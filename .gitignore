@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Xcode user settings
+xcuserdata/
+*.xcuserstate
+UserInterfaceState.xcuserstate
+
+# 项目文档 (如需入库可删掉下一行)
+docs/
+
+# Swift Package Manager / 构建产物
+.build/
+DerivedData/
+*.ipa
+*.dSYM
