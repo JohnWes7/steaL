@@ -1,6 +1,10 @@
 # macOS
 .DS_Store
 
+# Local editor and build configuration
+.vscode/
+buildServer.json
+
 # Xcode user settings
 xcuserdata/
 *.xcuserstate

@@ -9,7 +9,8 @@ import SwiftUI
 
 struct RootView: View {
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        // 之后加入登陆界面 判断需要登陆了之后才进入主界面
+        MainTabView()
     }
 }
 
