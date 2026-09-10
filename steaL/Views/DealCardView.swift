@@ -39,7 +39,7 @@ struct DealCardView: View {
     /// Artwork area with overlays: badges on top, quality tag and title pinned to the bottom
     private var artwork: some View {
         Color.clear
-            .aspectRatio(1.5, contentMode: .fit)
+            .aspectRatio(2, contentMode: .fit)
             .overlay { banner }
             .overlay { scrim }
             .overlay(alignment: .top) { topBar }

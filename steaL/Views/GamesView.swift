@@ -32,14 +32,24 @@ struct GamesView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         Section {
-                            ForEach(dealsData.list) { deal in
+                            if let firstDeal = dealsData.list.first {
                                 DealCardView(
-                                    deal: deal,
-                                    isFavorite: gamesViewModel.isFavorite(deal.id),
+                                    deal: firstDeal,
+                                    isFavorite: gamesViewModel.isFavorite(firstDeal.id),
                                     onToggleFavorite: {
-                                        gamesViewModel.toggleFavorite(deal.id)
+                                        gamesViewModel.toggleFavorite(firstDeal.id)
                                     }
                                 )
+                            } else {
+                                ContentUnavailableView(
+                                    "No Deals Found",
+                                    systemImage: "tag.slash",
+                                    description: Text(
+                                        "There are no discounted games to show right now. Try again later."
+                                    )
+                                )
+                                .foregroundStyle(.secondaryText)
+                                .frame(maxWidth: .infinity, alignment: .center)
                             }
                         } header: {
                             hotDealsHeader
