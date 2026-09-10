@@ -18,7 +18,7 @@ class ITADAPI {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("46b2f911a9f58576332b7541b7bf6e26417546be", forHTTPHeaderField: "ITAD-API-Key")
+        request.setValue(Config.itadAPIKey, forHTTPHeaderField: "ITAD-API-Key")
         
         let defaultBody : [String: Any] = [
             "country": "AU",
