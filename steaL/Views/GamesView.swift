@@ -8,38 +8,57 @@
 import SwiftUI
 
 struct GamesView: View {
+    /// 搜索框绑定的关键字，目前仅作展示，本地过滤逻辑待接入 / Search keyword bound to the field; display-only until local filtering lands
     @State private var searchText = ""
+    /// 列表数据的唯一数据源，负责请求、加载态与错误态 / Single source of truth for the list; owns fetching plus the loading and error state
     @State private var gamesViewModel = GamesViewModel()
     
+    /// 页面骨架：背景 + 状态分支内容 + 顶部固定的 header / Screen skeleton: background, state-driven content, and the top-pinned header
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack {
+            // 背景色 / Background color
             Color.appBackground
                 .ignoresSafeArea()
             
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    Color.clear
-                        .frame(height: 140)
-                    
-                    // 游戏列表放在这里
-                    ForEach(0..<20, id: \.self) { index in
-                        Text("Game \(index + 1)")
-                            .foregroundStyle(.primaryText)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding()
-                            .background(Color.surfaceElevated)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+            if gamesViewModel.isLoading {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)  // 真正全屏居中
+            } else if let errorMessage = gamesViewModel.errorMessage {
+                Text(errorMessage)
+                    .foregroundStyle(.secondaryText)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let dealsData = gamesViewModel.itadDealsData {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(dealsData.list) { deal in
+                            // 你的行视图
+                            
+                        }
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 16)
                 }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 16)
+            } else {
+                // 空数据提示 / Empty state
+                ContentUnavailableView(
+                    "No Deals Found",
+                    systemImage: "tag.slash",
+                    description: Text("There are no discounted games to show right now. Try again later.")
+                )
+                .foregroundStyle(.secondaryText)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
             headerArea
         }
         .toolbar(.hidden, for: .navigationBar)
     }
     
+    /// 顶部固定区域，由品牌标题和搜索框组成；通过 `safeAreaInset` 贴顶并自动占据安全区高度 /
+    /// Top pinned area holding the brand title and search field; attached with `safeAreaInset` so it reserves its own height
+    @ViewBuilder
     private var headerArea: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
@@ -57,6 +76,7 @@ struct GamesView: View {
         }
     }
     
+    /// 品牌标题区：左侧标语与 steaL 字样，右侧通知入口 / Brand header: tagline and steaL wordmark on the left, notification entry on the right
     @ViewBuilder
     private var header: some View {
         HStack(alignment: .bottom) {
@@ -81,6 +101,7 @@ struct GamesView: View {
         }
     }
     
+    /// 右上角通知按钮，附带未读小红点 / Notification button in the top-right, with an unread badge
     @ViewBuilder
     private var notificationButton: some View {
         Button {
@@ -102,6 +123,7 @@ struct GamesView: View {
         .accessibilityLabel("Notifications")
     }
     
+    /// 搜索输入框，回车提交；过滤逻辑待接入 / Search input field; return submits, filtering is not wired up yet
     @ViewBuilder
     private var searchField: some View {
         HStack(spacing: 14) {

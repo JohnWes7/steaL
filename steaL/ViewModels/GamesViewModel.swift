@@ -16,16 +16,28 @@ final class GamesViewModel {
     
     var errorMessage: String?  = nil
     
+    var requestBody: [String: Any] = [
+        "country": "AU",
+        "offset": 0,
+        "limit": 20,
+        "sort": "-cut",
+        "nondeals": false,
+        "filter": [
+            "type": [1],
+            "wasSpotlight": true,
+            "drm": [61],
+        ],
+    ]
     
     init() {
         isLoading = true
 
         Task {
-            await fetchDeals()
+            await fetchDeals(body: requestBody)
         }
     }
 
-    func fetchDeals(body: [String: Any] = [:]) async {
+    func fetchDeals(body: [String: Any]) async {
         isLoading = true
         defer { isLoading = false }
 
