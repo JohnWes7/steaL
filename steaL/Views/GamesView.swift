@@ -18,7 +18,7 @@ struct GamesView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     Color.clear
-                        .frame(height: 128)
+                        .frame(height: 140)
                     
                     // 游戏列表放在这里
                     ForEach(0..<20, id: \.self) { index in
