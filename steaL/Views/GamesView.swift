@@ -9,6 +9,7 @@ import SwiftUI
 
 struct GamesView: View {
     @State private var searchText = ""
+    @State private var gamesViewModel = GamesViewModel()
     
     var body: some View {
         ZStack(alignment: .top) {

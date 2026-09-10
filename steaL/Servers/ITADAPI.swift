@@ -1,0 +1,135 @@
+//
+//  ITADAPI.swift
+//  steaL
+//
+//  Created by yijiang on 2026/9/10.
+//
+
+import Foundation
+
+class ITADAPI {
+    
+    static func fetchDeals(body: [String: Any] = [:]) async throws -> ITADDealsData {
+        // 构建请求 URL / Construct request URL
+        let urlComponents = URLComponents(string: "https://api.isthereanydeal.com/deals/v2")!
+        guard let url = urlComponents.url else { throw URLError(.badURL) }
+
+        // 构建请求体 / Construct request body
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("46b2f911a9f58576332b7541b7bf6e26417546be", forHTTPHeaderField: "ITAD-API-Key")
+        
+        let defaultBody : [String: Any] = [
+            "country": "AU",
+            "offset": 0,
+            "limit": 20,
+            "sort": "-cut",
+            "nondeals": false,
+            "filter": [
+                "type": [1],
+                "wasSpotlight": true,
+                "drm": [61],
+            ],
+        ]
+        
+        var requestBody : [String: Any] = defaultBody
+        if !body.isEmpty {
+            requestBody = body
+        }
+        // 将请求体编码为 JSON / Encode request body as JSON
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+
+        #if DEBUG
+        logRequest(request)
+        #endif
+
+        // 发送请求并解析响应 / Send request and parse response
+        let (data, resp) = try await URLSession.shared.data(for: request)
+
+        // 检查响应类型 / Check response type
+        guard let httpResponse = resp as? HTTPURLResponse else {
+            throw ITADAPIError.invalidResponse
+        }
+
+        #if DEBUG
+        logResponse(httpResponse, data: data)
+        #endif
+
+        // 检查状态码是否为 2xx / Check if the status code is 2xx
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw ITADAPIError.requestFailed(
+                statusCode: httpResponse.statusCode,
+                body: String(data: data, encoding: .utf8)
+            )
+        }
+
+        do {
+            return try JSONDecoder().decode(ITADDealsData.self, from: data)
+        } catch {
+            #if DEBUG
+            // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
+            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            #endif
+            throw error
+        }
+    }
+
+}
+
+enum ITADAPIError: Error, LocalizedError {
+    case invalidResponse
+    case requestFailed(statusCode: Int, body: String?)
+
+    /// 面向用户 / For the UI
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "Invalid response from the server."
+        case .requestFailed(let statusCode, _):
+            return "Request failed with status code \(statusCode)."
+        }
+    }
+
+    /// 面向调试，包含服务端原始响应 / For debugging, includes the raw server body
+    var debugDescription: String {
+        switch self {
+        case .invalidResponse:
+            return "invalidResponse: 响应的类型不是 HTTPURLResponse"
+        case .requestFailed(let statusCode, let body):
+            return "HTTP \(statusCode): \(body ?? "<empty body>")"
+        }
+    }
+}
+
+#if DEBUG
+private extension ITADAPI {
+
+    static func logRequest(_ request: URLRequest) {
+        print("[ITAD] \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
+
+        // 别把 API Key 打进日志 / Never print the API key
+        var headers = request.allHTTPHeaderFields ?? [:]
+        if headers["ITAD-API-Key"] != nil { headers["ITAD-API-Key"] = "********" }
+        print("[ITAD] headers: \(headers)")
+
+        if let body = request.httpBody {
+            print("[ITAD] body: \(String(data: body, encoding: .utf8) ?? "<binary>")")
+        }
+    }
+
+    static func logResponse(_ response: HTTPURLResponse, data: Data) {
+        print("[ITAD] status: \(response.statusCode)")
+
+        let text: String
+        if let object = try? JSONSerialization.jsonObject(with: data),
+           let pretty = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]),
+           let string = String(data: pretty, encoding: .utf8) {
+            text = String(string.prefix(2000))   // deals 响应很大，截断
+        } else {
+            text = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
+        }
+        print("[ITAD] body:\n\(text)")
+    }
+}
+#endif
