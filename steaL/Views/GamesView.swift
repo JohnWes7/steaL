@@ -23,7 +23,7 @@ struct GamesView: View {
             if gamesViewModel.isLoading {
                 ProgressView()
                     .progressViewStyle(.circular)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)  // 真正全屏居中
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)  // 全屏居中
             } else if let errorMessage = gamesViewModel.errorMessage {
                 Text(errorMessage)
                     .foregroundStyle(.secondaryText)
@@ -31,13 +31,23 @@ struct GamesView: View {
             } else if let dealsData = gamesViewModel.itadDealsData {
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        ForEach(dealsData.list) { deal in
-                            // 你的行视图
-                            
+                        Section {
+                            ForEach(dealsData.list) { deal in
+                                DealCardView(
+                                    deal: deal,
+                                    isFavorite: gamesViewModel.isFavorite(deal.id),
+                                    onToggleFavorite: {
+                                        gamesViewModel.toggleFavorite(deal.id)
+                                    }
+                                )
+                            }
+                        } header: {
+                            hotDealsHeader
                         }
                     }
                     .padding(.horizontal, 14)
                     .padding(.bottom, 16)
+                    .padding(.top, 20)
                 }
             } else {
                 // 空数据提示 / Empty state
@@ -55,6 +65,25 @@ struct GamesView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
     }
+
+    /// 区块标题。注意 `wasSpotlight` 并不等于实时热门榜，它只代表「曾经进入过 Spotlight 且当前在打折」/
+    /// Section title. `wasSpotlight` is not a live popularity chart; it only means "was in Spotlight and is discounted now"
+    @ViewBuilder
+    private var hotDealsHeader: some View {
+        HStack(spacing: 10) {
+            Text("🔥")
+                .font(.system(size: 24))
+
+            Text("Hot Deals")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(.primaryText)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.bottom, 2)
+    }
+
+
     
     /// 顶部固定区域，由品牌标题和搜索框组成；通过 `safeAreaInset` 贴顶并自动占据安全区高度 /
     /// Top pinned area holding the brand title and search field; attached with `safeAreaInset` so it reserves its own height

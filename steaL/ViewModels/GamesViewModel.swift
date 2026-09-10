@@ -20,7 +20,7 @@ final class GamesViewModel {
         "country": "AU",
         "offset": 0,
         "limit": 20,
-        "sort": "-cut",
+//        "sort": "-cut",
         "nondeals": false,
         "filter": [
             "type": [1],
@@ -55,5 +55,14 @@ final class GamesViewModel {
 
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// 切换单个游戏的收藏状态 / Toggles the favourite state of a single game
+    func toggleFavorite(_ id: String) {
+
+    }
+    
+    func isFavorite(_ id: String) -> Bool {
+        return false
     }
 }
