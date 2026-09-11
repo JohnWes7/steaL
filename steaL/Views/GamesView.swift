@@ -12,6 +12,13 @@ struct GamesView: View {
     @State private var searchText = ""
     /// 列表数据的唯一数据源，负责请求、加载态与错误态 / Single source of truth for the list; owns fetching plus the loading and error state
     @State private var gamesViewModel = GamesViewModel()
+
+    /// 两列等宽网格，间距与 `LazyVStack` 的 12 对齐 /
+    /// Two equal-width grid columns; the spacing matches the `LazyVStack`'s 12
+    private let gridColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+    ]
     
     /// 页面骨架：背景 + 状态分支内容 + 顶部固定的 header / Screen skeleton: background, state-driven content, and the top-pinned header
     var body: some View {
@@ -53,6 +60,20 @@ struct GamesView: View {
                             }
                         } header: {
                             hotDealsHeader
+                        }
+
+                        // 其余条目排成两列网格，卡片改用竖版 boxart /
+                        // Everything else fills a two-column grid using portrait box art
+                        LazyVGrid(columns: gridColumns, spacing: 12) {
+                            ForEach(dealsData.list.dropFirst()) { deal in
+                                DealGridCardView(
+                                    deal: deal,
+                                    isFavorite: gamesViewModel.isFavorite(deal.id),
+                                    onToggleFavorite: {
+                                        gamesViewModel.toggleFavorite(deal.id)
+                                    }
+                                )
+                            }
                         }
                     }
                     .padding(.horizontal, 14)

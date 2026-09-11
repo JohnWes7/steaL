@@ -142,3 +142,48 @@ struct ITADPrice: Codable, Hashable, Sendable {
     let currency: String
 }
 
+// MARK: - 选图 / Artwork selection
+
+extension ITADAssets {
+
+    /// 按给定顺序取第一个能解析成 URL 的字符串 /
+    /// Returns the first entry that parses into a URL, following the given order
+    fileprivate func firstURL(from candidates: [String?]) -> URL? {
+        candidates
+            .compactMap { $0 }
+            .compactMap { URL(string: $0) }
+            .first
+    }
+}
+
+/// 不同卡片形状需要不同方向的图片，这里把挑选规则集中在一处，
+/// 避免每个卡片视图各写一份回退链 /
+/// Different card shapes need different artwork orientations, so the pick order lives in one
+/// place instead of being duplicated in every card view
+extension ITADDeal {
+
+    /// 宽幅图，供 hero 卡这类横向卡片使用：优先 banner，最后才回落到竖版封面 /
+    /// Wide artwork for landscape cards such as the hero: banners first, box art only as a last resort
+    var wideArtworkURL: URL? {
+        assets.firstURL(from: [
+            assets.banner600,
+            assets.banner400,
+            assets.banner300,
+            assets.banner145,
+            assets.boxart,
+        ])
+    }
+
+    /// 竖版封面，供网格卡这类竖向卡片使用：优先 boxart，缺失时才回落到横幅 /
+    /// Portrait artwork for vertical cards such as the grid: box art first, banners only as a fallback
+    var portraitArtworkURL: URL? {
+        assets.firstURL(from: [
+            assets.boxart,
+            assets.banner600,
+            assets.banner400,
+            assets.banner300,
+            assets.banner145,
+        ])
+    }
+}
+

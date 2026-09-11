@@ -35,8 +35,11 @@ struct DealCardView: View {
 
     // MARK: - 图片区 / Artwork
 
-    /// 图片区域。上下各叠一层内容：顶部徽标与收藏，底部标签与标题 /
-    /// Artwork area with overlays: badges on top, quality tag and title pinned to the bottom
+    /// 图片区域。上下各叠一层内容：顶部徽标与收藏，底部标签与标题。
+    /// 末尾的 `.clipped()` 把 `scaledToFill` 的溢出切在图片框内，否则图片会盖到价格行上 /
+    /// Artwork area with overlays: badges on top, quality tag and title pinned to the bottom.
+    /// The trailing `.clipped()` keeps the `scaledToFill` overflow inside the frame, otherwise
+    /// the image would paint over the price row
     private var artwork: some View {
         Color.clear
             .aspectRatio(2, contentMode: .fit)
@@ -44,13 +47,14 @@ struct DealCardView: View {
             .overlay { scrim }
             .overlay(alignment: .top) { topBar }
             .overlay(alignment: .bottom) { titleBlock }
+            .clipped()
     }
 
     /// 游戏大图，加载中与失败时都回落到同一种占位样式 /
     /// Game artwork, falling back to the same placeholder while loading and on failure
     @ViewBuilder
     private var banner: some View {
-        AsyncImage(url: bannerURL) { phase in
+        AsyncImage(url: deal.wideArtworkURL) { phase in
             switch phase {
             case .success(let image):
                 image
@@ -211,23 +215,6 @@ struct DealCardView: View {
 
     // MARK: - 派生数据 / Derived values
 
-    /// 按清晰度从高到低挑选可用的图片地址，末尾回落到竖版封面 /
-    /// Picks the highest resolution image URL available, falling back to boxart last
-    private var bannerURL: URL? {
-        let candidates = [
-            deal.assets.banner600,
-            deal.assets.banner400,
-            deal.assets.banner300,
-            deal.assets.banner145,
-            deal.assets.boxart,
-        ]
-
-        return candidates
-            .compactMap { $0 }
-            .compactMap { URL(string: $0) }
-            .first
-    }
-
     /// 图片上的绿色标签。`/deals/v2` 不返回游戏类型，因此这里用真实可得的优惠质量信息替代，
     /// 依次判断全史最低、近三月最低，最后回落到激活平台 /
     /// Green tag. `/deals/v2` has no genre field, so this reports real deal quality instead:
@@ -251,45 +238,6 @@ struct DealCardView: View {
         return deal.type.uppercased()
     }
 }
-
-#if DEBUG
-private extension ITADDeal {
-
-    /// 预览用示例数据，字段结构对齐 ITAD 真实响应，图片留空以便检查占位样式 /
-    /// Sample data for previews, shaped like a real ITAD response with images left empty to exercise the placeholder
-    static let previewSample = ITADDeal(
-        id: "01973dd3-e247-712c-aaee-acff181a3175",
-        slug: "cyberpunk-2077",
-        title: "Cyberpunk 2077",
-        type: "game",
-        mature: true,
-        assets: ITADAssets(
-            boxart: "https://assets.isthereanydeal.com/018d937f-3a1d-720b-aafa-2c1f21404d3f/boxart.jpg?t=1788299733",
-            banner145: "https://assets.isthereanydeal.com/018d937f-3a1d-720b-aafa-2c1f21404d3f/banner145.jpg?t=1788299733",
-            banner300: "https://assets.isthereanydeal.com/018d937f-3a1d-720b-aafa-2c1f21404d3f/banner300.jpg?t=1788299733",
-            banner400: "https://assets.isthereanydeal.com/018d937f-3a1d-720b-aafa-2c1f21404d3f/banner400.jpg?t=1788299733",
-            banner600: "https://assets.isthereanydeal.com/018d937f-3a1d-720b-aafa-2c1f21404d3f/banner600.jpg?t=1788299733"
-        ),
-        deal: ITADDealInfo(
-            shop: ITADShopRef(id: 61, name: "Steam"),
-            price: ITADPrice(amount: 23.99, amountInt: 2399, currency: "AUD"),
-            regular: ITADPrice(amount: 59.99, amountInt: 5999, currency: "AUD"),
-            cut: 60,
-            voucher: nil,
-            storeLow: ITADPrice(amount: 23.99, amountInt: 2399, currency: "AUD"),
-            historyLow: ITADPrice(amount: 27.99, amountInt: 2799, currency: "AUD"),
-            historyLow1y: ITADPrice(amount: 29.99, amountInt: 2999, currency: "AUD"),
-            historyLow3m: ITADPrice(amount: 29.99, amountInt: 2999, currency: "AUD"),
-            flag: "H",
-            drm: [ITADPlatformRef(id: 61, name: "Steam")],
-            platforms: [ITADPlatformRef(id: 1, name: "Windows")],
-            timestamp: "2026-09-01T19:15:45+02:00",
-            expiry: nil,
-            url: "https://isthereanydeal.com/"
-        )
-    )
-}
-#endif
 
 #Preview {
     ScrollView {
