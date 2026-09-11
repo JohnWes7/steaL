@@ -106,6 +106,8 @@ struct GamesView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 Section {
+
+                    // 首条 hero 卡 / Hero card for the first item
                     if let firstDeal = dealsData.list.first {
                         DealCardView(
                             deal: firstDeal,
@@ -129,9 +131,14 @@ struct GamesView: View {
                         }
                     }
 
-                    // 显示give away 条目
                 } header: {
                     hotDealsHeader
+                }
+
+                Section {
+
+                } header: {
+                    giveawayHeader
                 }
             }
             .padding(.horizontal, 14)
@@ -149,6 +156,23 @@ struct GamesView: View {
                 .foregroundStyle(.orange)
 
             Text("Hot Deals")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(.primaryText)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.bottom, 2)
+    }
+
+    /// 「Giveaways」区块标题 / Section title for the Giveaways block
+    @ViewBuilder
+    private var giveawayHeader: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "gift.fill")
+                .font(.system(size: 24))
+                .foregroundStyle(.brandGreen)
+
+            Text("Giveaways")
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.primaryText)
 
