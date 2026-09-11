@@ -146,14 +146,18 @@ struct DealGridCardView: View {
         }
     }
 
-    /// 标题叠在封面上，所以用白色；仍然预留两行高度，让所有卡片的文字起点一致 /
-    /// The title sits on the cover art, hence white. It still reserves two lines so every card's
-    /// text starts at the same offset
+    /// 标题叠在封面上，所以用白色。这里不预留两行高度：短标题只占一行、紧贴价格行，
+    /// 长标题最多折成两行后截断。因为整块由 `overlay(alignment: .bottom)` 压底，
+    /// 所以无论几行都会贴着卡片底部 /
+    /// The title sits on the cover art, hence white. It no longer reserves two lines: a short
+    /// title takes a single line and hugs the price row, a longer one wraps to at most two lines
+    /// before truncating. Since the whole block is pinned by `overlay(alignment: .bottom)`,
+    /// either case stays flush with the card's bottom edge
     private var titleBlock: some View {
         Text(deal.title)
             .font(.system(size: 18, weight: .bold))
             .foregroundStyle(.white)
-            .lineLimit(2, reservesSpace: true)
+            .lineLimit(2)
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
