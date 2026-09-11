@@ -35,6 +35,7 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable {
 /// the selected region drives both the currency format and the API parameters used
 /// when querying the Steam / ITAD services.
 enum AppRegion: String, Codable, CaseIterable, Identifiable {
+    case australia
     case china
     case unitedStates
     case unitedKingdom
@@ -46,6 +47,7 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
+        case .australia: return "Australia"
         case .china: return "China"
         case .unitedStates: return "United States"
         case .unitedKingdom: return "United Kingdom"
@@ -59,6 +61,7 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
     /// for dispary
     var currencyCode: String {
         switch self {
+        case .australia: return "AUD"
         case .china: return "CNY"
         case .unitedStates: return "USD"
         case .unitedKingdom: return "GBP"
@@ -72,6 +75,7 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
     /// for dispay
     var currencySymbol: String {
         switch self {
+        case .australia: return "$"
         case .china: return "¥"
         case .unitedStates: return "$"
         case .unitedKingdom: return "£"
@@ -85,6 +89,7 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
     /// use in api to get data
     var apiRegionCode: String {
         switch self {
+        case .australia: return "AU"
         case .china: return "CN"
         case .unitedStates: return "US"
         case .unitedKingdom: return "GB"

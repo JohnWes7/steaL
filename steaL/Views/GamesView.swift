@@ -8,20 +8,19 @@
 import SwiftUI
 
 struct GamesView: View {
-    /// 搜索框绑定的关键字，目前仅作展示，本地过滤逻辑待接入 / Search keyword bound to the field; display-only until local filtering lands
+    /// 搜索关键字，过滤逻辑待接入 / Search keyword; filtering is not wired up yet
     @State private var searchText = ""
-    /// 列表数据的唯一数据源，负责请求、加载态与错误态 / Single source of truth for the list; owns fetching plus the loading and error state
+    /// 列表数据源，负责请求与状态 / Data source for the list; owns fetching and state
     @State private var gamesViewModel = GamesViewModel()
 
-    /// 两列等宽网格，间距与 `LazyVStack` 的 12 对齐 /
-    /// Two equal-width grid columns; the spacing matches the `LazyVStack`'s 12
+    /// 两列等宽网格 / Two equal-width grid columns
     private let gridColumns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12),
     ]
     
-    /// 页面骨架：背景 + 状态机驱动的分支内容 + 顶部固定的 header /
-    /// Screen skeleton: background, state-machine-driven content, and the top-pinned header
+    /// 页面骨架：背景 + 状态驱动的内容 + 顶部固定 header /
+    /// Screen skeleton: background, state-driven content and the pinned header
     var body: some View {
         ZStack {
             // 背景色 / Background color
@@ -34,9 +33,7 @@ struct GamesView: View {
             case .failed(let error):
                 errorState(error)
             case .loaded(let dealsData):
-                // 状态机只保证「请求成功」，列表本身仍可能为空，所以这里再分一次 /
-                // The state machine only guarantees a successful request; the list itself can still be
-                // empty, hence this second branch
+                // 请求成功但列表为空 / Request succeeded with an empty list
                 if dealsData.list.isEmpty {
                     emptyState
                 } else {
@@ -52,7 +49,7 @@ struct GamesView: View {
 
     // MARK: - 状态分支 / State branches
 
-    /// 加载中，内容区居中 / Loading, centred in the content area
+    /// 加载中 / Loading
     @ViewBuilder
     private var loadingState: some View {
         ProgressView()
@@ -60,11 +57,7 @@ struct GamesView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// 加载失败。这里用 `ContentUnavailableView` 而不是裸 `Text`：一是和空态共用同一套排版，
-    /// 二是它自带 actions 槽位，可以放重试按钮 —— 之前失败后没有任何出路，只能杀掉 App 重开 /
-    /// Failure state. `ContentUnavailableView` instead of a bare `Text`: it matches the empty
-    /// state's layout, and its actions slot carries a retry button — previously a failed load left
-    /// no way out short of relaunching the app
+    /// 加载失败，附重试入口 / Failure state with a retry action
     @ViewBuilder
     private func errorState(_ error: DealsError) -> some View {
         ContentUnavailableView {
@@ -79,9 +72,7 @@ struct GamesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// 列表为空。空列表不是失败，文案也不同，所以单独一份而不是复用错误态 /
-    /// Empty list. An empty list is not a failure and needs different copy, so it gets its own
-    /// builder instead of reusing the error state
+    /// 列表为空，附刷新入口 / Empty list with a refresh action
     @ViewBuilder
     private var emptyState: some View {
         ContentUnavailableView {
@@ -96,8 +87,7 @@ struct GamesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// 失败态与空态共用的重试按钮，改动只影响一处 /
-    /// Retry button shared by the failure and empty states, so it only has to be tweaked in one place
+    /// 失败态与空态共用的重试按钮 / Retry button shared by the failure and empty states
     @ViewBuilder
     private func retryButton(title: String) -> some View {
         Button(title) {
@@ -109,11 +99,8 @@ struct GamesView: View {
 
     // MARK: - 内容 / Content
 
-    /// 有数据时的滚动内容：首条 hero 卡 + 其余两列网格 /
-    /// Scrolling content when there is data: hero card for the first item, two-column grid for the rest
-    ///
-    /// 空列表已在 `emptyState` 处理，所以这里可以认为 `list` 非空 /
-    /// Empty lists are handled by `emptyState` before this is reached, so the list is non-empty here
+    /// 有数据时的滚动列表：首条 hero 卡 + 其余两列网格 /
+    /// Scrolling list when there is data: hero card first, then a two-column grid
     @ViewBuilder
     private func dealsList(_ dealsData: ITADDealsData) -> some View {
         ScrollView {
@@ -129,8 +116,7 @@ struct GamesView: View {
                         )
                     }
 
-                    // 其余条目排成两列网格，卡片改用竖版 boxart /
-                    // Everything else fills a two-column grid using portrait box art
+                    // 其余条目排成两列网格 / Rest of the items in a two-column grid
                     LazyVGrid(columns: gridColumns, spacing: 12) {
                         ForEach(dealsData.list.dropFirst()) { deal in
                             DealGridCardView(
@@ -142,6 +128,8 @@ struct GamesView: View {
                             )
                         }
                     }
+
+                    // 显示give away 条目
                 } header: {
                     hotDealsHeader
                 }
@@ -152,13 +140,13 @@ struct GamesView: View {
         }
     }
 
-    /// 区块标题。注意 `wasSpotlight` 并不等于实时热门榜，它只代表「曾经进入过 Spotlight 且当前在打折」/
-    /// Section title. `wasSpotlight` is not a live popularity chart; it only means "was in Spotlight and is discounted now"
+    /// 「Hot Deals」区块标题 / Section title for the Hot Deals block
     @ViewBuilder
     private var hotDealsHeader: some View {
         HStack(spacing: 10) {
-            Text("🔥")
+            Image(systemName: "flame.fill")
                 .font(.system(size: 24))
+                .foregroundStyle(.orange)
 
             Text("Hot Deals")
                 .font(.system(size: 28, weight: .bold))
@@ -171,8 +159,7 @@ struct GamesView: View {
 
 
     
-    /// 顶部固定区域，由品牌标题和搜索框组成；通过 `safeAreaInset` 贴顶并自动占据安全区高度 /
-    /// Top pinned area holding the brand title and search field; attached with `safeAreaInset` so it reserves its own height
+    /// 顶部固定区：品牌标题 + 搜索框 / Pinned top area: brand title and search field
     @ViewBuilder
     private var headerArea: some View {
         VStack(alignment: .leading, spacing: 8) {

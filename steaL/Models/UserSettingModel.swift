@@ -22,7 +22,7 @@ final class UserSettingModel {
     // MARK: Region & currency
 
     /// Store region & currency.
-    var region: AppRegion = AppRegion.china
+    var region: AppRegion = AppRegion.australia
 
     // MARK: Language
 
@@ -41,7 +41,7 @@ final class UserSettingModel {
 
     init(
         theme: AppTheme = AppTheme.system,
-        region: AppRegion = AppRegion.china,
+        region: AppRegion = AppRegion.australia,
         language: AppLanguage = AppLanguage.english,
         isPriceDropAlertsEnabled: Bool = true,
         isGameReleaseAlertsEnabled: Bool = true
