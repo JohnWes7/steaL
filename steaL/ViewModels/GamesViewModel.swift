@@ -94,8 +94,22 @@ final class GamesViewModel {
         case failed(DealsError)
     }
 
+    /// Giveaways 区块的独立状态机：与 deals 互不影响 /
+    /// Independent state machine for the giveaways section; it never affects the deals state
+    enum GiveawaysLoadState: Equatable {
+        /// 首次加载或重试中 / First load, or a retry in progress
+        case loading
+        /// 请求成功，列表可能为空 / Request succeeded; the list itself may still be empty
+        case loaded(ITADGiveawaysData)
+        /// 请求失败，携带归一化后的错误 / Request failed, carrying the normalised error
+        case failed(DealsError)
+    }
+
     /// 当前状态 / Current state
     private(set) var state: LoadState = .loading
+
+    /// Giveaways 区块当前状态 / Current state of the giveaways section
+    private(set) var giveawaysState: GiveawaysLoadState = .loading
 
     var requestBody: [String: Any] = [
         "country": "AU",
@@ -113,6 +127,9 @@ final class GamesViewModel {
     init() {
         Task {
             await fetchDeals(body: requestBody)
+        }
+        Task {
+            await fetchGiveaways()
         }
     }
 
@@ -138,6 +155,30 @@ final class GamesViewModel {
     /// 用当前请求体重试 / Retries with the current request body
     func retry() async {
         await fetchDeals(body: requestBody)
+    }
+
+    /// 拉取限时免费领取列表 / Fetches the giveaways list
+    func fetchGiveaways() async {
+        giveawaysState = .loading
+
+        do {
+            let giveaways = try await ITADAPI.fetchGiveaways()
+            giveawaysState = .loaded(giveaways)
+
+        } catch {
+            // 完整错误只进日志，界面只看到 `DealsError` / Log the full error; the UI only sees `DealsError`
+            print("[GamesViewModel] fetchGiveaways failed / failed: \(error)")
+            if let itadError = error as? ITADAPIError {
+                print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
+            }
+
+            giveawaysState = .failed(DealsError.from(error))
+        }
+    }
+
+    /// 重试 giveaways，只影响第二个区块 / Retries giveaways; only the second section is affected
+    func retryGiveaways() async {
+        await fetchGiveaways()
     }
 
     /// 切换单个游戏的收藏状态 / Toggles the favourite state of a single game

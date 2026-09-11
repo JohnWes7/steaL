@@ -75,6 +75,68 @@ class ITADAPI {
         }
     }
 
+    /// 获取限时免费领取列表，默认只返回未过期条目，按发布时间从新到旧 /
+    /// Fetch the giveaways list; by default unexpired entries only, newest first
+    ///
+    /// `GET https://api.isthereanydeal.com/giveaways/v1`
+    static func fetchGiveaways(
+        offset: Int = 0,
+        limit: Int = 20,
+        expired: Bool = false,
+        mature: Bool = false,
+        sort: String = "-publish"
+    ) async throws -> ITADGiveawaysData {
+        // 构建请求 URL / Construct request URL
+        var urlComponents = URLComponents(string: "https://api.isthereanydeal.com/giveaways/v1")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "offset", value: String(offset)),
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "expired", value: String(expired)),
+            URLQueryItem(name: "mature", value: String(mature)),
+            URLQueryItem(name: "sort", value: sort),
+        ]
+        guard let url = urlComponents.url else { throw URLError(.badURL) }
+
+        // 构建请求，giveaways 是 GET 接口 / Construct request; giveaways is a GET endpoint
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(Config.itadAPIKey, forHTTPHeaderField: "ITAD-API-Key")
+
+        #if DEBUG
+        logRequest(request)
+        #endif
+
+        // 发送请求并解析响应 / Send request and parse response
+        let (data, resp) = try await URLSession.shared.data(for: request)
+
+        // 检查响应类型 / Check response type
+        guard let httpResponse = resp as? HTTPURLResponse else {
+            throw ITADAPIError.invalidResponse
+        }
+
+        #if DEBUG
+        logResponse(httpResponse, data: data)
+        #endif
+
+        // 检查状态码是否为 2xx / Check if the status code is 2xx
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw ITADAPIError.requestFailed(
+                statusCode: httpResponse.statusCode,
+                body: String(data: data, encoding: .utf8)
+            )
+        }
+
+        do {
+            return try JSONDecoder().decode(ITADGiveawaysData.self, from: data)
+        } catch {
+            #if DEBUG
+            // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
+            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            #endif
+            throw error
+        }
+    }
+
 }
 
 enum ITADAPIError: Error, LocalizedError {
