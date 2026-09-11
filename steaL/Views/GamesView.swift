@@ -36,7 +36,7 @@ struct GamesView: View {
                     }
 
                     Section {
-
+                        giveawaySection
                     } header: {
                         giveawayHeader
                     }
@@ -155,6 +155,39 @@ struct GamesView: View {
                 )
             }
         }
+    }
+
+    /// 「Giveaways」区块内容，跟随 giveawaysState 渲染加载 / 失败 / 空 / 行列表 /
+    /// Giveaways section content; renders loading, failure, empty or the rows based on giveawaysState
+    @ViewBuilder
+    private var giveawaySection: some View {
+        switch gamesViewModel.giveawaysState {
+        case .loading:
+            loadingState
+        case .failed(let error):
+            errorState(error) {
+                await gamesViewModel.retryGiveaways()
+            }
+        case .loaded(let giveaways):
+            if giveaways.isEmpty {
+                giveawayEmptyState
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(giveaways) { giveaway in
+                        GiveawayRowView(giveaway: giveaway)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Giveaways 为空时的轻量提示 / Lightweight note when no giveaways are active
+    @ViewBuilder
+    private var giveawayEmptyState: some View {
+        Text("No giveaways right now. Check back later.")
+            .font(.system(size: 14))
+            .foregroundStyle(.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// 「Hot Deals」区块标题 / Section title for the Hot Deals block

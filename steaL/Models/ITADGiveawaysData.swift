@@ -69,3 +69,34 @@ struct ITADGiveawayGame: Codable, Hashable, Identifiable, Sendable {
     /// 支持的操作系统 / Supported operating systems
     let platforms: [ITADPlatformRef]
 }
+
+// MARK: - 派生属性 / Derived properties
+
+extension ITADGiveaway {
+
+    /// 卡片标题：优先第一件游戏的正式名称，兜底整个 giveaway 的标题 /
+    /// Card title: prefers the first game's real name, falls back to the giveaway title
+    var displayTitle: String {
+        games.first?.title ?? title
+    }
+
+    /// 行式缩略图：优先小尺寸横幅，最后才回落到竖版封面；无图时为 nil /
+    /// Row thumbnail: small banners first, portrait box art only as a last resort; nil without artwork
+    var thumbnailURL: URL? {
+        guard let assets = games.first?.assets else { return nil }
+        return [assets.banner300, assets.banner400, assets.banner145, assets.banner600, assets.boxart]
+            .compactMap { $0 }
+            .compactMap { URL(string: $0) }
+            .first
+    }
+
+    /// 领取截止时间；`expiry` 缺失或无法解析时为 nil /
+    /// Claim deadline; nil when `expiry` is missing or cannot be parsed
+    var expiryDate: Date? {
+        guard let expiry else { return nil }
+        return Self.iso8601Formatter.date(from: expiry)
+    }
+
+    /// 解析 ITAD ISO8601 时间的共享 formatter / Shared formatter for ITAD's ISO8601 strings
+    private static let iso8601Formatter = ISO8601DateFormatter()
+}
