@@ -19,26 +19,31 @@ struct GamesView: View {
         GridItem(.flexible(), spacing: 12),
     ]
     
-    /// 页面骨架：背景 + 状态驱动的内容 + 顶部固定 header /
-    /// Screen skeleton: background, state-driven content and the pinned header
+    /// 页面骨架：背景 + 两个各自管理状态的区块 + 顶部固定 header /
+    /// Screen skeleton: background, two self-managed sections and the pinned header
     var body: some View {
         ZStack {
             // 背景色 / Background color
             Color.appBackground
                 .ignoresSafeArea()
 
-            switch gamesViewModel.dealState {
-            case .loading:
-                loadingState
-            case .failed(let error):
-                errorState(error)
-            case .loaded(let dealsData):
-                // 请求成功但列表为空 / Request succeeded with an empty list
-                if dealsData.list.isEmpty {
-                    emptyState
-                } else {
-                    dealsList(dealsData)
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    Section {
+                        dealsSection
+                    } header: {
+                        hotDealsHeader
+                    }
+
+                    Section {
+
+                    } header: {
+                        giveawayHeader
+                    }
                 }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 16)
+                .padding(.top, 20)
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -49,17 +54,18 @@ struct GamesView: View {
 
     // MARK: - 状态分支 / State branches
 
-    /// 加载中 / Loading
+    /// 区块内加载中 / In-section loading
     @ViewBuilder
     private var loadingState: some View {
         ProgressView()
             .progressViewStyle(.circular)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 40)
     }
 
-    /// 加载失败，附重试入口 / Failure state with a retry action
+    /// 区块内加载失败，附重试入口 / In-section failure with a retry action
     @ViewBuilder
-    private func errorState(_ error: DealsError) -> some View {
+    private func errorState(_ error: LoadError, retry: @escaping () async -> Void) -> some View {
         ContentUnavailableView {
             Label(error.title, systemImage: error.symbolName)
                 .foregroundStyle(.secondaryText)
@@ -67,12 +73,12 @@ struct GamesView: View {
             Text(error.message)
                 .foregroundStyle(.secondaryText)
         } actions: {
-            retryButton(title: "Try Again")
+            retryButton(title: "Try Again", action: retry)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
     }
 
-    /// 列表为空，附刷新入口 / Empty list with a refresh action
+    /// 区块内列表为空，附刷新入口 / In-section empty list with a refresh action
     @ViewBuilder
     private var emptyState: some View {
         ContentUnavailableView {
@@ -82,16 +88,18 @@ struct GamesView: View {
             Text("There are no discounted games to show right now. Try again later.")
                 .foregroundStyle(.secondaryText)
         } actions: {
-            retryButton(title: "Refresh")
+            retryButton(title: "Refresh") {
+                await gamesViewModel.retryDeals()
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
     }
 
     /// 失败态与空态共用的重试按钮 / Retry button shared by the failure and empty states
     @ViewBuilder
-    private func retryButton(title: String) -> some View {
+    private func retryButton(title: String, action: @escaping () async -> Void) -> some View {
         Button(title) {
-            Task { await gamesViewModel.retryDeals() }
+            Task { await action() }
         }
         .buttonStyle(.borderedProminent)
         .tint(.brandBlue)
@@ -99,51 +107,53 @@ struct GamesView: View {
 
     // MARK: - 内容 / Content
 
-    /// 有数据时的滚动列表：首条 hero 卡 + 其余两列网格 /
-    /// Scrolling list when there is data: hero card first, then a two-column grid
+    /// 「Hot Deals」区块内容，跟随 dealState 渲染加载 / 失败 / 空 / 列表 /
+    /// Hot Deals section content; renders loading, failure, empty or the list based on dealState
     @ViewBuilder
-    private func dealsList(_ dealsData: ITADDealsData) -> some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                Section {
-
-                    // 首条 hero 卡 / Hero card for the first item
-                    if let firstDeal = dealsData.list.first {
-                        DealCardView(
-                            deal: firstDeal,
-                            isFavorite: gamesViewModel.isFavorite(firstDeal.id),
-                            onToggleFavorite: {
-                                gamesViewModel.toggleFavorite(firstDeal.id)
-                            }
-                        )
-                    }
-
-                    // 其余条目排成两列网格 / Rest of the items in a two-column grid
-                    LazyVGrid(columns: gridColumns, spacing: 12) {
-                        ForEach(dealsData.list.dropFirst()) { deal in
-                            DealGridCardView(
-                                deal: deal,
-                                isFavorite: gamesViewModel.isFavorite(deal.id),
-                                onToggleFavorite: {
-                                    gamesViewModel.toggleFavorite(deal.id)
-                                }
-                            )
-                        }
-                    }
-
-                } header: {
-                    hotDealsHeader
-                }
-
-                Section {
-
-                } header: {
-                    giveawayHeader
-                }
+    private var dealsSection: some View {
+        switch gamesViewModel.dealState {
+        case .loading:
+            loadingState
+        case .failed(let error):
+            errorState(error) {
+                await gamesViewModel.retryDeals()
             }
-            .padding(.horizontal, 14)
-            .padding(.bottom, 16)
-            .padding(.top, 20)
+        case .loaded(let dealsData):
+            // 请求成功但列表为空 / Request succeeded with an empty list
+            if dealsData.list.isEmpty {
+                emptyState
+            } else {
+                dealsContent(dealsData)
+            }
+        }
+    }
+
+    /// 首条 hero 卡 + 其余两列网格 / Hero card first, then a two-column grid
+    @ViewBuilder
+    private func dealsContent(_ dealsData: ITADDealsData) -> some View {
+
+        // 首条 hero 卡 / Hero card for the first item
+        if let firstDeal = dealsData.list.first {
+            DealCardView(
+                deal: firstDeal,
+                isFavorite: gamesViewModel.isFavorite(firstDeal.id),
+                onToggleFavorite: {
+                    gamesViewModel.toggleFavorite(firstDeal.id)
+                }
+            )
+        }
+
+        // 其余条目排成两列网格 / Rest of the items in a two-column grid
+        LazyVGrid(columns: gridColumns, spacing: 12) {
+            ForEach(dealsData.list.dropFirst()) { deal in
+                DealGridCardView(
+                    deal: deal,
+                    isFavorite: gamesViewModel.isFavorite(deal.id),
+                    onToggleFavorite: {
+                        gamesViewModel.toggleFavorite(deal.id)
+                    }
+                )
+            }
         }
     }
 

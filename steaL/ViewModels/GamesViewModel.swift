@@ -11,7 +11,7 @@ import Foundation
 /// 每种自带固定英文文案与 SF Symbol /
 /// UI-facing error: normalises network failures into a few actionable cases, each with fixed
 /// English copy and an SF Symbol
-enum DealsError: Error, Equatable {
+enum LoadError: Error, Equatable {
     /// 无网络，或连不上主机 / No connection, or the host cannot be reached
     case offline
     /// 服务端返回非 2xx / The server answered with a non-2xx status
@@ -35,9 +35,9 @@ enum DealsError: Error, Equatable {
     var message: String {
         switch self {
         case .offline: "Check your internet connection and try again."
-        case .server: "The deal service is having trouble right now. Please try again in a moment."
+        case .server: "The service is having trouble right now. Please try again in a moment."
         case .decoding: "We received data we couldn't read. Please try again later."
-        case .unknown: "The deals couldn't be loaded. Please try again."
+        case .unknown: "We couldn't load this right now. Please try again."
         }
     }
 
@@ -52,7 +52,7 @@ enum DealsError: Error, Equatable {
     }
 
     /// 把底层抛出的任意错误归一化 / Normalises whatever the lower layers threw
-    static func from(_ error: Error) -> DealsError {
+    static func from(_ error: Error) -> LoadError {
         switch error {
         case let urlError as URLError:
             switch urlError.code {
@@ -91,7 +91,7 @@ final class GamesViewModel {
         /// 请求成功，注意列表本身可能为空 / Request succeeded; the list itself may still be empty
         case loaded(ITADDealsData)
         /// 请求失败，携带归一化后的错误 / Request failed, carrying the normalised error
-        case failed(DealsError)
+        case failed(LoadError)
     }
 
     /// Giveaways 区块的独立状态机：与 deals 互不影响 /
@@ -102,7 +102,7 @@ final class GamesViewModel {
         /// 请求成功，列表可能为空 / Request succeeded; the list itself may still be empty
         case loaded(ITADGiveawaysData)
         /// 请求失败，携带归一化后的错误 / Request failed, carrying the normalised error
-        case failed(DealsError)
+        case failed(LoadError)
     }
 
     /// Deals 列表当前状态 / Current state of the deal list
@@ -142,13 +142,13 @@ final class GamesViewModel {
             dealState = .loaded(data)
 
         } catch {
-            // 完整错误只进日志，界面只看到 `DealsError` / Log the full error; the UI only sees `DealsError`
+            // 完整错误只进日志，界面只看到 `LoadError` / Log the full error; the UI only sees `LoadError`
             print("[GamesViewModel] fetchDeals failed / failed: \(error)")
             if let itadError = error as? ITADAPIError {
                 print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
             }
 
-            dealState = .failed(DealsError.from(error))
+            dealState = .failed(LoadError.from(error))
         }
     }
 
@@ -166,13 +166,13 @@ final class GamesViewModel {
             giveawaysState = .loaded(giveaways)
 
         } catch {
-            // 完整错误只进日志，界面只看到 `DealsError` / Log the full error; the UI only sees `DealsError`
+            // 完整错误只进日志，界面只看到 `LoadError` / Log the full error; the UI only sees `LoadError`
             print("[GamesViewModel] fetchGiveaways failed / failed: \(error)")
             if let itadError = error as? ITADAPIError {
                 print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
             }
 
-            giveawaysState = .failed(DealsError.from(error))
+            giveawaysState = .failed(LoadError.from(error))
         }
     }
 
