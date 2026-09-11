@@ -84,8 +84,8 @@ enum DealsError: Error, Equatable {
 @Observable
 final class GamesViewModel {
 
-    /// 页面状态机 / Screen state machine
-    enum LoadState: Equatable {
+    /// Deals 列表状态机 / State machine for the deal list
+    enum DealLoadState: Equatable {
         /// 首次加载或重试中 / First load, or a retry in progress
         case loading
         /// 请求成功，注意列表本身可能为空 / Request succeeded; the list itself may still be empty
@@ -105,8 +105,8 @@ final class GamesViewModel {
         case failed(DealsError)
     }
 
-    /// 当前状态 / Current state
-    private(set) var state: LoadState = .loading
+    /// Deals 列表当前状态 / Current state of the deal list
+    private(set) var dealState: DealLoadState = .loading
 
     /// Giveaways 区块当前状态 / Current state of the giveaways section
     private(set) var giveawaysState: GiveawaysLoadState = .loading
@@ -135,11 +135,11 @@ final class GamesViewModel {
 
     /// 拉取优惠列表 / Fetches the deal list
     func fetchDeals(body: [String: Any]) async {
-        state = .loading
+        dealState = .loading
 
         do {
             let data = try await ITADAPI.fetchDeals(body: body)
-            state = .loaded(data)
+            dealState = .loaded(data)
 
         } catch {
             // 完整错误只进日志，界面只看到 `DealsError` / Log the full error; the UI only sees `DealsError`
@@ -148,12 +148,12 @@ final class GamesViewModel {
                 print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
             }
 
-            state = .failed(DealsError.from(error))
+            dealState = .failed(DealsError.from(error))
         }
     }
 
-    /// 用当前请求体重试 / Retries with the current request body
-    func retry() async {
+    /// 重试 deals，只影响第一个区块 / Retries deals; only the first section is affected
+    func retryDeals() async {
         await fetchDeals(body: requestBody)
     }
 

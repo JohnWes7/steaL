@@ -27,7 +27,7 @@ struct GamesView: View {
             Color.appBackground
                 .ignoresSafeArea()
 
-            switch gamesViewModel.state {
+            switch gamesViewModel.dealState {
             case .loading:
                 loadingState
             case .failed(let error):
@@ -91,7 +91,7 @@ struct GamesView: View {
     @ViewBuilder
     private func retryButton(title: String) -> some View {
         Button(title) {
-            Task { await gamesViewModel.retry() }
+            Task { await gamesViewModel.retryDeals() }
         }
         .buttonStyle(.borderedProminent)
         .tint(.brandBlue)
