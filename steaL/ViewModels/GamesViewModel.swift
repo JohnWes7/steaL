@@ -111,37 +111,46 @@ final class GamesViewModel {
     /// Giveaways 区块当前状态 / Current state of the giveaways section
     private(set) var giveawaysState: GiveawaysLoadState = .loading
 
-    var requestBody: [String: Any] = [
-        "country": "AU",
-        "offset": 0,
-        "limit": 20,
-//        "sort": "-cut",
-        "nondeals": false,
-        "filter": [
-            "type": [1],
-            "wasSpotlight": true,
-            "drm": [61],
-        ],
-    ]
-    
-    init() {
-        Task {
-            await fetchDeals(body: requestBody)
-        }
-        Task {
-            await fetchGiveaways()
-        }
+    /// 当前请求使用的区域，由界面从设置读出后传入 / Region used by requests; the view reads it from settings and passes it in
+    private(set) var region: AppRegion = .australia
+
+    /// 请求体，country 跟随当前区域 / Request body; country follows the current region
+    private var requestBody: [String: Any] {
+        [
+            "country": region.apiRegionCode,
+            "offset": 0,
+            "limit": 20,
+//            "sort": "-cut",
+            "nondeals": false,
+            "filter": [
+                "type": [1],
+                "wasSpotlight": true,
+                "drm": [61],
+            ],
+        ]
+    }
+
+    /// 界面传入区域后加载两个区块 / Loads both sections with the region handed in by the view
+    func load(region: AppRegion) async {
+        self.region = region
+
+        async let deals: Void = fetchDeals()
+        async let giveaways: Void = fetchGiveaways()
+        _ = await (deals, giveaways) 
     }
 
     /// 拉取优惠列表 / Fetches the deal list
-    func fetchDeals(body: [String: Any]) async {
+    func fetchDeals() async {
         dealState = .loading
 
         do {
-            let data = try await ITADAPI.fetchDeals(body: body)
+            let data = try await ITADAPI.fetchDeals(body: requestBody)
             dealState = .loaded(data)
 
         } catch {
+            // 取消（视图离开或任务重跑）不算失败 / A cancellation (view left, or the task restarted) is not a failure
+            if Task.isCancelled { return }
+
             // 完整错误只进日志，界面只看到 `LoadError` / Log the full error; the UI only sees `LoadError`
             print("[GamesViewModel] fetchDeals failed / failed: \(error)")
             if let itadError = error as? ITADAPIError {
@@ -154,7 +163,7 @@ final class GamesViewModel {
 
     /// 重试 deals，只影响第一个区块 / Retries deals; only the first section is affected
     func retryDeals() async {
-        await fetchDeals(body: requestBody)
+        await fetchDeals()
     }
 
     /// 拉取限时免费领取列表 / Fetches the giveaways list
@@ -166,6 +175,9 @@ final class GamesViewModel {
             giveawaysState = .loaded(giveaways)
 
         } catch {
+            // 取消（视图离开或任务重跑）不算失败 / A cancellation (view left, or the task restarted) is not a failure
+            if Task.isCancelled { return }
+
             // 完整错误只进日志，界面只看到 `LoadError` / Log the full error; the UI only sees `LoadError`
             print("[GamesViewModel] fetchGiveaways failed / failed: \(error)")
             if let itadError = error as? ITADAPIError {

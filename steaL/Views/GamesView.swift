@@ -5,13 +5,22 @@
 //  Created by yijiang on 2026/9/8.
 //
 
+import SwiftData
 import SwiftUI
 
 struct GamesView: View {
+    /// 用户设置单例行，只读区域等偏好 / Singleton user-settings row; read for the region and other preferences
+    @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
+    private var settings: [UserSettingModel]
     /// 搜索关键字，过滤逻辑待接入 / Search keyword; filtering is not wired up yet
     @State private var searchText = ""
     /// 列表数据源，负责请求与状态 / Data source for the list; owns fetching and state
     @State private var gamesViewModel = GamesViewModel()
+
+    /// 当前区域，设置就绪前回退澳洲 / Current region; falls back to Australia before settings load
+    private var region: AppRegion {
+        settings.first?.region ?? .australia
+    }
 
     /// 两列等宽网格 / Two equal-width grid columns
     private let gridColumns = [
@@ -50,6 +59,11 @@ struct GamesView: View {
             headerArea
         }
         .toolbar(.hidden, for: .navigationBar)
+        .task(id: region) {
+            // 首次出现与区域变化时重新加载 / Loads on first appearance and whenever the region changes
+            await gamesViewModel.load(region: region)
+            // it will cancel old task
+        }
     }
 
     // MARK: - 状态分支 / State branches
@@ -327,4 +341,5 @@ struct GamesView: View {
     NavigationStack {
         GamesView()
     }
+    .modelContainer(for: UserSettingModel.self, inMemory: true)
 }
