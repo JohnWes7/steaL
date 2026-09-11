@@ -16,10 +16,20 @@ struct GamesView: View {
     @State private var searchText = ""
     /// 列表数据源，负责请求与状态 / Data source for the list; owns fetching and state
     @State private var gamesViewModel = GamesViewModel()
+    /// 当前加载任务；区域变化时取消上一个 / The in-flight load task; cancelled when the region changes
+    @State private var loadTask: Task<Void, Never>?
+    /// 是否已触发过首帧加载 / Whether the initial load has been started
+    @State private var hasStarted = false
 
     /// 当前区域，设置就绪前回退澳洲 / Current region; falls back to Australia before settings load
     private var region: AppRegion {
         settings.first?.region ?? .australia
+    }
+
+    /// 首帧加载一次，之后只由区域变化触发重载 / Loads once, then only a region change triggers a reload
+    private func reload() {
+        loadTask?.cancel()
+        loadTask = Task { await gamesViewModel.load(region: region) }
     }
 
     /// 两列等宽网格 / Two equal-width grid columns
@@ -59,10 +69,15 @@ struct GamesView: View {
             headerArea
         }
         .toolbar(.hidden, for: .navigationBar)
-        .task(id: region) {
-            // 首次出现与区域变化时重新加载 / Loads on first appearance and whenever the region changes
-            await gamesViewModel.load(region: region)
-            // it will cancel old task
+        .onAppear {
+            // 只在首次出现时加载：切 Tab 回来不重复请求 / Loads only on first appearance; tab switches do not refetch
+            guard !hasStarted else { return }
+            hasStarted = true
+            reload()
+        }
+        .onChange(of: region) {
+            // 设置里的区域变化才重新请求 / Refetches only when the region changes in settings
+            reload()
         }
     }
 
