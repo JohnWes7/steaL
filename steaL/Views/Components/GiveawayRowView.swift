@@ -23,7 +23,7 @@ struct GiveawayRowView: View {
     private let cornerRadius: CGFloat = 14
 
     /// 缩略图宽度，高度随行高拉满 / Thumbnail width; its height stretches to fill the row
-    private let thumbnailWidth: CGFloat = 100
+    private let thumbnailWidth: CGFloat = 120
 
     var body: some View {
         Button {
@@ -50,6 +50,7 @@ struct GiveawayRowView: View {
         }
         .background(Color.surfaceElevated, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .frame(height: 60)
     }
 
     /// 标题与商店名两行文字 / Title and shop in two lines
@@ -81,7 +82,8 @@ struct GiveawayRowView: View {
                 placeholder
             }
         }
-        .frame(width: thumbnailWidth, height: .infinity)
+        .frame(width: thumbnailWidth)
+        .frame(maxHeight: .infinity)
         .overlay(alignment: .topLeading) { freeBadge.padding(5) }
         .clipped()
     }
@@ -113,11 +115,11 @@ struct GiveawayRowView: View {
         if let expiryText {
             Text(expiryText)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isExpiringSoon ? Color.brandGreen : Color.secondaryText)
+                .foregroundStyle(isExpiringSoon ? Color.black.opacity(0.85) : Color.brandGreen)
                 .lineLimit(1)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .glassEffect(.clear, in: Capsule())
+                .background(isExpiringSoon ? Color.brandGreen : Color.brandGreen.opacity(0.16), in: Capsule())
         }
     }
 
@@ -134,9 +136,9 @@ struct GiveawayRowView: View {
         guard let expiryDate = giveaway.expiryDate else { return nil }
 
         let days = Calendar.current.dateComponents([.day], from: .now, to: expiryDate).day ?? 0
-        if days <= 0 { return "Ends today" }
-        if days <= 7 { return days == 1 ? "1 day left" : "\(days) days left" }
-        return "Ends \(expiryDate.formatted(.dateTime.month(.abbreviated).day()))"
+        if days <= 0 { return "Today" }
+        if days <= 7 { return "\(days)d left" }
+        return expiryDate.formatted(.dateTime.month(.abbreviated).day())
     }
 
     /// 是否不满 48 小时截止，用来给倒计时上强调色 /

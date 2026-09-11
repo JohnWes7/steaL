@@ -207,20 +207,29 @@ struct GamesView: View {
         .padding(.bottom, 2)
     }
 
-    /// 「Giveaways」区块标题 / Section title for the Giveaways block
+    /// 「Giveaways」区块标题，上方带一条分割线 / Section title for the Giveaways block, with a hairline divider above
     @ViewBuilder
     private var giveawayHeader: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "gift.fill")
-                .font(.system(size: 24))
-                .foregroundStyle(.brandGreen)
+        VStack(alignment: .leading, spacing: 16) {
+            // 分割线：把 Giveaways 区块与上面的 Hot Deals 隔开 / Divider cutting the Giveaways block away from Hot Deals
+            // Rectangle()
+            //     .fill(.white.opacity(0.08))
+            //     .frame(height: 0.5)
 
-            Text("Giveaways")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.primaryText)
+            HStack(spacing: 10) {
+                Image(systemName: "gift.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.brandGreen)
 
-            Spacer(minLength: 0)
+                Text("Giveaways")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(.primaryText)
+
+                Spacer(minLength: 0)
+            }
         }
+        // 区块间留白：把分割线推离上一区块 / Gap above the divider, separating it from the previous block
+        .padding(.top, 20)
         .padding(.bottom, 2)
     }
 
