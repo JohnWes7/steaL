@@ -20,81 +20,136 @@ struct GamesView: View {
         GridItem(.flexible(), spacing: 12),
     ]
     
-    /// 页面骨架：背景 + 状态分支内容 + 顶部固定的 header / Screen skeleton: background, state-driven content, and the top-pinned header
+    /// 页面骨架：背景 + 状态机驱动的分支内容 + 顶部固定的 header /
+    /// Screen skeleton: background, state-machine-driven content, and the top-pinned header
     var body: some View {
         ZStack {
             // 背景色 / Background color
             Color.appBackground
                 .ignoresSafeArea()
-            
-            if gamesViewModel.isLoading {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)  // 全屏居中
-            } else if let errorMessage = gamesViewModel.errorMessage {
-                Text(errorMessage)
-                    .foregroundStyle(.secondaryText)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let dealsData = gamesViewModel.itadDealsData {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        Section {
-                            if let firstDeal = dealsData.list.first {
-                                DealCardView(
-                                    deal: firstDeal,
-                                    isFavorite: gamesViewModel.isFavorite(firstDeal.id),
-                                    onToggleFavorite: {
-                                        gamesViewModel.toggleFavorite(firstDeal.id)
-                                    }
-                                )
-                            } else {
-                                ContentUnavailableView(
-                                    "No Deals Found",
-                                    systemImage: "tag.slash",
-                                    description: Text(
-                                        "There are no discounted games to show right now. Try again later."
-                                    )
-                                )
-                                .foregroundStyle(.secondaryText)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                            }
-                        } header: {
-                            hotDealsHeader
-                        }
 
-                        // 其余条目排成两列网格，卡片改用竖版 boxart /
-                        // Everything else fills a two-column grid using portrait box art
-                        LazyVGrid(columns: gridColumns, spacing: 12) {
-                            ForEach(dealsData.list.dropFirst()) { deal in
-                                DealGridCardView(
-                                    deal: deal,
-                                    isFavorite: gamesViewModel.isFavorite(deal.id),
-                                    onToggleFavorite: {
-                                        gamesViewModel.toggleFavorite(deal.id)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 16)
-                    .padding(.top, 20)
+            switch gamesViewModel.state {
+            case .loading:
+                loadingState
+            case .failed(let error):
+                errorState(error)
+            case .loaded(let dealsData):
+                // 状态机只保证「请求成功」，列表本身仍可能为空，所以这里再分一次 /
+                // The state machine only guarantees a successful request; the list itself can still be
+                // empty, hence this second branch
+                if dealsData.list.isEmpty {
+                    emptyState
+                } else {
+                    dealsList(dealsData)
                 }
-            } else {
-                // 空数据提示 / Empty state
-                ContentUnavailableView(
-                    "No Deals Found",
-                    systemImage: "tag.slash",
-                    description: Text("There are no discounted games to show right now. Try again later.")
-                )
-                .foregroundStyle(.secondaryText)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             headerArea
         }
         .toolbar(.hidden, for: .navigationBar)
+    }
+
+    // MARK: - 状态分支 / State branches
+
+    /// 加载中，内容区居中 / Loading, centred in the content area
+    @ViewBuilder
+    private var loadingState: some View {
+        ProgressView()
+            .progressViewStyle(.circular)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// 加载失败。这里用 `ContentUnavailableView` 而不是裸 `Text`：一是和空态共用同一套排版，
+    /// 二是它自带 actions 槽位，可以放重试按钮 —— 之前失败后没有任何出路，只能杀掉 App 重开 /
+    /// Failure state. `ContentUnavailableView` instead of a bare `Text`: it matches the empty
+    /// state's layout, and its actions slot carries a retry button — previously a failed load left
+    /// no way out short of relaunching the app
+    @ViewBuilder
+    private func errorState(_ error: DealsError) -> some View {
+        ContentUnavailableView {
+            Label(error.title, systemImage: error.symbolName)
+                .foregroundStyle(.secondaryText)
+        } description: {
+            Text(error.message)
+                .foregroundStyle(.secondaryText)
+        } actions: {
+            retryButton(title: "Try Again")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// 列表为空。空列表不是失败，文案也不同，所以单独一份而不是复用错误态 /
+    /// Empty list. An empty list is not a failure and needs different copy, so it gets its own
+    /// builder instead of reusing the error state
+    @ViewBuilder
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No Deals Found", systemImage: "tag.slash")
+                .foregroundStyle(.secondaryText)
+        } description: {
+            Text("There are no discounted games to show right now. Try again later.")
+                .foregroundStyle(.secondaryText)
+        } actions: {
+            retryButton(title: "Refresh")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// 失败态与空态共用的重试按钮，改动只影响一处 /
+    /// Retry button shared by the failure and empty states, so it only has to be tweaked in one place
+    @ViewBuilder
+    private func retryButton(title: String) -> some View {
+        Button(title) {
+            Task { await gamesViewModel.retry() }
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.brandBlue)
+    }
+
+    // MARK: - 内容 / Content
+
+    /// 有数据时的滚动内容：首条 hero 卡 + 其余两列网格 /
+    /// Scrolling content when there is data: hero card for the first item, two-column grid for the rest
+    ///
+    /// 空列表已在 `emptyState` 处理，所以这里可以认为 `list` 非空 /
+    /// Empty lists are handled by `emptyState` before this is reached, so the list is non-empty here
+    @ViewBuilder
+    private func dealsList(_ dealsData: ITADDealsData) -> some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                Section {
+                    if let firstDeal = dealsData.list.first {
+                        DealCardView(
+                            deal: firstDeal,
+                            isFavorite: gamesViewModel.isFavorite(firstDeal.id),
+                            onToggleFavorite: {
+                                gamesViewModel.toggleFavorite(firstDeal.id)
+                            }
+                        )
+                    }
+
+                    // 其余条目排成两列网格，卡片改用竖版 boxart /
+                    // Everything else fills a two-column grid using portrait box art
+                    LazyVGrid(columns: gridColumns, spacing: 12) {
+                        ForEach(dealsData.list.dropFirst()) { deal in
+                            DealGridCardView(
+                                deal: deal,
+                                isFavorite: gamesViewModel.isFavorite(deal.id),
+                                onToggleFavorite: {
+                                    gamesViewModel.toggleFavorite(deal.id)
+                                }
+                            )
+                        }
+                    }
+                } header: {
+                    hotDealsHeader
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 16)
+            .padding(.top, 20)
+        }
     }
 
     /// 区块标题。注意 `wasSpotlight` 并不等于实时热门榜，它只代表「曾经进入过 Spotlight 且当前在打折」/
