@@ -105,8 +105,9 @@ struct GameDetailView: View {
 
     /// 数据就绪后的内容 / The page once the data is in
     ///
-    /// 目前只用到 Steam 那一半；截图、视频与 ITAD 的比价区块后续往里加 /
-    /// Only the Steam half is used so far; screenshots, movies and the ITAD price block come next
+    /// 目前只用到 Steam 那一半加上一块临时比价；截图、视频与完整价格区后续往里加 /
+    /// The Steam half plus a provisional price block for now; screenshots, movies and the real
+    /// price section come next
     private func detailContent(_ details: SteamAppDetails) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             header(details)
@@ -118,9 +119,83 @@ struct GameDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            priceSection
+
             parameterList
 
             Spacer()
+        }
+    }
+
+    /// 临时的比价区块：只验证数据接上没有，版式后续重做 /
+    /// Provisional price block: only proves the data is wired up; the layout comes later
+    ///
+    /// 比价晚于详情到达，所以它自己带一个小加载态，不让整页回到转圈 /
+    /// The prices arrive after the details, so the section carries its own little loading state
+    /// instead of sending the whole page back to a spinner
+    @ViewBuilder
+    private var priceSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("ITAD PRICES")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.brandGreen)
+
+            switch gameDetailViewModel.pricesState {
+            case .idle:
+                EmptyView()
+
+            case .loading:
+                ProgressView()
+                    .controlSize(.small)
+
+            case .loaded(let prices):
+                if let best = prices.bestDeal {
+                    priceRow(
+                        label: "Best",
+                        price: best.price,
+                        detail: "\(best.shop.name) · -\(best.cut)%"
+                    )
+                }
+
+                if let low = prices.allTimeLow {
+                    priceRow(label: "All-time low", price: low, detail: nil)
+                }
+
+                Text("\(prices.deals?.count ?? 0) deals")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondaryText)
+
+            case .unavailable:
+                Text("No price data")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondaryText)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    /// 一行价格 / One price line
+    private func priceRow(label: String, price: ITADPrice, detail: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.secondaryText)
+                .frame(width: 96, alignment: .leading)
+
+            // 货币代码取数据自带的那个，不硬编码区域 /
+            // The currency code comes from the payload rather than a hard-coded region
+            Text(price.amount.formatted(.currency(code: price.currency)))
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .foregroundStyle(.brandGreen)
+
+            if let detail {
+                Text(detail)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondaryText)
+            }
         }
     }
 

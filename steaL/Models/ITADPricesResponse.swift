@@ -19,6 +19,21 @@ import Foundation
 /// Callers must therefore match by `id` rather than by position
 typealias ITADPricesResponse = [ITADPriceGame]
 
+
+// MARK: - 按 id 取条目 / Looking an entry up by id
+
+extension ITADPricesResponse {
+
+    /// 取某个游戏的条目，没有（当前无折扣价）时返回 `nil` /
+    /// The entry for one game, `nil` when it has no discounted price right now
+    ///
+    /// 响应是稀疏数组，**不能按下标取** —— 传 2 个 ID 可能只回 1 条 /
+    /// The response is sparse, so never index into it: two requested ids can come back as one entry
+    func entry(for uuid: String) -> ITADPriceGame? {
+        first { $0.id == uuid }
+    }
+}
+
 // MARK: - 单个游戏 / One game
 
 /// 一个游戏的价格总览：历史低价 + 当前全部商店的 deal /
