@@ -31,17 +31,18 @@ struct MainTabView: View {
 
             // `role: .search`：让系统把搜索框变形顶替 tab bar /
             // `role: .search` morphs a search field into the tab bar
-            // Tab("Search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
-            //     NavigationStack {
-            //          IOS26SearchView()
-            //     }
-            // }
-
-            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) {
+            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
                 NavigationStack {
-                    SearchView(isSelected: true)
+                     IOS26SearchView()
                 }
             }
+
+            // 别删下面的comment 要给tutor看
+            // Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) {
+            //     NavigationStack {
+            //         SearchView(isSelected: true)
+            //     }
+            // }
 
             Tab("Wishlist", systemImage: "heart", value: AppTab.wishlist) {
                 NavigationStack {

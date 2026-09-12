@@ -50,8 +50,9 @@ struct DealCardView: View {
             .clipped()
     }
 
-    /// 游戏大图，加载中与失败时都回落到同一种占位样式 /
-    /// Game artwork, falling back to the same placeholder while loading and on failure
+    /// 游戏大图。三种状态分开渲染，失败与加载中不再共用一个占位 /
+    /// Game artwork, with the three phases rendered separately: loading and failure no longer
+    /// share one placeholder
     @ViewBuilder
     private var banner: some View {
         AsyncImage(url: deal.wideArtworkURL) { phase in
@@ -60,17 +61,33 @@ struct DealCardView: View {
                 image
                     .resizable()
                     .scaledToFill()
+            case .empty:
+                placeholder
+            case .failure:
+                failedPlaceholder
             default:
                 placeholder
             }
         }
     }
 
-    /// 无图占位，保证任何响应都能撑满图片区 / Placeholder that always fills the artwork area
+    /// 加载中占位，保证任何响应都能撑满图片区 / Loading placeholder that always fills the artwork area
     private var placeholder: some View {
         ZStack {
             Color.saleSurface
             Image(systemName: "photo")
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(.secondaryText)
+        }
+    }
+
+    /// 加载失败占位，用不同图标与加载中区分。以后要接重试，就改在这一块 /
+    /// Failure placeholder, told apart from the loading one by its icon. A retry affordance, when
+    /// added, belongs here
+    private var failedPlaceholder: some View {
+        ZStack {
+            Color.saleSurface
+            Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 32, weight: .semibold))
                 .foregroundStyle(.secondaryText)
         }

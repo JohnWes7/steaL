@@ -57,8 +57,9 @@ struct DealGridCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 
-    /// 竖版封面，加载中与失败时共用同一种占位 /
-    /// Portrait cover art, sharing one placeholder for both loading and failure
+    /// 竖版封面。三种状态分开渲染，失败与加载中不再共用一个占位 /
+    /// Portrait cover art, with the three phases rendered separately: loading and failure no
+    /// longer share one placeholder
     @ViewBuilder
     private var boxArt: some View {
         AsyncImage(url: deal.portraitArtworkURL) { phase in
@@ -67,17 +68,33 @@ struct DealGridCardView: View {
                 image
                     .resizable()
                     .scaledToFill()
+            case .empty:
+                placeholder
+            case .failure:
+                failedPlaceholder
             default:
                 placeholder
             }
         }
     }
 
-    /// 无图占位 / Placeholder when there is no artwork
+    /// 加载中占位 / Loading placeholder
     private var placeholder: some View {
         ZStack {
             Color.saleSurface
             Image(systemName: "photo")
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(.secondaryText)
+        }
+    }
+
+    /// 加载失败占位，用不同图标与加载中区分。以后要接重试，就改在这一块 /
+    /// Failure placeholder, told apart from the loading one by its icon. A retry affordance, when
+    /// added, belongs here
+    private var failedPlaceholder: some View {
+        ZStack {
+            Color.saleSurface
+            Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(.secondaryText)
         }
