@@ -23,6 +23,14 @@ struct GamesView: View {
     /// 是否已触发过首帧加载 / Whether the initial load has been started
     @State private var hasStarted = false
 
+    /// 要推入的详情页。`non-nil` 即跳转，系统返回时会被置回 `nil` /
+    /// The detail page to push. A `non-nil` value navigates, and the system sets it back to
+    /// `nil` when the user goes back
+    @State private var homeDetailItem: GameDetailRoute?
+
+    /// 进不了详情页时的提示文案，`non-nil` 即弹出 / Warning text; a `non-nil` value raises the alert
+    @State private var warning: String?
+
     /// 当前区域，设置就绪前回退澳洲 / Current region; falls back to Australia before settings load
     private var region: AppRegion {
         settings.first?.region ?? .australia
@@ -67,25 +75,10 @@ struct GamesView: View {
                 .padding(.top, 20)
             }
         }
-        // 旧版：`safeAreaInset` + 自己铺 `.bar` 材质 + 手画分隔线 /
-        // Legacy: `safeAreaInset` with its own `.bar` material and a hand-drawn divider
-        // .safeAreaInset(edge: .top, spacing: 0) {
-        //     headerContent
-        //         .padding(.horizontal, 14)
-        //         .padding(.top, 2)
-        //         .padding(.bottom, 12)
-        //         .frame(maxWidth: .infinity, alignment: .leading)
-        //         .background(.bar)
-        //         .overlay(alignment: .bottom) {
-        //             Rectangle()
-        //                 .fill(.white.opacity(0.08))
-        //                 .frame(height: 0.5)
-        //         }
-        // }
-        // 新版：玻璃背景与滚动边缘模糊交给 iOS 26 的 `safeAreaBar`。
-        // 两个 API 都不会替内容加 padding，所以内边距得自己写 /
-        // New: the iOS 26 `safeAreaBar` supplies the glass background and scroll edge blur.
-        // Neither API adds padding on its own, so the padding is written out here.
+        // 玻璃背景与滚动边缘模糊交给 iOS 26 的 `safeAreaBar`。它不会替内容加 padding，
+        // 所以内边距得自己写 /
+        // The iOS 26 `safeAreaBar` supplies the glass background and scroll edge blur. It does
+        // not add padding on its own, so the padding is written out here
         .safeAreaBar(edge: .top, spacing: 0) {
             headerContent
                 .padding(.horizontal, 14)
@@ -104,6 +97,48 @@ struct GamesView: View {
         .onChange(of: region) {
             // 设置里的区域变化才重新请求 / Refetches only when the region changes in settings
             reload()
+        }
+        // 进不了详情页时的提示 / Warning shown when a game cannot open its detail page
+        .alert(
+            "Can't Open This Game",
+            isPresented: Binding(
+                get: { warning != nil },
+                set: { isPresented in
+                    if !isPresented { warning = nil }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) { warning = nil }
+        } message: {
+            Text(warning ?? "")
+        }
+        .navigationDestination(item: $homeDetailItem, destination: { route in
+            GameDetailView(route: route)
+        })
+    }
+
+    // MARK: - 进详情页 / Opening the detail page
+
+    /// 条目的点击行为 / What happens when a row is tapped
+    ///
+    /// 三种状态对应三种结果，这正是 `HomeDealItem.steam` 用三态而不是 `Int?` 的原因 ——
+    /// 只看 `appID == nil` 无法区分「还在查」和「查过了没有」/
+    /// Three states, three outcomes: this is exactly why `steam` is a three-case enum rather than
+    /// an `Int?`, since a bare `nil` cannot tell "still resolving" from "resolved and absent"
+    private func handleTap(_ item: HomeDealItem) {
+        switch item.steam {
+        case .pending:
+            // 预取通常几百毫秒就回来，这期间静默忽略，不打扰用户 /
+            // Prefetch usually lands within a few hundred milliseconds; stay quiet until then
+            break
+
+        case .resolved(let appID):
+            // 赋值即跳转：`.navigationDestination(item:)` 在 `non-nil` 时推入详情页 /
+            // Assigning navigates: `.navigationDestination(item:)` pushes once the value is non-nil
+            homeDetailItem = GameDetailRoute(appID: appID, uuid: item.id, title: item.deal.title)
+
+        case .unavailable:
+            warning = "“\(item.deal.title)” is not available on Steam, so there is no detail page to show."
         }
     }
 
@@ -194,25 +229,37 @@ struct GamesView: View {
 
         // 首条 hero 卡 / Hero card for the first item
         if let firstItem = items.first {
-            DealCardView(
-                deal: firstItem.deal,
-                isFavorite: gamesViewModel.isFavorite(firstItem.id),
-                onToggleFavorite: {
-                    gamesViewModel.toggleFavorite(firstItem.id)
-                }
-            )
+            // 卡片直接包成 `Button`：点击结果由 `handleTap` 决定，`.plain` 让卡片内收藏按钮的点击不被外层吞掉 /
+            // The card is wrapped in a plain `Button`: `handleTap` decides the outcome, and `.plain` keeps the card's own favourite button clickable
+            Button {
+                handleTap(firstItem)
+            } label: {
+                DealCardView(
+                    deal: firstItem.deal,
+                    isFavorite: gamesViewModel.isFavorite(firstItem.id),
+                    onToggleFavorite: {
+                        gamesViewModel.toggleFavorite(firstItem.id)
+                    }
+                )
+            }
+            .buttonStyle(.plain)
         }
 
         // 其余条目排成两列网格 / Rest of the items in a two-column grid
         LazyVGrid(columns: gridColumns, spacing: 12) {
             ForEach(items.dropFirst()) { item in
-                DealGridCardView(
-                    deal: item.deal,
-                    isFavorite: gamesViewModel.isFavorite(item.id),
-                    onToggleFavorite: {
-                        gamesViewModel.toggleFavorite(item.id)
-                    }
-                )
+                Button {
+                    handleTap(item)
+                } label: {
+                    DealGridCardView(
+                        deal: item.deal,
+                        isFavorite: gamesViewModel.isFavorite(item.id),
+                        onToggleFavorite: {
+                            gamesViewModel.toggleFavorite(item.id)
+                        }
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -267,15 +314,10 @@ struct GamesView: View {
         .padding(.bottom, 2)
     }
 
-    /// 「Giveaways」区块标题，上方带一条分割线 / Section title for the Giveaways block, with a hairline divider above
+    /// 「Giveaways」区块标题 / Section title for the Giveaways block
     @ViewBuilder
     private var giveawayHeader: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // 分割线：把 Giveaways 区块与上面的 Hot Deals 隔开 / Divider cutting the Giveaways block away from Hot Deals
-            // Rectangle()
-            //     .fill(.white.opacity(0.08))
-            //     .frame(height: 0.5)
-
             HStack(spacing: 10) {
                 Image(systemName: "gift.fill")
                     .font(.system(size: 24))
@@ -288,7 +330,7 @@ struct GamesView: View {
                 Spacer(minLength: 0)
             }
         }
-        // 区块间留白：把分割线推离上一区块 / Gap above the divider, separating it from the previous block
+        // 区块间留白，与上一区块拉开距离 / Gap above the section, separating it from the previous block
         .padding(.top, 20)
         .padding(.bottom, 2)
     }
@@ -366,6 +408,10 @@ struct GamesView: View {
 }
 
 #Preview {
+    // 复刻 `MainTabView` 的接线：`GamesView` 自己用 `.navigationDestination(item:)` 推栈，
+    // 但那个修饰符只有在 `NavigationStack` 的内容树里才生效 /
+    // Mirrors `MainTabView`: `GamesView` pushes through its own
+    // `.navigationDestination(item:)`, which only takes effect inside a `NavigationStack`
     NavigationStack {
         GamesView(onSearchTapped: {})
     }

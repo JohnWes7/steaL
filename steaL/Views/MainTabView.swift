@@ -36,13 +36,6 @@ struct MainTabView: View {
                      IOS26SearchView()
                 }
             }
-            
-//            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) {
-//                NavigationStack {
-//                    // IOS26SearchView()
-//                    SearchView(isSelected: true)
-//                }
-//            }
 
             Tab("Wishlist", systemImage: "heart", value: AppTab.wishlist) {
                 NavigationStack {
