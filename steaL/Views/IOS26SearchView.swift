@@ -22,8 +22,7 @@ struct IOS26SearchView: View {
 
             placeholderContent
         }
-        .navigationTitle("Search")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .searchable(text: $query, prompt: "Search games, publishers...")
     }
 

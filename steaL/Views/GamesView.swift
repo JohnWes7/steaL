@@ -67,8 +67,32 @@ struct GamesView: View {
                 .padding(.top, 20)
             }
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            headerArea
+        // 旧版：`safeAreaInset` + 自己铺 `.bar` 材质 + 手画分隔线 /
+        // Legacy: `safeAreaInset` with its own `.bar` material and a hand-drawn divider
+        // .safeAreaInset(edge: .top, spacing: 0) {
+        //     headerContent
+        //         .padding(.horizontal, 14)
+        //         .padding(.top, 2)
+        //         .padding(.bottom, 12)
+        //         .frame(maxWidth: .infinity, alignment: .leading)
+        //         .background(.bar)
+        //         .overlay(alignment: .bottom) {
+        //             Rectangle()
+        //                 .fill(.white.opacity(0.08))
+        //                 .frame(height: 0.5)
+        //         }
+        // }
+        // 新版：玻璃背景与滚动边缘模糊交给 iOS 26 的 `safeAreaBar`。
+        // 两个 API 都不会替内容加 padding，所以内边距得自己写 /
+        // New: the iOS 26 `safeAreaBar` supplies the glass background and scroll edge blur.
+        // Neither API adds padding on its own, so the padding is written out here.
+        .safeAreaBar(edge: .top, spacing: 0) {
+            headerContent
+                .padding(.horizontal, 14)
+                .padding(.top, 2)
+                .padding(.bottom, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.bar)
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
@@ -266,25 +290,18 @@ struct GamesView: View {
 
 
     
-    /// 顶部固定区：品牌标题 + 搜索框 / Pinned top area: brand title and search field
+    /// 顶部栏内容：品牌标题 + 搜索框。只有内容，不含背景与内边距 ——
+    /// 内边距和背景都写在 `body` 里的 `.safeAreaBar` / `.safeAreaInset` 调用点上 /
+    /// Top bar content: brand title plus search field. Content only, no background or padding —
+    /// both live at the `.safeAreaBar` / `.safeAreaInset` call site in `body`.
     @ViewBuilder
-    private var headerArea: some View {
+    private var headerContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
             searchField
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 2)
-        .padding(.bottom, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.bar)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(.white.opacity(0.08))
-                .frame(height: 0.5)
-        }
     }
-    
+
     /// 品牌标题区：左侧标语与 steaL 字样，右侧通知入口 / Brand header: tagline and steaL wordmark on the left, notification entry on the right
     @ViewBuilder
     private var header: some View {

@@ -50,9 +50,9 @@ struct SearchView: View {
         // Tapping empty space resigns the keyboard — the most natural "leave without searching" gesture
         .contentShape(Rectangle())
         .onTapGesture { isFieldFocused = false }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            headerArea
-        }
+        // .safeAreaInset(edge: .top, spacing: 0) {
+        //     headerArea
+        // }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear { handleSelectionChange(isSelected) }
         .onChange(of: isSelected) { _, selected in handleSelectionChange(selected) }
