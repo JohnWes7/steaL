@@ -91,9 +91,9 @@ final class GamesViewModel {
         /// 请求成功，注意列表本身可能为空 /
         /// Request succeeded; the list itself may still be empty
         ///
-        /// 装的是 `HomeDealItem` 而不是 `ITADDealsData`：列表渲染需要的是「deal + appID」，
+        /// 装的是 `HomeDealItem` 而不是 `ITADDealsResponse`：列表渲染需要的是「deal + appID」，
         /// 分页状态暂时用不到，留在 `fetchDeals` 内部即可 /
-        /// Carries `HomeDealItem` rather than `ITADDealsData`: rendering needs deal plus appID,
+        /// Carries `HomeDealItem` rather than `ITADDealsResponse`: rendering needs deal plus appID,
         /// and the pagination fields are not needed yet
         case loaded([HomeDealItem])
         /// 请求失败，携带归一化后的错误 / Request failed, carrying the normalised error
@@ -106,7 +106,7 @@ final class GamesViewModel {
         /// 首次加载或重试中 / First load, or a retry in progress
         case loading
         /// 请求成功，列表可能为空 / Request succeeded; the list itself may still be empty
-        case loaded(ITADGiveawaysData)
+        case loaded(ITADGiveawaysResponse)
         /// 请求失败，携带归一化后的错误 / Request failed, carrying the normalised error
         case failed(LoadError)
     }

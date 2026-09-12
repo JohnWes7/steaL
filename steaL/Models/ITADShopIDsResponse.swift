@@ -1,5 +1,5 @@
 //
-//  ITADLookupData.swift
+//  ITADShopIDsResponse.swift
 //  steaL
 //
 //  Created by yijiang on 2026/9/12.
@@ -25,7 +25,7 @@ import Foundation
 ///   "00000000-0000-0000-0000-000000000000": null
 /// }
 /// ```
-struct ITADLookupData: Decodable, Hashable, Sendable {
+struct ITADShopIDsResponse: Decodable, Hashable, Sendable {
 
     /// UUID → 该游戏在 Steam 上的商店 ID 列表 /
     /// UUID to the list of that game's shop IDs on Steam
@@ -49,7 +49,7 @@ struct ITADLookupData: Decodable, Hashable, Sendable {
 
 // MARK: - 取 Steam appid / Pulling the Steam appid
 
-extension ITADLookupData {
+extension ITADShopIDsResponse {
 
     /// 某个 ITAD 游戏对应的 Steam appID / The Steam appID for one ITAD game
     ///
@@ -122,11 +122,11 @@ enum ITADShopID {
 
 #if DEBUG
 
-extension ITADLookupData {
+extension ITADShopIDsResponse {
 
     /// 预览用示例，覆盖三种情况：有 `app/`、只有 `sub/`、值为 `null` /
     /// Sample covering all three shapes: has `app/`, `sub/` only, and `null`
-    static let previewSample = ITADLookupData(entries: [
+    static let previewSample = ITADShopIDsResponse(entries: [
         "018d937f-590c-728b-ac35-38bcff85f086": ["sub/432247", "sub/440410", "app/1245620", "sub/440408"],
         "018d937f-3a1d-720b-aafa-2c1f21404d3f": ["sub/517969"],
         "00000000-0000-0000-0000-000000000000": nil,

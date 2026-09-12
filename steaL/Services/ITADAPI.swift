@@ -9,7 +9,7 @@ import Foundation
 
 class ITADAPI {
     
-    static func fetchDeals(body: [String: Any] = [:]) async throws -> ITADDealsData {
+    static func fetchDeals(body: [String: Any] = [:]) async throws -> ITADDealsResponse {
         // 构建请求 URL / Construct request URL
         let urlComponents = URLComponents(string: "https://api.isthereanydeal.com/deals/v2")!
         guard let url = urlComponents.url else { throw URLError(.badURL) }
@@ -65,7 +65,7 @@ class ITADAPI {
         }
 
         do {
-            return try JSONDecoder().decode(ITADDealsData.self, from: data)
+            return try JSONDecoder().decode(ITADDealsResponse.self, from: data)
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
@@ -89,16 +89,16 @@ class ITADAPI {
     /// "Bare" matters: the reverse endpoint requires an `"app/123"` prefix instead, and mixing
     /// the two up is the easiest mistake to make here
     ///
-    /// 解析交给 `ITADLookupData`，调用方只需 `appID(for:)` /
-    /// Parsing lives in `ITADLookupData`, so callers only need `appID(for:)`
+    /// 解析交给 `ITADShopIDsResponse`，调用方只需 `appID(for:)` /
+    /// Parsing lives in `ITADShopIDsResponse`, so callers only need `appID(for:)`
     ///
     /// - Parameter uuids: ITAD 游戏 UUID 列表 / ITAD game UUIDs
     /// - Returns: 以 UUID 为 key 的查表结果 / a lookup keyed by UUID
-    static func lookupShopIDs(uuids: [String]) async throws -> ITADLookupData {
+    static func lookupShopIDs(uuids: [String]) async throws -> ITADShopIDsResponse {
         // 空数组会被服务端拒绝（`Request body must be non-empty JSON array`），
         // 也会让请求失去意义 —— 直接短路，连网络都不发 /
         // An empty array is rejected by the server, so short-circuit before any request
-        guard !uuids.isEmpty else { return ITADLookupData(entries: [:]) }
+        guard !uuids.isEmpty else { return ITADShopIDsResponse(entries: [:]) }
 
         // 构建请求 URL / Construct request URL
         let urlComponents = URLComponents(string: "https://api.isthereanydeal.com/lookup/shop/61/id/v1")!
@@ -138,7 +138,7 @@ class ITADAPI {
         }
 
         do {
-            return try JSONDecoder().decode(ITADLookupData.self, from: data)
+            return try JSONDecoder().decode(ITADShopIDsResponse.self, from: data)
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
@@ -158,7 +158,7 @@ class ITADAPI {
         expired: Bool = false,
         mature: Bool = false,
         sort: String = "-publish"
-    ) async throws -> ITADGiveawaysData {
+    ) async throws -> ITADGiveawaysResponse {
         // 构建请求 URL / Construct request URL
         var urlComponents = URLComponents(string: "https://api.isthereanydeal.com/giveaways/v1")!
         urlComponents.queryItems = [
@@ -200,7 +200,7 @@ class ITADAPI {
         }
 
         do {
-            return try JSONDecoder().decode(ITADGiveawaysData.self, from: data)
+            return try JSONDecoder().decode(ITADGiveawaysResponse.self, from: data)
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names

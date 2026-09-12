@@ -1,5 +1,5 @@
 //
-//  ITADDealsData.swift
+//  ITADDealsResponse.swift
 //  steaL
 //
 //  Created by yijiang on 2026/9/10.
@@ -10,7 +10,7 @@ import Foundation
 // MARK: - 根对象 / Root
 
 /// `POST https://api.isthereanydeal.com/deals/v2` 的响应体 / Response of the deals endpoint
-struct ITADDealsData: Codable, Hashable, Sendable {
+struct ITADDealsResponse: Codable, Hashable, Sendable {
     /// 下次请求使用的偏移量，以服务端返回值为准 / Offset to pass into the next request, as reported by the server
     let nextOffset: Int?
     /// 是否还有下一页 / Whether more pages are available

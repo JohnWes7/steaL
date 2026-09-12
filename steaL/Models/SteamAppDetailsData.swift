@@ -1,5 +1,5 @@
 //
-//  SteamAppDetails.swift
+//  SteamAppDetailsData.swift
 //  steaL
 //
 //  Created by yijiang on 2026/9/13.

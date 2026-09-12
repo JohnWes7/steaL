@@ -1,5 +1,5 @@
 //
-//  ITADGiveawaysData.swift
+//  ITADGiveawaysResponse.swift
 //  steaL
 //
 //  Created by yijiang on 2026/9/11.
@@ -14,7 +14,7 @@ import Foundation
 ///
 /// 顶层直接是数组，没有 `nextOffset` / `hasMore` 分页包装，翻页靠递增 `offset` /
 /// The top level is a plain array with no `nextOffset` / `hasMore` wrapper, so paging relies on an increasing `offset`
-typealias ITADGiveawaysData = [ITADGiveaway]
+typealias ITADGiveawaysResponse = [ITADGiveaway]
 
 // MARK: - 列表项 / Giveaway item
 

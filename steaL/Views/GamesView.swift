@@ -220,9 +220,9 @@ struct GamesView: View {
 
     /// 首条 hero 卡 + 其余两列网格 / Hero card first, then a two-column grid
     ///
-    /// 收 `[HomeDealItem]` 而不是 `ITADDealsData`：条目除了 deal 还带着 Steam appID 的解析结果，
+    /// 收 `[HomeDealItem]` 而不是 `ITADDealsResponse`：条目除了 deal 还带着 Steam appID 的解析结果，
     /// 视图只需要渲染，不需要知道分页字段 /
-    /// Takes `[HomeDealItem]` rather than `ITADDealsData`: each row now also carries its Steam
+    /// Takes `[HomeDealItem]` rather than `ITADDealsResponse`: each row now also carries its Steam
     /// appID resolution, and the view never needs the pagination fields
     @ViewBuilder
     private func dealsContent(_ items: [HomeDealItem]) -> some View {
