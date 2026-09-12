@@ -8,7 +8,8 @@
 import Foundation
 
 class ITADAPI {
-    
+    //TODO: 改造弱类型fetchDeals body
+
     static func fetchDeals(body: [String: Any] = [:]) async throws -> ITADDealsResponse {
         // 构建请求 URL / Construct request URL
         let urlComponents = URLComponents(string: "https://api.isthereanydeal.com/deals/v2")!
@@ -201,6 +202,84 @@ class ITADAPI {
 
         do {
             return try JSONDecoder().decode(ITADGiveawaysResponse.self, from: data)
+        } catch {
+            #if DEBUG
+            // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
+            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            #endif
+            throw error
+        }
+    }
+
+    /// 查一批游戏在各商店的价格与历史低价 / Loads prices and historical lows for a batch of games
+    ///
+    /// `POST https://api.isthereanydeal.com/games/prices/v3?country=<CC>&deals=true`
+    ///
+    /// 请求体是**裸 UUID 数组**，最多 200 个 / the body is a plain array of bare UUIDs, at most 200
+    ///
+    /// ⚠️ 响应是**稀疏数组**：没有 deal 的游戏整条不返回（实测 Portal 2 返回空数组），
+    /// 调用方必须按 `id` 匹配；某个 UUID 查不到就当作「没有比价数据」处理，不是错误 /
+    /// ⚠️ The response is **sparse**: a game without deals is omitted entirely (verified with
+    /// Portal 2 returning an empty array). Callers match by `id`, and a missing UUID means
+    /// "no price data", not an error
+    ///
+    /// `deals=true` 固定打开：详情页的比价区只关心正在打折的价格 /
+    /// `deals=true` is always on, since the detail page's price block only cares about discounted prices
+    ///
+    /// - Parameters:
+    ///   - uuids: ITAD 游戏 UUID 列表，最多 200 个 / ITAD game UUIDs, at most 200
+    ///   - region: 区域，决定货币与可用商店 / Region, drives the currency and available shops
+    /// - Returns: 查到价格的游戏，顺序与请求无关 / The games that have prices, in no particular order
+    static func fetchPrices(uuids: [String], region: AppRegion) async throws -> ITADPricesResponse {
+        // 空数组会被服务端拒绝，也不会返回任何数据 —— 直接短路，连网络都不发 /
+        // An empty array would be rejected by the server and could not return anything anyway
+        guard !uuids.isEmpty else { return [] }
+
+        // 构建请求 URL，鉴权沿用其它接口的 key 查询参数写法 /
+        // Construct request URL; authentication follows the other endpoints and uses the key query parameter
+        var urlComponents = URLComponents(string: "https://api.isthereanydeal.com/games/prices/v3")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "key", value: Config.itadAPIKey),
+            URLQueryItem(name: "country", value: region.apiRegionCode),
+            URLQueryItem(name: "deals", value: "true"),
+        ]
+        guard let url = urlComponents.url else { throw URLError(.badURL) }
+
+        // 构建请求，和其它接口一样用 POST + JSON body /
+        // Construct the request; POST with a JSON body, same as the other endpoints
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.itadAPIKey, forHTTPHeaderField: "ITAD-API-Key")
+
+        request.httpBody = try JSONEncoder().encode(uuids)
+
+        #if DEBUG
+        logRequest(request)
+        #endif
+
+        // 发送请求并解析响应 / Send request and parse response
+        let (data, resp) = try await URLSession.shared.data(for: request)
+
+        // 检查响应类型 / Check response type
+        guard let httpResponse = resp as? HTTPURLResponse else {
+            throw ITADAPIError.invalidResponse
+        }
+
+        #if DEBUG
+        logResponse(httpResponse, data: data)
+        #endif
+
+        // 检查状态码是否为 2xx / Check if the status code is 2xx
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw ITADAPIError.requestFailed(
+                statusCode: httpResponse.statusCode,
+                body: String(data: data, encoding: .utf8)
+            )
+        }
+
+        do {
+            return try JSONDecoder().decode(ITADPricesResponse.self, from: data)
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
