@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 
+// 先保持未使用 之后要缓存在用
 @Model
 final class GameDetaildataModel {
     @Attribute(.unique) var appID: Int

@@ -50,9 +50,14 @@ struct SearchView: View {
         // Tapping empty space resigns the keyboard — the most natural "leave without searching" gesture
         .contentShape(Rectangle())
         .onTapGesture { isFieldFocused = false }
-        // .safeAreaInset(edge: .top, spacing: 0) {
-        //     headerArea
-        // }
+        // 这里用 `.safeAreaInset`，而不是 `GamesView` 用的 `.safeAreaBar`：后者的 bar 内容在单独的
+        // 托管上下文里，输入框的 `@FocusState` 传不回本视图（Cancel 因此永远不出现）/
+        // `.safeAreaInset` here rather than `GamesView`'s `.safeAreaBar`: the latter hosts the bar
+        // content in its own context, so the field's `@FocusState` does not round-trip and the
+        // Cancel button never appears. Both land on the same Y.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            headerArea
+        }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear { handleSelectionChange(isSelected) }
         .onChange(of: isSelected) { _, selected in handleSelectionChange(selected) }
