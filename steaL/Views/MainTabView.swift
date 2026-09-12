@@ -8,37 +8,54 @@
 import SwiftUI
 
 struct MainTabView: View {
-    enum Tab {
+    /// 选中项。原来叫 `Tab`，改用 iOS 26 的 `Tab` API 后会和 `SwiftUI.Tab` 撞名，
+    /// 所以改名为 `AppTab` /
+    /// The selection type. It used to be named `Tab`, which collides with `SwiftUI.Tab` once we
+    /// adopt the iOS 26 `Tab` API, so it is now `AppTab`.
+    enum AppTab {
         case games
         case search
         case wishlist
         case profile
     }
 
-    @State private var selectedTab: Tab = .games
+    @State private var selectedTab: AppTab = .games
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack {
-                GamesView()
+            Tab("Games", systemImage: "gamecontroller.fill", value: AppTab.games) {
+                NavigationStack {
+                    GamesView {
+                        // 顶部搜索框暂时保留：只负责切到搜索 tab。
+                        // 搜索框的聚焦、弹键盘交给系统（搜索 tab 声明了 role: .search）/
+                        // The top search bar is still here for now and only switches tabs.
+                        // Focusing and raising the keyboard are the system's job now that the
+                        // search tab declares `role: .search`
+                        selectedTab = .search
+                    }
+                }
             }
-            .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
-            .tag(Tab.games)
 
-            NavigationStack {
+            // `role: .search` 是整套原生效果的唯一开关：系统会把其他 tab 向左收拢，
+            // 让搜索框变形顶替 tab bar，并自动聚焦键盘 /
+            // `role: .search` is the single switch for the whole native effect: the system collapses
+            // the other tabs to the left, morphs a search field into place of the tab bar and
+            // focuses the keyboard for us
+            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
+                NavigationStack {
+                    IOS26SearchView()
+                }
             }
-            .tabItem { Label("Search", systemImage: "magnifyingglass") }
-            .tag(Tab.search)
 
-            NavigationStack {
+            Tab("Wishlist", systemImage: "heart", value: AppTab.wishlist) {
+                NavigationStack {
+                }
             }
-            .tabItem { Label("Wishlist", systemImage: "heart") }
-            .tag(Tab.wishlist)
 
-            NavigationStack {
+            Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
+                NavigationStack {
+                }
             }
-            .tabItem { Label("Profile", systemImage: "person.fill") }
-            .tag(Tab.profile)
         }
         .tint(selectedTab == .games ? .brandGreen : .brandBlue)
     }

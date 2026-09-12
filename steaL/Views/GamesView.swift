@@ -9,11 +9,13 @@ import SwiftData
 import SwiftUI
 
 struct GamesView: View {
+    /// 点击顶部搜索入口时交给 `MainTabView` 处理：切到 Search tab 并聚焦输入框 /
+    /// Handed to `MainTabView` when the top search affordance is tapped: switch to the Search tab and focus the field
+    let onSearchTapped: () -> Void
+
     /// 用户设置单例行，只读区域等偏好 / Singleton user-settings row; read for the region and other preferences
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
-    /// 搜索关键字，过滤逻辑待接入 / Search keyword; filtering is not wired up yet
-    @State private var searchText = ""
     /// 列表数据源，负责请求与状态 / Data source for the list; owns fetching and state
     @State private var gamesViewModel = GamesViewModel()
     /// 当前加载任务；区域变化时取消上一个 / The in-flight load task; cancelled when the region changes
@@ -330,31 +332,20 @@ struct GamesView: View {
         .accessibilityLabel("Notifications")
     }
     
-    /// 搜索输入框，回车提交；过滤逻辑待接入 / Search input field; return submits, filtering is not wired up yet
+    /// 搜索入口。外观与 `SearchView` 的输入框完全一致（共用 `SearchBarShell`），
+    /// 但本身不可编辑：点击只发出"去搜索"的信号，由 `MainTabView` 把它变成切 tab /
+    /// Search entry point. Identical in appearance to the `SearchView` text field (both wrap
+    /// `SearchBarShell`), but not editable: tapping only sends a "go search" signal, which
+    /// `MainTabView` turns into a tab switch
     @ViewBuilder
     private var searchField: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 19, weight: .medium))
-                .foregroundStyle(.secondaryText)
-            
-            TextField("Search games, publishers...", text: $searchText)
-                .foregroundStyle(.primaryText)
-                .tint(.brandBlue)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-        }
-        .padding(.horizontal, 20)
-        .frame(height: 45)
-        .background(Color.appBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        SearchBarButton(placeholder: "Search games, publishers...", action: onSearchTapped)
     }
 }
 
 #Preview {
     NavigationStack {
-        GamesView()
+        GamesView(onSearchTapped: {})
     }
     .modelContainer(for: UserSettingModel.self, inMemory: true)
 }
