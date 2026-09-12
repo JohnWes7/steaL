@@ -8,10 +8,7 @@
 import SwiftUI
 
 struct MainTabView: View {
-    /// 选中项。原来叫 `Tab`，改用 iOS 26 的 `Tab` API 后会和 `SwiftUI.Tab` 撞名，
-    /// 所以改名为 `AppTab` /
-    /// The selection type. It used to be named `Tab`, which collides with `SwiftUI.Tab` once we
-    /// adopt the iOS 26 `Tab` API, so it is now `AppTab`.
+    /// 选中项。不叫 `Tab` 是为了避开 `SwiftUI.Tab` / Not named `Tab` to avoid colliding with `SwiftUI.Tab`
     enum AppTab {
         case games
         case search
@@ -26,21 +23,14 @@ struct MainTabView: View {
             Tab("Games", systemImage: "gamecontroller.fill", value: AppTab.games) {
                 NavigationStack {
                     GamesView {
-                        // 顶部搜索框暂时保留：只负责切到搜索 tab。
-                        // 搜索框的聚焦、弹键盘交给系统（搜索 tab 声明了 role: .search）/
-                        // The top search bar is still here for now and only switches tabs.
-                        // Focusing and raising the keyboard are the system's job now that the
-                        // search tab declares `role: .search`
+                        // 顶部搜索框暂时保留，只负责切到搜索 tab / Top search bar kept for now; only switches tabs
                         selectedTab = .search
                     }
                 }
             }
 
-            // `role: .search` 是整套原生效果的唯一开关：系统会把其他 tab 向左收拢，
-            // 让搜索框变形顶替 tab bar，并自动聚焦键盘 /
-            // `role: .search` is the single switch for the whole native effect: the system collapses
-            // the other tabs to the left, morphs a search field into place of the tab bar and
-            // focuses the keyboard for us
+            // `role: .search`：让系统把搜索框变形顶替 tab bar /
+            // `role: .search` morphs a search field into the tab bar
             Tab("Search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
                 NavigationStack {
                     IOS26SearchView()
@@ -58,6 +48,9 @@ struct MainTabView: View {
             }
         }
         .tint(selectedTab == .games ? .brandGreen : .brandBlue)
+        // 不加这行，选中搜索 tab 只会变形、不会弹键盘 /
+        // Without this, selecting the search tab only morphs the bar and never raises the keyboard
+        .tabViewSearchActivation(.searchTabSelection)
     }
 }
 
