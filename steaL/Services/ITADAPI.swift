@@ -289,6 +289,74 @@ class ITADAPI {
         }
     }
 
+    /// 查一个游戏的评分、标签与热度 / Loads one game's reviews, tags and popularity
+    ///
+    /// `GET https://api.isthereanydeal.com/games/info/v2?id=<uuid>`
+    ///
+    /// 这是详情页的**可选增强**：拿不到就少一块评分与热度，主流程不受影响。
+    /// 未发售的游戏也能查到（实测 The Wolf Among Us 2），只是 `releaseDate` 为 `null`、
+    /// `reviews` 为空数组、`players` 四个值都是 `0` /
+    /// This is an **optional enhancement** for the detail page: without it there is simply no
+    /// review or popularity block. Unreleased games are covered as well (verified with
+    /// The Wolf Among Us 2); they just carry a `null` `releaseDate`, an empty `reviews` array and
+    /// four zeroed `players` counts
+    ///
+    /// ⚠️ `assets` 字段在同一接口里会返回**数组或对象**两种形态，DTO 里已兼容 /
+    /// ⚠️ The `assets` field arrives as either an array or an object; the DTO handles both
+    ///
+    /// - Parameters:
+    ///   - uuid: ITAD 游戏 UUID / ITAD game UUID
+    /// - Returns: 该游戏的评分与热度信息 / The game's review and popularity info
+    static func fetchGameInfo(uuid: String) async throws -> ITADGameInfoResponse {
+        // 构建请求 URL，鉴权沿用其它接口的 key 查询参数写法 /
+        // Construct request URL; authentication follows the other endpoints' key query parameter
+        var urlComponents = URLComponents(string: "https://api.isthereanydeal.com/games/info/v2")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "key", value: Config.itadAPIKey),
+            URLQueryItem(name: "id", value: uuid),
+        ]
+        guard let url = urlComponents.url else { throw URLError(.badURL) }
+
+        // 构建请求，info 是 GET 接口 / Construct request; info is a GET endpoint
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(Config.itadAPIKey, forHTTPHeaderField: "ITAD-API-Key")
+
+        #if DEBUG
+        logRequest(request)
+        #endif
+
+        // 发送请求并解析响应 / Send request and parse response
+        let (data, resp) = try await URLSession.shared.data(for: request)
+
+        // 检查响应类型 / Check response type
+        guard let httpResponse = resp as? HTTPURLResponse else {
+            throw ITADAPIError.invalidResponse
+        }
+
+        #if DEBUG
+        logResponse(httpResponse, data: data)
+        #endif
+
+        // 检查状态码是否为 2xx，未收录的游戏会返回 404 / Check for 2xx; an untracked game answers 404
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw ITADAPIError.requestFailed(
+                statusCode: httpResponse.statusCode,
+                body: String(data: data, encoding: .utf8)
+            )
+        }
+
+        do {
+            return try JSONDecoder().decode(ITADGameInfoResponse.self, from: data)
+        } catch {
+            #if DEBUG
+            // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
+            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            #endif
+            throw error
+        }
+    }
+
 }
 
 enum ITADAPIError: Error, LocalizedError {
