@@ -237,7 +237,14 @@ final class GamesViewModel {
 
         dealState = .loaded(items.map { item in
             var updated = item
-            updated.steam = resolve(item.id).map { .resolved($0) } ?? .unavailable
+
+            switch resolve(item.id) {
+            case .some(let appID):
+                updated.steam = .resolved(appID)
+            case .none:
+                updated.steam = .unavailable
+            }
+
             return updated
         })
     }
