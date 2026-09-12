@@ -75,6 +75,79 @@ class ITADAPI {
         }
     }
 
+    /// 批量把 ITAD 游戏 ID 换成 Steam 商店 ID /
+    /// Batch-converts ITAD game IDs into Steam shop IDs
+    ///
+    /// `POST https://api.isthereanydeal.com/lookup/shop/61/id/v1`
+    ///
+    /// 请求体是**裸 UUID 的数组**（`["<uuid>", ...]`），60 个实测一次返回，无需分批 /
+    /// The body is a plain array of bare UUIDs; 60 of them were verified in a single call, so
+    /// no chunking is needed for a home feed
+    ///
+    /// 注意「裸」是重点：另一个方向的接口（`lookup/id/shop/61/v1`）反而要求 `"app/123"` 前缀，
+    /// 两个接口规则相反，很容易写错 /
+    /// "Bare" matters: the reverse endpoint requires an `"app/123"` prefix instead, and mixing
+    /// the two up is the easiest mistake to make here
+    ///
+    /// 解析交给 `ITADLookupData`，调用方只需 `appID(for:)` /
+    /// Parsing lives in `ITADLookupData`, so callers only need `appID(for:)`
+    ///
+    /// - Parameter uuids: ITAD 游戏 UUID 列表 / ITAD game UUIDs
+    /// - Returns: 以 UUID 为 key 的查表结果 / a lookup keyed by UUID
+    static func lookupShopIDs(uuids: [String]) async throws -> ITADLookupData {
+        // 空数组会被服务端拒绝（`Request body must be non-empty JSON array`），
+        // 也会让请求失去意义 —— 直接短路，连网络都不发 /
+        // An empty array is rejected by the server, so short-circuit before any request
+        guard !uuids.isEmpty else { return ITADLookupData(entries: [:]) }
+
+        // 构建请求 URL / Construct request URL
+        let urlComponents = URLComponents(string: "https://api.isthereanydeal.com/lookup/shop/61/id/v1")!
+        guard let url = urlComponents.url else { throw URLError(.badURL) }
+
+        // 构建请求，和其它接口一样用 POST + JSON body /
+        // Construct the request; POST with a JSON body, same as the other endpoints
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.itadAPIKey, forHTTPHeaderField: "ITAD-API-Key")
+
+        request.httpBody = try JSONEncoder().encode(uuids)
+
+        #if DEBUG
+        logRequest(request)
+        #endif
+
+        // 发送请求并解析响应 / Send request and parse response
+        let (data, resp) = try await URLSession.shared.data(for: request)
+
+        // 检查响应类型 / Check response type
+        guard let httpResponse = resp as? HTTPURLResponse else {
+            throw ITADAPIError.invalidResponse
+        }
+
+        #if DEBUG
+        logResponse(httpResponse, data: data)
+        #endif
+
+        // 检查状态码是否为 2xx / Check if the status code is 2xx
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw ITADAPIError.requestFailed(
+                statusCode: httpResponse.statusCode,
+                body: String(data: data, encoding: .utf8)
+            )
+        }
+
+        do {
+            return try JSONDecoder().decode(ITADLookupData.self, from: data)
+        } catch {
+            #if DEBUG
+            // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
+            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            #endif
+            throw error
+        }
+    }
+
     /// 获取限时免费领取列表，默认只返回未过期条目，按发布时间从新到旧 /
     /// Fetch the giveaways list; by default unexpired entries only, newest first
     ///

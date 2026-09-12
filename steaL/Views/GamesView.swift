@@ -173,39 +173,44 @@ struct GamesView: View {
             errorState(error) {
                 await gamesViewModel.retryDeals()
             }
-        case .loaded(let dealsData):
+        case .loaded(let items):
             // 请求成功但列表为空 / Request succeeded with an empty list
-            if dealsData.list.isEmpty {
+            if items.isEmpty {
                 emptyState
             } else {
-                dealsContent(dealsData)
+                dealsContent(items)
             }
         }
     }
 
     /// 首条 hero 卡 + 其余两列网格 / Hero card first, then a two-column grid
+    ///
+    /// 收 `[HomeDealItem]` 而不是 `ITADDealsData`：条目除了 deal 还带着 Steam appID 的解析结果，
+    /// 视图只需要渲染，不需要知道分页字段 /
+    /// Takes `[HomeDealItem]` rather than `ITADDealsData`: each row now also carries its Steam
+    /// appID resolution, and the view never needs the pagination fields
     @ViewBuilder
-    private func dealsContent(_ dealsData: ITADDealsData) -> some View {
+    private func dealsContent(_ items: [HomeDealItem]) -> some View {
 
         // 首条 hero 卡 / Hero card for the first item
-        if let firstDeal = dealsData.list.first {
+        if let firstItem = items.first {
             DealCardView(
-                deal: firstDeal,
-                isFavorite: gamesViewModel.isFavorite(firstDeal.id),
+                deal: firstItem.deal,
+                isFavorite: gamesViewModel.isFavorite(firstItem.id),
                 onToggleFavorite: {
-                    gamesViewModel.toggleFavorite(firstDeal.id)
+                    gamesViewModel.toggleFavorite(firstItem.id)
                 }
             )
         }
 
         // 其余条目排成两列网格 / Rest of the items in a two-column grid
         LazyVGrid(columns: gridColumns, spacing: 12) {
-            ForEach(dealsData.list.dropFirst()) { deal in
+            ForEach(items.dropFirst()) { item in
                 DealGridCardView(
-                    deal: deal,
-                    isFavorite: gamesViewModel.isFavorite(deal.id),
+                    deal: item.deal,
+                    isFavorite: gamesViewModel.isFavorite(item.id),
                     onToggleFavorite: {
-                        gamesViewModel.toggleFavorite(deal.id)
+                        gamesViewModel.toggleFavorite(item.id)
                     }
                 )
             }

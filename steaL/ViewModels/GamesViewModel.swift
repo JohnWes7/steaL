@@ -88,8 +88,14 @@ final class GamesViewModel {
     enum DealLoadState: Equatable {
         /// 首次加载或重试中 / First load, or a retry in progress
         case loading
-        /// 请求成功，注意列表本身可能为空 / Request succeeded; the list itself may still be empty
-        case loaded(ITADDealsData)
+        /// 请求成功，注意列表本身可能为空 /
+        /// Request succeeded; the list itself may still be empty
+        ///
+        /// 装的是 `HomeDealItem` 而不是 `ITADDealsData`：列表渲染需要的是「deal + appID」，
+        /// 分页状态暂时用不到，留在 `fetchDeals` 内部即可 /
+        /// Carries `HomeDealItem` rather than `ITADDealsData`: rendering needs deal plus appID,
+        /// and the pagination fields are not needed yet
+        case loaded([HomeDealItem])
         /// 请求失败，携带归一化后的错误 / Request failed, carrying the normalised error
         case failed(LoadError)
     }
@@ -145,7 +151,14 @@ final class GamesViewModel {
 
         do {
             let data = try await ITADAPI.fetchDeals(body: requestBody)
-            dealState = .loaded(data)
+            // 状态先落地，让卡片能立刻渲染。appID 是 `.pending`，点开时会被拦下 /
+            // Publish first so the cards render immediately; their appID is still `.pending` and
+            // a tap is held back until resolution finishes
+            dealState = .loaded(data.list.map { HomeDealItem(deal: $0) })
+
+            // 预取放在渲染之后，不阻塞首屏 /
+            // Prefetch runs after publishing so it never delays the first frame
+            await prefetchAppIDs()
 
         } catch {
             // 取消（视图离开或任务重跑）不算失败 / A cancellation (view left, or the task restarted) is not a failure
@@ -164,6 +177,82 @@ final class GamesViewModel {
     /// 重试 deals，只影响第一个区块 / Retries deals; only the first section is affected
     func retryDeals() async {
         await fetchDeals()
+    }
+
+    // MARK: - Steam appID 预取 / Prefetching Steam appIDs
+
+    /// 给当前列表里的每个游戏补上 Steam appID /
+    /// Resolves the Steam appID for every game currently in the feed
+    ///
+    /// 这一步是「从主页进详情页」的前提：详情页的本体是 Steam 数据，所以必须先有 appID。
+    /// 放在列表层批量做，而不是点一次查一次 —— 实测 60 个 UUID 一次请求即可返回 /
+    /// This is what makes the home feed able to open a detail page at all, since the detail page
+    /// is built on Steam data. Doing it as one batch beats one lookup per tap: 60 UUIDs were
+    /// verified in a single request
+    ///
+    /// 失败**不改变 `dealState`**：列表本身是好的，只是暂时进不了详情页 /
+    /// A failure deliberately does not touch `dealState`: the feed is still valid, only the
+    /// detail pages are unreachable
+    func prefetchAppIDs() async {
+        guard case .loaded(let items) = dealState else { return }
+        guard !items.isEmpty else { return }
+
+        let uuids = items.map(\.id)
+
+        do {
+            let lookup = try await ITADAPI.lookupShopIDs(uuids: uuids)
+
+            // 请求期间用户可能切了地区或重试，那时结果已经过期 /
+            // The region may have changed, or a retry may have started, while this was in flight
+            guard !Task.isCancelled else { return }
+
+            // 一次性写回整批，避免 N 次数组复制 /
+            // Apply the whole batch in one pass instead of N array copies
+            applyAppIDs { lookup.appID(for: $0) }
+
+            #if DEBUG
+            print("[GamesViewModel] Steam appID 预取 / prefetch: \(lookup.trackedCount)/\(uuids.count) 条拿到 appID")
+            #endif
+
+        } catch {
+            if Task.isCancelled { return }
+
+            print("[GamesViewModel] prefetchAppIDs failed / failed: \(error)")
+            if let itadError = error as? ITADAPIError {
+                print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
+            }
+
+            // 把还挂在 `.pending` 上的条目一次性标成 `.unavailable`，否则卡片会永远点不动 /
+            // Settle anything still `.pending`, otherwise those cards would stay untappable forever
+            settlePendingAsUnavailable()
+        }
+    }
+
+    /// 按解析结果整批更新列表 / Applies a resolver across the whole feed in one pass
+    ///
+    /// - Parameter resolve: 输入 ITAD UUID，返回 appID；`nil` 表示查不到 /
+    ///   takes an ITAD UUID, returns the appID, or `nil` when there is none
+    private func applyAppIDs(_ resolve: (String) -> Int?) {
+        guard case .loaded(let items) = dealState else { return }
+
+        dealState = .loaded(items.map { item in
+            var updated = item
+            updated.steam = resolve(item.id).map { .resolved($0) } ?? .unavailable
+            return updated
+        })
+    }
+
+    /// 把仍在等待中的条目落定为 `.unavailable` /
+    /// Settles every still-pending entry as `.unavailable`
+    private func settlePendingAsUnavailable() {
+        guard case .loaded(let items) = dealState else { return }
+
+        dealState = .loaded(items.map { item in
+            guard item.steam == .pending else { return item }
+            var updated = item
+            updated.steam = .unavailable
+            return updated
+        })
     }
 
     /// 拉取限时免费领取列表 / Fetches the giveaways list
