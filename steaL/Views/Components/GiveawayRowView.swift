@@ -69,8 +69,9 @@ struct GiveawayRowView: View {
         .padding(.vertical, 12)
     }
 
-    /// 缩略图，加载中与失败共用占位；左上角压一个 FREE 徽章 /
-    /// Thumbnail with one placeholder for loading and failure, plus a FREE badge in its corner
+    /// 缩略图。三种状态分开渲染，失败与加载中不再共用一个占位；左上角压一个 FREE 徽章 /
+    /// Thumbnail with the three phases rendered separately, so loading and failure no longer share
+    /// one placeholder; the FREE badge sits in its top-leading corner
     private var thumbnail: some View {
         AsyncImage(url: giveaway.thumbnailURL) { phase in
             switch phase {
@@ -78,6 +79,10 @@ struct GiveawayRowView: View {
                 image
                     .resizable()
                     .scaledToFill()
+            case .empty:
+                placeholder
+            case .failure:
+                failedPlaceholder
             default:
                 placeholder
             }
@@ -88,11 +93,23 @@ struct GiveawayRowView: View {
         .clipped()
     }
 
-    /// 无图占位，撑满缩略图区域 / Placeholder that fills the thumbnail area
+    /// 加载中占位，撑满缩略图区域 / Loading placeholder that fills the thumbnail area
     private var placeholder: some View {
         ZStack {
             Color.saleSurface
             Image(systemName: "photo")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.secondaryText)
+        }
+    }
+
+    /// 加载失败占位，图标与加载中区分；以后要接重试就改在这一块 /
+    /// Failure placeholder, told apart from the loading one by its icon; a retry affordance, when
+    /// added, belongs here
+    private var failedPlaceholder: some View {
+        ZStack {
+            Color.saleSurface
+            Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.secondaryText)
         }
