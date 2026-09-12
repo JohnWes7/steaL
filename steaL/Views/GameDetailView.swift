@@ -5,32 +5,62 @@
 //  Created by yijiang on 2026/9/12.
 //
 
+import SwiftData
 import SwiftUI
 
 /// 游戏详情页 / Game detail page
 ///
-/// 本轮**只显示传进来的参数**，用来验证导航链路。真正的数据加载与 UI 在后续步骤补 /
-/// This round only renders the parameters it was handed, to prove the navigation works.
-/// Real data loading and layout come next
+/// 数据由 `GameDetailViewModel` 加载：先拿 Steam 详情（硬门槛），ITAD 的比价与评分等接入时
+/// 继续往同一个 `load` 里加 /
+/// Data is loaded by `GameDetailViewModel`: Steam details first (the hard requirement), with the
+/// ITAD price and info steps joining the same `load` once their DTOs exist
 struct GameDetailView: View {
 
     /// 导航携带的参数 / The payload handed over by the navigation stack
     let route: GameDetailRoute
+
+    /// 设置单例，用来决定请求的区域与语言 / The settings singleton, which decides region and language
+    @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
+    private var settings: [UserSettingModel]
+
+    @State private var gameDetailViewModel = GameDetailViewModel()
+
+    /// 当前区域 / Current region
+    private var region: AppRegion { settings.first?.region ?? .australia }
+
+    /// 当前语言 / Current language
+    private var language: AppLanguage { settings.first?.language ?? .english }
+
+    struct ReloadKey: Equatable, Hashable {
+        let route: GameDetailRoute
+        let region: AppRegion
+        let language: AppLanguage
+    }
+
+    /// 参数签名：route 或设置变了就重新加载 /
+    /// Parameter signature; a change to the route or the settings triggers a reload
+    private var reloadKey: ReloadKey {
+        ReloadKey(route: route, region: region, language: language)
+    }
 
     var body: some View {
         ZStack {
             Color.appBackground
                 .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 18) {
-                header
-
-                parameterList
-
-                Spacer()
-            }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            content
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        // 参数由视图传入，`@State` 里的 view model 只接收调用 /
+        // The view hands the parameters in; the `@State` view model only receives calls
+        //
+        // 用 `.task(id:)` 而不是 `onAppear` + `hasStarted`：详情页没有「切 Tab 不能被取消」的需求，
+        // 而 `.task` 在参数变化时自动重跑、视图离开时自动取消在飞请求 /
+        // `.task(id:)` rather than `onAppear` + a started flag: unlike the feed, the detail page
+        // wants the request cancelled when it goes away, and to re-run when parameters change
+        .task(id: reloadKey) {
+            await gameDetailViewModel.load(route: route, region: region, language: language)
         }
         // 来源页把导航栏藏起来了（`.toolbar(.hidden, for: .navigationBar)`），
         // 不在这里显式恢复的话详情页会连返回按钮一起没有 /
@@ -40,18 +70,78 @@ struct GameDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    /// 标题区，直接用列表传过来的名字，避免白屏 /
-    /// Title block; uses the name handed over from the list so the screen is never blank
-    private var header: some View {
+    /// 按状态切换的页面主体 / The page body, switched on the load state
+    @ViewBuilder
+    private var content: some View {
+        switch gameDetailViewModel.state {
+        case .loading:
+            ProgressView()
+                .tint(.brandGreen)
+                .frame(maxWidth: .infinity)
+
+        case .loaded(let details):
+            detailContent(details)
+
+        case .failed(let error):
+            ContentUnavailableView {
+                Label(error.title, systemImage: error.symbolName)
+            } description: {
+                Text(error.message)
+            } actions: {
+                Button("Try Again") {
+                    Task {
+                        await gameDetailViewModel.load(
+                            route: route,
+                            region: region,
+                            language: language,
+                            isRetry: true
+                        )
+                    }
+                }
+                .tint(.brandGreen)
+            }
+        }
+    }
+
+    /// 数据就绪后的内容 / The page once the data is in
+    ///
+    /// 目前只用到 Steam 那一半；截图、视频与 ITAD 的比价区块后续往里加 /
+    /// Only the Steam half is used so far; screenshots, movies and the ITAD price block come next
+    private func detailContent(_ details: SteamAppDetails) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            header(details)
+
+            if let description = details.shortDescription {
+                Text(description)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            parameterList
+
+            Spacer()
+        }
+    }
+
+    /// 标题区：优先用 Steam 的本地化标题，数据回来前用列表传过来的名字 /
+    /// Title block; the localised Steam title once it is in, falling back to the list title
+    private func header(_ details: SteamAppDetails) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("GAME DETAIL")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.brandGreen)
 
-            Text(route.title)
+            Text(details.name ?? route.title)
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
                 .foregroundStyle(.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if let date = details.releaseDate?.date {
+                Text(details.isComingSoon ? "Coming soon · \(date)" : date)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondaryText)
+            }
         }
     }
 
@@ -90,22 +180,24 @@ struct GameDetailView: View {
     NavigationStack {
         GameDetailView(
             route: GameDetailRoute(
-                appID: 1245620,
-                uuid: "018d937f-590c-728b-ac35-38bcff85f086",
-                title: "ELDEN RING"
+                appID: 620,
+                uuid: "018d937f-0f5c-72f6-9b1e-2e5b3c4d5e6f",
+                title: "Portal 2"
             )
         )
     }
+    .modelContainer(for: UserSettingModel.self, inMemory: true)
 }
 
 #Preview("搜索路径 / Search path") {
     NavigationStack {
         GameDetailView(
             route: GameDetailRoute(
-                appID: 1245620,
+                appID: 620,
                 uuid: nil,
-                title: "ELDEN RING"
+                title: "Portal 2"
             )
         )
     }
+    .modelContainer(for: UserSettingModel.self, inMemory: true)
 }

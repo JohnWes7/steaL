@@ -71,6 +71,17 @@ enum LoadError: Error, Equatable {
                 return .server(statusCode: statusCode)
             }
 
+        // Steam 的失败同样是网络层，`gameNotFound` 归一成离线以外的通用失败 /
+        // Steam failures are network failures too; `gameNotFound` is normalised into a generic
+        // failure rather than an offline one
+        case let apiError as SteamAPIError:
+            switch apiError {
+            case .invalidResponse, .gameNotFound:
+                return .unknown
+            case .requestFailed(let statusCode, _):
+                return .server(statusCode: statusCode)
+            }
+
         case is DecodingError:
             return .decoding
 
