@@ -33,9 +33,16 @@ struct MainTabView: View {
             // `role: .search` morphs a search field into the tab bar
             Tab("Search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
                 NavigationStack {
-                    IOS26SearchView()
+                     IOS26SearchView()
                 }
             }
+            
+//            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) {
+//                NavigationStack {
+//                    // IOS26SearchView()
+//                    SearchView(isSelected: true)
+//                }
+//            }
 
             Tab("Wishlist", systemImage: "heart", value: AppTab.wishlist) {
                 NavigationStack {

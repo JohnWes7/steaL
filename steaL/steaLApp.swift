@@ -14,6 +14,15 @@ struct steaLApp: App {
     private let container: ModelContainer
 
     init() {
+        // 图片缓存容量。系统默认只有 500 KB 内存 / 10 MB 磁盘，而一张 ITAD boxart 就有 47 KB，
+        // 默认值大概只装得下半个首页。必须在任何请求发出前设置才生效 /
+        // Image cache capacity. The system defaults are only 500 KB memory and 10 MB disk, while a
+        // single ITAD boxart is already 47 KB. Must be set before any request goes out.
+        URLCache.shared = URLCache(
+            memoryCapacity: 64 * 1024 * 1024,   // 64 MB
+            diskCapacity: 256 * 1024 * 1024     // 256 MB
+        )
+
         let container: ModelContainer
         do {
             container = try ModelContainer(for: UserSettingModel.self)
