@@ -49,28 +49,28 @@ struct ITADPriceGame: Codable, Hashable, Identifiable, Sendable {
     let id: String
 
     /// 历史低价，按时间窗口分档 / Historical lows, split by time window
-    let historyLow: ITADPriceHistory?
+    let historyLow: ITADPriceHistory
 
-    /// 各商店当前的优惠，按价格从低到高（实测）/ Current deals per shop, cheapest first
+    /// 各商店当前的优惠，按价格从低到高（实测），数组可以为空 / Current deals per shop, cheapest first; the array may be empty
     ///
     /// **可能为空数组**（接口带 `deals=true` 时只返回有折扣的价格）/
-    /// **Can be an empty array**; with `deals=true` only discounted prices come back
-    let deals: [ITADPriceDeal]?
+    /// **Can be empty**; with `deals=true` only discounted prices come back
+    let deals: [ITADPriceDeal]
 
     /// 全史最低价，供 UI 直接取 / The all-time low, ready for the UI
-    var allTimeLow: ITADPrice? { historyLow?.all }
+    var allTimeLow: ITADPrice? { historyLow.all }
 
     /// 最便宜的那条 deal / The cheapest deal
-    var bestDeal: ITADPriceDeal? { deals?.min { $0.price.amount < $1.price.amount } }
+    var bestDeal: ITADPriceDeal? { deals.min { $0.price.amountInt < $1.price.amountInt } }
 
     /// 明确在 Steam 激活的 deal / Deals whose keys explicitly activate on Steam
-    var steamDeals: [ITADPriceDeal] { (deals ?? []).filter(\.isSteamActivation) }
+    var steamDeals: [ITADPriceDeal] { deals.filter(\.isSteamActivation) }
 
     /// 最便宜的 Steam 激活 deal / The cheapest deal that activates on Steam
-    var bestSteamDeal: ITADPriceDeal? { steamDeals.min { $0.price.amount < $1.price.amount } }
+    var bestSteamDeal: ITADPriceDeal? { steamDeals.min { $0.price.amountInt < $1.price.amountInt } }
 
     /// 是否完全查不到价格 / Whether nothing usable came back
-    var isEmpty: Bool { (deals ?? []).isEmpty && allTimeLow == nil }
+    var isEmpty: Bool { deals.isEmpty && allTimeLow == nil }
 }
 
 // MARK: - 历史低价 / Historical lows
@@ -94,13 +94,6 @@ struct ITADPriceHistory: Codable, Hashable, Sendable {
     /// 近三个月最低价 / Lowest price within the last three months
     let m3: ITADPrice?
 
-    /// JSON 键名与 Swift 属性名的映射，`y1` / `m3` 无法从属性名还原 /
-    /// Maps JSON keys to Swift properties; `y1` and `m3` do not map by name
-    enum CodingKeys: String, CodingKey {
-        case all
-        case y1 = "y1"
-        case m3 = "m3"
-    }
 }
 
 // MARK: - 单条优惠 / One deal
@@ -131,15 +124,14 @@ struct ITADPriceDeal: Codable, Hashable, Sendable {
     /// 该商店历史最低价 / Lowest price ever seen in this shop
     let storeLow: ITADPrice?
 
-    /// ITAD 标记如 `"S"`（商店最低价）、`"H"`（历史最低价），可能为 `nil` /
-    /// ITAD flag such as `"S"` (store low) or `"H"` (historical low); often `nil`
-    let flag: String?
+    /// ITAD 标记：`H` 为历史最低价，`N` 为新的历史最低价，`S` 为商店最低价 / ITAD flag: `H` historical low, `N` new historical low, `S` store low
+    let flag: ITADPriceDealFlag?
 
     /// 激活平台，注意不是购买商店 / Activation platforms, not the shop the key comes from
-    let drm: [ITADPlatformRef]?
+    let drm: [ITADPlatformRef]
 
     /// 支持的操作系统 / Supported operating systems
-    let platforms: [ITADPlatformRef]?
+    let platforms: [ITADPlatformRef]
 
     /// 价格采集时间，ISO8601 字符串 / ISO8601 string of when the price was seen
     let timestamp: String
@@ -153,9 +145,19 @@ struct ITADPriceDeal: Codable, Hashable, Sendable {
     /// 判断该价格是否属于 Steam 激活：Steam 直购或 DRM 明确包含 Steam /
     /// Treat a deal as Steam activation when it is bought from Steam or explicitly lists Steam as DRM
     var isSteamActivation: Bool {
-        shop.id == 61 || (drm ?? []).contains { $0.id == 61 }
+        shop.id == 61 || drm.contains { $0.id == 61 }
     }
 
-    /// ITAD 的 `"H"` 标记：这条 deal 触达了全史最低价 / ITAD's `"H"` flag: this deal hit an all-time low
-    var isHistoricalLow: Bool { flag == "H" }
+    /// ITAD 的 `H` 或 `N` 标记：这条 deal 触达了全史最低价 / ITAD's `H` or `N` flag: this deal hit an all-time low
+    var isHistoricalLow: Bool { flag == .historicalLow || flag == .newHistoricalLow }
+}
+
+/// 价格优惠标记 / Price deal flag
+enum ITADPriceDealFlag: String, Codable, Hashable, Sendable {
+    /// 全史最低价 / Historical low
+    case historicalLow = "H"
+    /// 新的全史最低价 / New historical low
+    case newHistoricalLow = "N"
+    /// 商店历史最低价 / Store low
+    case storeLow = "S"
 }

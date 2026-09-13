@@ -80,7 +80,7 @@ struct ITADDealInfo: Codable, Hashable, Sendable {
     let historyLow1y: ITADPrice?
     /// 近三个月最低价 / Historical low within the last three months
     let historyLow3m: ITADPrice?
-    /// ITAD 简写标记，`"S"` 表示商店最低价、`"H"` 表示历史最低价 / ITAD shorthand flag, e.g. `"S"` (store low) or `"H"` (historical low)
+    /// ITAD 简写标记，`"S"` 表示商店最低价、`"H"` 表示历史最低价、`"N"` 表示新的历史最低价 / ITAD shorthand flag: `"S"` store low, `"H"` historical low, `"N"` new historical low
     let flag: String?
     /// 激活平台，注意不是购买商店 / Activation platforms, not the shop the key is bought from
     let drm: [ITADPlatformRef]
@@ -110,7 +110,7 @@ struct ITADDealInfo: Codable, Hashable, Sendable {
     /// 当前价是否等于或低于全史最低价 / `true` when the current price matches or beats the all-time low
     var isHistoricalLow: Bool {
         guard let historyLow else { return false }
-        return price.amount <= historyLow.amount
+        return price.amountInt <= historyLow.amountInt
     }
 }
 

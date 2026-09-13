@@ -239,7 +239,7 @@ struct DealCardView: View {
     private var qualityLabel: String {
         let info = deal.deal
 
-        if info.flag == "H" || info.isHistoricalLow {
+        if info.flag == "H" || info.flag == "N" || info.isHistoricalLow {
             return "ALL-TIME LOW"
         }
 

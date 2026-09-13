@@ -550,9 +550,9 @@ struct GameDetailView: View {
 
             case .loaded(let prices):
                 let lows = [
-                    ("All-time low", prices.historyLow?.all),
-                    ("1 year low", prices.historyLow?.y1),
-                    ("3 months low", prices.historyLow?.m3),
+                    ("All-time low", prices.historyLow.all),
+                    ("1 year low", prices.historyLow.y1),
+                    ("3 months low", prices.historyLow.m3),
                 ].compactMap { label, price in
                     price.map { (label, $0) }
                 }
