@@ -455,6 +455,7 @@ struct GameDetailView: View {
                             )
                         }
 
+                        // `recentPlayers` 与 `itadRank` 都有值时加竖线分隔，避免视觉上挤在一起 / When both `recentPlayers` and `itadRank` are available, add a vertical separator to avoid visual crowding
                         if recentPlayers != nil && itadRank != nil {
                             Rectangle()
                                 .fill(Color.secondaryText.opacity(0.24))
@@ -539,7 +540,7 @@ struct GameDetailView: View {
                         .frame(width: proxy.size.width * CGFloat(score) / 100)
 
                     Capsule()
-                        .fill(Color.secondaryText.opacity(0.28))
+                        .fill(Color.red.opacity(0.75))
                 }
             }
             .frame(height: 7)
