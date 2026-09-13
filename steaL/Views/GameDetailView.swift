@@ -571,6 +571,8 @@ struct GameDetailView: View {
                     }
                 }
 
+                currentOffers(prices)
+
             case .unavailable:
                 Text("No historical price data")
                     .font(.system(size: 14))
@@ -580,6 +582,89 @@ struct GameDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+
+    /// 当前可购买的 Steam 激活价格 / Current prices for Steam-activating offers
+    @ViewBuilder
+    private func currentOffers(_ prices: ITADPriceGame) -> some View {
+        let offers = prices.steamDeals.sorted { $0.price.amount < $1.price.amount }
+
+        if !offers.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("CURRENT OFFERS")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.brandGreen)
+
+                    Spacer(minLength: 12)
+
+                    Text("Steam activation")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondaryText)
+                }
+                .padding(.top, 14)
+
+                ForEach(Array(offers.enumerated()), id: \.offset) { index, offer in
+                    currentOfferRow(
+                        offer,
+                        isBest: index == 0
+                    )
+                }
+            }
+        }
+    }
+
+    /// 当前报价行，最低价用品牌色标记 / Current offer row; the cheapest offer gets the brand accent
+    private func currentOfferRow(_ offer: ITADPriceDeal, isBest: Bool) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(isBest ? Color.brandGreen : Color.secondaryText.opacity(0.5))
+                .frame(width: 5, height: 42)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Text(offer.shop.name)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primaryText)
+
+                    if isBest {
+                        Text("BEST")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.appBackground)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.brandGreen, in: Capsule())
+                    }
+                }
+
+                Text(offer.cut > 0 ? "Save \(offer.cut)%" : "Current price")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(offer.cut > 0 ? .brandBlue : .secondaryText)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(offer.price.amount.formatted(.currency(code: offer.price.currency)))
+                    .font(.system(size: 19, weight: .heavy, design: .rounded))
+                    .foregroundStyle(isBest ? .brandGreen : .primaryText)
+
+                if offer.cut > 0 {
+                    Text(offer.regular.amount.formatted(.currency(code: offer.regular.currency)))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondaryText)
+                        .strikethrough()
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(offer.shop.name), \(offer.price.amount.formatted(.currency(code: offer.price.currency)))"
+        )
+    }
     /// 一条历史价格 / One historical price row
     private func historicalPriceRow(label: String, price: ITADPrice, accent: Color) -> some View {
         HStack(spacing: 12) {
