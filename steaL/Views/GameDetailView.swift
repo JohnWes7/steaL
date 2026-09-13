@@ -355,7 +355,7 @@ struct GameDetailView: View {
     private func chipRow(_ labels: [String]) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
-                ForEach(labels, id: \.self) { label in
+                ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
                     Text(label)
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primaryText)
@@ -371,7 +371,7 @@ struct GameDetailView: View {
     /// Detail 内的分类标签自动换行并完整显示 / Detail categories wrap and remain fully visible
     private func categoryChipGrid(_ labels: [String]) -> some View {
         FlowLayout(itemSpacing: 8, rowSpacing: 8) {
-            ForEach(labels, id: \.self) { label in
+            ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
                 Text(label)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(.primaryText)
