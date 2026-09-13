@@ -441,11 +441,36 @@ struct GameDetailView: View {
                     }
                 }
 
-                if let recent = info.players?.recent, recent > 0 {
-                    infoRow(label: "Players", value: recent.formatted())
-                }
-                if let rank = info.stats?.rank, rank > 0 {
-                    infoRow(label: "ITAD rank", value: "#\(rank)")
+                let recentPlayers = info.players?.recent.flatMap { $0 > 0 ? $0 : nil }
+                let itadRank = info.stats?.rank.flatMap { $0 > 0 ? $0 : nil }
+
+                if recentPlayers != nil || itadRank != nil {
+                    HStack(spacing: 0) {
+                        if let recentPlayers {
+                            itadMetric(
+                                icon: "person.3.fill",
+                                label: "Players online",
+                                value: recentPlayers.formatted(),
+                                tint: .brandGreen
+                            )
+                        }
+
+                        if recentPlayers != nil && itadRank != nil {
+                            Rectangle()
+                                .fill(Color.secondaryText.opacity(0.24))
+                                .frame(width: 1, height: 58)
+                                .padding(.horizontal, 16)
+                        }
+
+                        if let itadRank {
+                            itadMetric(
+                                icon: "medal.fill",
+                                label: "ITAD rank",
+                                value: "#\(itadRank)",
+                                tint: .brandBlue
+                            )
+                        }
+                    }
                 }
 
             case .unavailable:
@@ -455,6 +480,32 @@ struct GameDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// ITAD 底部指标：图标、重点数字与简短标签 /
+    /// Compact ITAD metric with an icon, a prominent value, and a short label
+    private func itadMetric(icon: String, label: String, value: String, tint: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(.appBackground)
+                .frame(width: 32, height: 32)
+                .background(tint, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .foregroundStyle(tint)
+
+                Text(label)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondaryText)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label), \(value)")
     }
 
     /// 一个评分来源：分数、评分人数与视觉比例条 / A review source with score, count, and a visual ratio bar
