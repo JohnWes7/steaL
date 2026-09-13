@@ -10,9 +10,9 @@ import Foundation
 class ITADAPI {
     //TODO: 改造弱类型fetchDeals body
 
-    /// 根据 Steam appID 查找 ITAD 游戏 UUID，未收录时返回 nil /
-    /// Looks up an ITAD game UUID by Steam appID, returning nil when it is not tracked
-    static func lookupUUID(appID: Int) async throws -> String? {
+    /// 根据 Steam appID 查找 ITAD 游戏，返回完整 lookup response /
+    /// Looks up an ITAD game by Steam appID and returns the complete lookup response
+    static func lookupUUID(appID: Int) async throws -> ITADGameLookupResponse {
         var urlComponents = URLComponents(string: "https://api.isthereanydeal.com/games/lookup/v1")!
         urlComponents.queryItems = [
             URLQueryItem(name: "key", value: Config.itadAPIKey),
@@ -36,7 +36,7 @@ class ITADAPI {
             )
         }
 
-        return try JSONDecoder().decode(ITADGameLookupResponse?.self, from: data)?.id
+        return try JSONDecoder().decode(ITADGameLookupResponse.self, from: data)
     }
 
     static func fetchDeals(body: [String: Any] = [:]) async throws -> ITADDealsResponse {

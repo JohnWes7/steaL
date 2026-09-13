@@ -241,10 +241,15 @@ final class GameDetailViewModel {
         }
 
         do {
-            let uuid = try await ITADAPI.lookupUUID(appID: appID)
+            let response = try await ITADAPI.lookupUUID(appID: appID)
             guard !Task.isCancelled else { return nil }
-            self.uuid = uuid
-            return uuid
+
+            guard response.found, let resolvedUUID = response.game?.id else {
+                return nil
+            }
+
+            self.uuid = resolvedUUID
+            return resolvedUUID
         } catch {
             if !(error is CancellationError) {
                 print("[GameDetailViewModel] UUID lookup failed / failed: \(error)")
