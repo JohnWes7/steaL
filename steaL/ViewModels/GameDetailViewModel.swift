@@ -204,9 +204,9 @@ final class GameDetailViewModel {
     /// 拿到这个游戏在各商店的价格，拿不到就返回 `nil` /
     /// Fetches the game's prices, returning `nil` when there is nothing to show
     ///
-    /// 响应是**稀疏数组**，只能按 `id` 取；查不到（没有折扣价）不是错误 /
+    /// 响应是**稀疏数组**，只能按 `id` 取；查不到（没有价格数据）不是错误 /
     /// The response is a **sparse array**, so the entry has to be found by `id`; a missing entry
-    /// (the game currently has no discounted price) is not an error
+    /// (the game has no price data) is not an error
     private func fetchPricesIfPossible(uuid: String, region: AppRegion) async -> ITADPriceGame? {
         do {
             let response = try await ITADAPI.fetchPrices(uuids: [uuid], region: region)

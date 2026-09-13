@@ -25,7 +25,7 @@ typealias ITADPricesResponse = [ITADPriceGame]
 extension ITADPricesResponse {
 
     /// 取某个游戏的条目，没有（当前无折扣价）时返回 `nil` /
-    /// The entry for one game, `nil` when it has no discounted price right now
+    /// The entry for one game, `nil` when ITAD has no price data for it
     ///
     /// 响应是稀疏数组，**不能按下标取** —— 传 2 个 ID 可能只回 1 条 /
     /// The response is sparse, so never index into it: two requested ids can come back as one entry
@@ -53,8 +53,8 @@ struct ITADPriceGame: Codable, Hashable, Identifiable, Sendable {
 
     /// 各商店当前的优惠，按价格从低到高（实测），数组可以为空 / Current deals per shop, cheapest first; the array may be empty
     ///
-    /// **可能为空数组**（接口带 `deals=true` 时只返回有折扣的价格）/
-    /// **Can be empty**; with `deals=true` only discounted prices come back
+    /// **可能为空数组**（接口没有该游戏的价格数据时会省略它）/
+    /// **Can be empty**; games with no price data are omitted by the API
     let deals: [ITADPriceDeal]
 
     /// 全史最低价，供 UI 直接取 / The all-time low, ready for the UI

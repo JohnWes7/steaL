@@ -242,18 +242,18 @@ class ITADAPI {
 
     /// 查一批游戏在各商店的价格与历史低价 / Loads prices and historical lows for a batch of games
     ///
-    /// `POST https://api.isthereanydeal.com/games/prices/v3?country=<CC>&deals=true`
+    /// `POST https://api.isthereanydeal.com/games/prices/v3?country=<CC>&deals=false`
     ///
     /// 请求体是**裸 UUID 数组**，最多 200 个 / the body is a plain array of bare UUIDs, at most 200
     ///
-    /// ⚠️ 响应是**稀疏数组**：没有 deal 的游戏整条不返回（实测 Portal 2 返回空数组），
+    /// ⚠️ 响应是**稀疏数组**：没有价格数据的游戏整条不返回，
     /// 调用方必须按 `id` 匹配；某个 UUID 查不到就当作「没有比价数据」处理，不是错误 /
-    /// ⚠️ The response is **sparse**: a game without deals is omitted entirely (verified with
+    /// ⚠️ The response is **sparse**: a game without price data is omitted entirely,
     /// Portal 2 returning an empty array). Callers match by `id`, and a missing UUID means
     /// "no price data", not an error
     ///
-    /// `deals=true` 固定打开：详情页的比价区只关心正在打折的价格 /
-    /// `deals=true` is always on, since the detail page's price block only cares about discounted prices
+    /// `deals=false` 返回完整价格：包括普通价格、折扣价格与历史低价 /
+    /// `deals=false` returns complete pricing, including regular prices, discounted prices, and lows
     ///
     /// - Parameters:
     ///   - uuids: ITAD 游戏 UUID 列表，最多 200 个 / ITAD game UUIDs, at most 200
@@ -270,7 +270,7 @@ class ITADAPI {
         urlComponents.queryItems = [
             URLQueryItem(name: "key", value: Config.itadAPIKey),
             URLQueryItem(name: "country", value: region.apiRegionCode),
-            URLQueryItem(name: "deals", value: "true"),
+            URLQueryItem(name: "deals", value: "false"),
         ]
         guard let url = urlComponents.url else { throw URLError(.badURL) }
 
