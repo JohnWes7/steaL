@@ -63,6 +63,12 @@ struct ITADPriceGame: Codable, Hashable, Identifiable, Sendable {
     /// 最便宜的那条 deal / The cheapest deal
     var bestDeal: ITADPriceDeal? { deals?.min { $0.price.amount < $1.price.amount } }
 
+    /// 明确在 Steam 激活的 deal / Deals whose keys explicitly activate on Steam
+    var steamDeals: [ITADPriceDeal] { (deals ?? []).filter(\.isSteamActivation) }
+
+    /// 最便宜的 Steam 激活 deal / The cheapest deal that activates on Steam
+    var bestSteamDeal: ITADPriceDeal? { steamDeals.min { $0.price.amount < $1.price.amount } }
+
     /// 是否完全查不到价格 / Whether nothing usable came back
     var isEmpty: Bool { (deals ?? []).isEmpty && allTimeLow == nil }
 }

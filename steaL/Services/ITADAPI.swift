@@ -10,6 +10,35 @@ import Foundation
 class ITADAPI {
     //TODO: 改造弱类型fetchDeals body
 
+    /// 根据 Steam appID 查找 ITAD 游戏 UUID，未收录时返回 nil /
+    /// Looks up an ITAD game UUID by Steam appID, returning nil when it is not tracked
+    static func lookupUUID(appID: Int) async throws -> String? {
+        var urlComponents = URLComponents(string: "https://api.isthereanydeal.com/games/lookup/v1")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "key", value: Config.itadAPIKey),
+            URLQueryItem(name: "appid", value: String(appID)),
+        ]
+        guard let url = urlComponents.url else { throw URLError(.badURL) }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(Config.itadAPIKey, forHTTPHeaderField: "ITAD-API-Key")
+
+        let (data, resp) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = resp as? HTTPURLResponse else {
+            throw ITADAPIError.invalidResponse
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw ITADAPIError.requestFailed(
+                statusCode: httpResponse.statusCode,
+                body: String(data: data, encoding: .utf8)
+            )
+        }
+
+        return try JSONDecoder().decode(ITADLookupGame?.self, from: data)?.id
+    }
+
     static func fetchDeals(body: [String: Any] = [:]) async throws -> ITADDealsResponse {
         // 构建请求 URL / Construct request URL
         let urlComponents = URLComponents(string: "https://api.isthereanydeal.com/deals/v2")!
@@ -357,6 +386,12 @@ class ITADAPI {
         }
     }
 
+}
+
+/// ITAD lookup 返回的最小游戏对象 / Minimal game object returned by the ITAD lookup endpoint
+private struct ITADLookupGame: Decodable {
+    /// ITAD 游戏 UUID / ITAD game UUID
+    let id: String
 }
 
 enum ITADAPIError: Error, LocalizedError {

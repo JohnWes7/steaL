@@ -119,11 +119,82 @@ struct GameDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            infoSection
+
             priceSection
 
             parameterList
 
             Spacer()
+        }
+    }
+
+    /// ITAD 评分、厂商、标签与热度 / ITAD reviews, credits, tags and popularity
+    @ViewBuilder
+    private var infoSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("ITAD INFO")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.brandGreen)
+
+            switch gameDetailViewModel.infoState {
+            case .idle:
+                EmptyView()
+
+            case .loading:
+                ProgressView()
+                    .controlSize(.small)
+
+            case .loaded(let info):
+                if let steam = info.steamReview, let score = steam.score {
+                    infoRow(label: "Steam", value: "\(score)%")
+                }
+                if let metascore = info.reviews?.first(where: { $0.source == "Metascore" })?.score {
+                    infoRow(label: "Metascore", value: "\(metascore)")
+                }
+                if let openCritic = info.reviews?.first(where: { $0.source == "OpenCritic" })?.score {
+                    infoRow(label: "OpenCritic", value: "\(openCritic)")
+                }
+                if let developer = info.primaryDeveloper {
+                    infoRow(label: "Developer", value: developer)
+                }
+                if let publisher = info.primaryPublisher {
+                    infoRow(label: "Publisher", value: publisher)
+                }
+                if let tags = info.tags, !tags.isEmpty {
+                    infoRow(label: "Tags", value: tags.joined(separator: ", "))
+                }
+                if let recent = info.players?.recent, recent > 0 {
+                    infoRow(label: "Players", value: recent.formatted())
+                }
+                if let rank = info.stats?.rank, rank > 0 {
+                    infoRow(label: "Rank", value: "#\(rank)")
+                }
+
+            case .unavailable:
+                Text("No info data")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondaryText)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    /// 一行信息 / One info row
+    private func infoRow(label: String, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.secondaryText)
+                .frame(width: 96, alignment: .leading)
+
+            Text(value)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -149,7 +220,7 @@ struct GameDetailView: View {
                     .controlSize(.small)
 
             case .loaded(let prices):
-                if let best = prices.bestDeal {
+                if let best = prices.bestSteamDeal {
                     priceRow(
                         label: "Best",
                         price: best.price,
@@ -161,7 +232,7 @@ struct GameDetailView: View {
                     priceRow(label: "All-time low", price: low, detail: nil)
                 }
 
-                Text("\(prices.deals?.count ?? 0) deals")
+                Text("\(prices.steamDeals.count) Steam deals")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondaryText)
 

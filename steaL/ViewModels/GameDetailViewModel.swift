@@ -47,6 +47,18 @@ final class GameDetailViewModel {
         case unavailable
     }
 
+    /// ITAD 游戏信息区块自己的状态 / The info section's own state
+    enum InfoState: Equatable {
+        /// 还没开始查 / Not asked for yet
+        case idle
+        /// 正在查 / Asking
+        case loading
+        /// 查到了 / The info is in
+        case loaded(ITADGameInfoResponse)
+        /// 问过了，没有可显示的信息 / Asked, and there is no info to show
+        case unavailable
+    }
+
     /// 页面当前状态，决定整页显示什么 / Current state of the page; decides what the whole page shows
     ///
     /// 详情是硬门槛，所以它是状态机的主轴 / The details are the hard requirement, so they drive the
@@ -55,6 +67,9 @@ final class GameDetailViewModel {
 
     /// ITAD 比价的状态，独立于主状态 / The ITAD prices' own state, independent of the main one
     private(set) var pricesState: PricesState = .idle
+
+    /// ITAD 游戏信息的状态，独立于页面主状态 / The ITAD info state, independent of the page state
+    private(set) var infoState: InfoState = .idle
 
     /// 加载一页详情 / Loads one detail page
     ///
@@ -78,6 +93,7 @@ final class GameDetailViewModel {
         if !isRetry {
             state = .loading
             pricesState = .idle
+            infoState = .idle
         }
 
         // 硬门槛：拿不到 Steam 详情就没有详情页 / Hard requirement: no Steam details, no page
@@ -97,13 +113,23 @@ final class GameDetailViewModel {
             // without holding the first frame back
             state = .loaded(details)
 
-            // 比价是可选增强，失败只当没有，不拖垮整页；没有 uuid 时直接跳过，状态留在 `.idle` /
-            // Prices are optional: a failure just means "no price data". Without a uuid there is
-            // nothing to ask for, so the state stays `.idle`
-            if route.uuid != nil {
+            // ITAD 增强数据共用一次 UUID lookup；已有 UUID 时不查 lookup /
+            // The ITAD enhancements share one UUID lookup; an existing UUID skips that lookup
+            let uuid = await resolveUUID(for: route)
+            if let uuid {
                 pricesState = .loading
-                let prices = await fetchPricesIfPossible(route: route, region: region)
-                pricesState = prices.map(PricesState.loaded) ?? .unavailable
+                infoState = .loading
+
+                async let prices = fetchPricesIfPossible(uuid: uuid, region: region)
+                async let info = fetchInfoIfPossible(uuid: uuid)
+
+                let loadedPrices = await prices
+                let loadedInfo = await info
+                pricesState = loadedPrices.map(PricesState.loaded) ?? .unavailable
+                infoState = loadedInfo.map(InfoState.loaded) ?? .unavailable
+            } else if route.uuid == nil {
+                pricesState = .unavailable
+                infoState = .unavailable
             }
 
         } catch {
@@ -124,9 +150,7 @@ final class GameDetailViewModel {
     /// 响应是**稀疏数组**，只能按 `id` 取；查不到（没有折扣价）不是错误 /
     /// The response is a **sparse array**, so the entry has to be found by `id`; a missing entry
     /// (the game currently has no discounted price) is not an error
-    private func fetchPricesIfPossible(route: GameDetailRoute, region: AppRegion) async -> ITADPriceGame? {
-        guard let uuid = route.uuid else { return nil }
-
+    private func fetchPricesIfPossible(uuid: String, region: AppRegion) async -> ITADPriceGame? {
         do {
             let response = try await ITADAPI.fetchPrices(uuids: [uuid], region: region)
             return response.entry(for: uuid)
@@ -136,6 +160,34 @@ final class GameDetailViewModel {
             // Cancellation is normal (the page went away); anything else is only logged
             if !(error is CancellationError) {
                 print("[GameDetailViewModel] prices failed / failed: \(error)")
+            }
+            return nil
+        }
+    }
+
+    /// 获取 ITAD 游戏信息，失败时静默降级 / Fetches ITAD game info, degrading silently on failure
+    private func fetchInfoIfPossible(uuid: String) async -> ITADGameInfoResponse? {
+        do {
+            return try await ITADAPI.fetchGameInfo(uuid: uuid)
+        } catch {
+            if !(error is CancellationError) {
+                print("[GameDetailViewModel] info failed / failed: \(error)")
+            }
+            return nil
+        }
+    }
+
+    /// 优先使用路由 UUID，否则按 Steam appID 查一次 / Uses the route UUID, or looks it up once by Steam appID
+    private func resolveUUID(for route: GameDetailRoute) async -> String? {
+        if let uuid = route.uuid {
+            return uuid
+        }
+
+        do {
+            return try await ITADAPI.lookupUUID(appID: route.appID)
+        } catch {
+            if !(error is CancellationError) {
+                print("[GameDetailViewModel] UUID lookup failed / failed: \(error)")
             }
             return nil
         }
