@@ -125,6 +125,8 @@ struct GameDetailView: View {
                 mediaGallery(details)
 
                 VStack(alignment: .leading, spacing: 22) {
+                    genreChips(details)
+
                     steamReleaseSection(details)
 
                     steamDetailSection(details)
@@ -135,6 +137,16 @@ struct GameDetailView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 32)
             }
+        }
+    }
+
+    /// 图片下方的 Steam 类型标签 / Steam genre chips below the media gallery
+    @ViewBuilder
+    private func genreChips(_ details: SteamAppDetails) -> some View {
+        let genres = details.genres?.compactMap(\.description).filter { !$0.isEmpty } ?? []
+
+        if !genres.isEmpty {
+            chipRow(genres)
         }
     }
 
@@ -216,17 +228,31 @@ struct GameDetailView: View {
     private func steamDetailSection(_ details: SteamAppDetails) -> some View {
         let developers = details.developers?.filter { !$0.isEmpty } ?? []
         let publishers = details.publishers?.filter { !$0.isEmpty } ?? []
+        let categories = details.categories?.compactMap(\.description).filter { !$0.isEmpty } ?? []
+        let platforms = details.platformText
+        let hasPlatforms = !platforms.isEmpty && platforms != "—"
 
-        if let description = details.shortDescription {
+        if details.shortDescription != nil
+            || !developers.isEmpty
+            || !publishers.isEmpty
+            || !categories.isEmpty
+            || hasPlatforms {
             VStack(alignment: .leading, spacing: 14) {
                 Text("GAME DETAIL")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.brandGreen)
 
                 if isSteamDetailExpanded {
-                    descriptionText(description)
+                    if let description = details.shortDescription {
+                        descriptionText(description)
+                    }
 
                     creditsList(developers: developers, publishers: publishers)
+
+                    steamMetadataList(
+                        categories: categories,
+                        platforms: hasPlatforms ? platforms : nil
+                    )
 
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
@@ -240,20 +266,18 @@ struct GameDetailView: View {
                         .accessibilityLabel("Show less")
                     }
                 } else {
-                    descriptionText(description, lineLimit: 3)
-                        .overlay(alignment: .bottomTrailing) {
+                    if let description = details.shortDescription {
+                        descriptionText(description, lineLimit: 3)
+                            .overlay(alignment: .bottomTrailing) {
+                                inlineMoreButton
+                            }
+                    } else {
+                        HStack(spacing: 0) {
+                            Spacer(minLength: 0)
                             inlineMoreButton
                         }
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } else if !developers.isEmpty || !publishers.isEmpty {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("GAME DETAIL")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.brandGreen)
-
-                creditsList(developers: developers, publishers: publishers)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -305,6 +329,57 @@ struct GameDetailView: View {
         }
     }
 
+    /// Steam 分类与支持平台 / Steam categories and supported platforms
+    @ViewBuilder
+    private func steamMetadataList(
+        categories: [String],
+        platforms: String?
+    ) -> some View {
+        if !categories.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Categories")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondaryText)
+
+                categoryChipGrid(categories)
+            }
+        }
+        if let platforms {
+            infoRow(label: "Platforms", value: platforms)
+        }
+    }
+
+    /// 封面下的类型标签可横向滚动 / Genre chips below the cover can scroll horizontally
+    private func chipRow(_ labels: [String]) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(labels, id: \.self) { label in
+                    Text(label)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primaryText)
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .background(Color.surfaceElevated, in: Capsule())
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    /// Detail 内的分类标签自动换行并完整显示 / Detail categories wrap and remain fully visible
+    private func categoryChipGrid(_ labels: [String]) -> some View {
+        FlowLayout(itemSpacing: 8, rowSpacing: 8) {
+            ForEach(labels, id: \.self) { label in
+                Text(label)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primaryText)
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 32)
+                    .background(Color.surfaceElevated, in: Capsule())
+            }
+        }
+    }
+
     /// 蓝色 `More ⌄` / `Show less ⌃`，文字和箭头始终挨在一起；收起向下、展开向上 /
     /// The blue `More ⌄` and `Show less ⌃`, with the label and its chevron always together; down
     /// while collapsed, up while expanded
@@ -331,10 +406,10 @@ struct GameDetailView: View {
         }
     }
 
-    /// ITAD 评分、厂商、标签与热度 / ITAD reviews, credits, tags and popularity
+    /// ITAD 评分与热度 / ITAD reviews and popularity
     @ViewBuilder
     private var infoSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 18) {
             Text("ITAD details")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.brandGreen)
@@ -348,29 +423,27 @@ struct GameDetailView: View {
                     .controlSize(.small)
 
             case .loaded(let info):
-                if let steam = info.steamReview, let score = steam.score {
-                    infoRow(label: "Steam", value: "\(score)%")
+                let reviews = info.reviews?.filter {
+                    $0.source?.isEmpty == false && $0.score != nil
+                } ?? []
+
+                if !reviews.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Reviews")
+                            .font(.system(size: 22, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.primaryText)
+
+                        ForEach(Array(reviews.enumerated()), id: \.offset) { _, review in
+                            reviewRow(review)
+                        }
+                    }
                 }
-                if let metascore = info.reviews?.first(where: { $0.source == "Metascore" })?.score {
-                    infoRow(label: "Metascore", value: "\(metascore)")
-                }
-                if let openCritic = info.reviews?.first(where: { $0.source == "OpenCritic" })?.score {
-                    infoRow(label: "OpenCritic", value: "\(openCritic)")
-                }
-                if let developer = info.primaryDeveloper {
-                    infoRow(label: "Developer", value: developer)
-                }
-                if let publisher = info.primaryPublisher {
-                    infoRow(label: "Publisher", value: publisher)
-                }
-                if let tags = info.tags, !tags.isEmpty {
-                    infoRow(label: "Tags", value: tags.joined(separator: ", "))
-                }
+
                 if let recent = info.players?.recent, recent > 0 {
                     infoRow(label: "Players", value: recent.formatted())
                 }
                 if let rank = info.stats?.rank, rank > 0 {
-                    infoRow(label: "Rank", value: "#\(rank)")
+                    infoRow(label: "ITAD rank", value: "#\(rank)")
                 }
 
             case .unavailable:
@@ -379,10 +452,63 @@ struct GameDetailView: View {
                     .foregroundStyle(.secondaryText)
             }
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    /// 一个评分来源：分数、评分人数与视觉比例条 / A review source with score, count, and a visual ratio bar
+    private func reviewRow(_ review: ITADReview) -> some View {
+        let score = min(max(review.score ?? 0, 0), 100)
+        let source = review.source ?? "Unknown"
+
+        return VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline) {
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.thumbsup.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.brandGreen)
+
+                    Text("\(score)%")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(.brandGreen)
+                }
+
+                Spacer(minLength: 12)
+
+                Text(review.count.map { "\($0.formatted()) reviews" } ?? "Review count unavailable")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondaryText)
+            }
+
+            GeometryReader { proxy in
+                HStack(spacing: 3) {
+                    Capsule()
+                        .fill(Color.brandGreen)
+                        .frame(width: proxy.size.width * CGFloat(score) / 100)
+
+                    Capsule()
+                        .fill(Color.secondaryText.opacity(0.28))
+                }
+            }
+            .frame(height: 7)
+
+            HStack {
+                Text(source)
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primaryText)
+
+                Spacer(minLength: 12)
+
+                Text("\(score)/100")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondaryText)
+            }
+        }
+        .padding(.vertical, 12)
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(source), \(score) percent, \(review.count.map { $0.formatted() } ?? "review count unavailable") reviews")
     }
 
     /// 一行信息 / One info row
@@ -496,6 +622,85 @@ struct GameDetailView: View {
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+/// 按子项真实宽度排列并自动换行的流式布局 /
+/// A wrapping layout that uses each item's intrinsic width
+private struct FlowLayout: Layout {
+    let itemSpacing: CGFloat
+    let rowSpacing: CGFloat
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        let rows = makeRows(width: proposal.width, subviews: subviews)
+        let height = rows.reduce(0) { total, row in
+            total + row.height
+        } + CGFloat(max(0, rows.count - 1)) * rowSpacing
+
+        return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: height)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        let rows = makeRows(width: bounds.width, subviews: subviews)
+        var y = bounds.minY
+
+        for row in rows {
+            var x = bounds.minX
+
+            for index in row.indices {
+                let subview = subviews[index]
+                let size = subview.sizeThatFits(.unspecified)
+                subview.place(
+                    at: CGPoint(x: x, y: y),
+                    anchor: .topLeading,
+                    proposal: ProposedViewSize(size)
+                )
+                x += size.width + itemSpacing
+            }
+
+            y += row.height + rowSpacing
+        }
+    }
+
+    private func makeRows(width: CGFloat?, subviews: Subviews) -> [FlowRow] {
+        let availableWidth = width ?? .infinity
+        var rows: [FlowRow] = []
+        var current = FlowRow()
+
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let proposedWidth = current.width + (current.indices.isEmpty ? 0 : itemSpacing) + size.width
+
+            if !current.indices.isEmpty && proposedWidth > availableWidth {
+                rows.append(current)
+                current = FlowRow()
+            }
+
+            current.indices.append(index)
+            current.width += (current.indices.count == 1 ? 0 : itemSpacing) + size.width
+            current.height = max(current.height, size.height)
+        }
+
+        if !current.indices.isEmpty {
+            rows.append(current)
+        }
+
+        return rows
+    }
+
+    private struct FlowRow {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
     }
 }
 
