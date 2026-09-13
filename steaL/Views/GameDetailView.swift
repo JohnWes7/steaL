@@ -672,7 +672,8 @@ struct GameDetailView: View {
 
                 Picker("Offer filter", selection: $offerFilter) {
                     ForEach(OfferFilter.allCases, id: \.self) { filter in
-                        Text(filter.rawValue)
+                    let count = filter == .steam ? prices.steamDeals.count : prices.deals.count
+                    Text("\(filter.rawValue) (\(count))")
                             .tag(filter)
                     }
                 }
