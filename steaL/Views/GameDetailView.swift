@@ -25,10 +25,16 @@ struct GameDetailView: View {
 
     @State private var gameDetailViewModel = GameDetailViewModel()
     @State private var isSteamDetailExpanded = false
+    @State private var offerFilter: OfferFilter = .steam
 
     /// 用户开了「减弱动态效果」时跳过展开动画 /
     /// Skips the expand animation when Reduce Motion is turned on
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private enum OfferFilter: String, CaseIterable {
+        case steam = "Steam"
+        case all = "All"
+    }
 
     /// 当前区域 / Current region
     private var region: AppRegion { settings.first?.region ?? .australia }
@@ -638,7 +644,8 @@ struct GameDetailView: View {
     /// 当前可购买的 Steam 激活价格 / Current prices for Steam-activating offers
     @ViewBuilder
     private func currentOffers(_ prices: ITADPriceGame) -> some View {
-        let offers = prices.steamDeals.sorted { $0.price.amount < $1.price.amount }
+        let offers = (offerFilter == .steam ? prices.steamDeals : prices.deals)
+            .sorted { $0.price.amountInt < $1.price.amountInt }
 
         if !offers.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
@@ -647,13 +654,17 @@ struct GameDetailView: View {
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(.brandGreen)
 
-                    Spacer(minLength: 12)
-
-                    Text("Steam activation")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondaryText)
                 }
                 .padding(.top, 14)
+
+                Picker("Offer filter", selection: $offerFilter) {
+                    ForEach(OfferFilter.allCases, id: \.self) { filter in
+                        Text(filter.rawValue)
+                            .tag(filter)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .tint(.brandBlue)
 
                 ForEach(Array(offers.enumerated()), id: \.offset) { index, offer in
                     currentOfferRow(
@@ -662,12 +673,21 @@ struct GameDetailView: View {
                     )
                 }
             }
+        } else if offerFilter == .all {
+            Text("No current offers")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondaryText)
         }
     }
 
     /// 当前报价行，最低价用品牌色标记 / Current offer row; the cheapest offer gets the brand accent
-    private func currentOfferRow(_ offer: ITADPriceDeal, isBest: Bool) -> some View {
-        HStack(spacing: 12) {
+    private func currentOfferRow(
+        _ offer: ITADPriceDeal,
+        isBest: Bool
+    ) -> some View {
+        let drmNames = offer.drm.map(\.name).joined(separator: ", ")
+
+        return HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .fill(isBest ? Color.brandGreen : Color.secondaryText.opacity(0.5))
                 .frame(width: 5, height: 42)
@@ -691,6 +711,11 @@ struct GameDetailView: View {
                 Text(offer.cut > 0 ? "Save \(offer.cut)%" : "Current price")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(offer.cut > 0 ? .brandBlue : .secondaryText)
+
+                Text(drmNames.isEmpty ? "DRM unavailable" : drmNames)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondaryText)
+                    .lineLimit(1)
             }
 
             Spacer(minLength: 8)
@@ -714,7 +739,8 @@ struct GameDetailView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            "\(offer.shop.name), \(offer.price.amount.formatted(.currency(code: offer.price.currency)))"
+            "\(offer.shop.name), \(drmNames.isEmpty ? "DRM unavailable" : drmNames), "
+                + "\(offer.price.amount.formatted(.currency(code: offer.price.currency)))"
         )
     }
     /// 一条历史价格 / One historical price row
