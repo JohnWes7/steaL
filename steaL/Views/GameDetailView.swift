@@ -24,6 +24,11 @@ struct GameDetailView: View {
     private var settings: [UserSettingModel]
 
     @State private var gameDetailViewModel = GameDetailViewModel()
+    @State private var isSteamDetailExpanded = false
+
+    /// 用户开了「减弱动态效果」时跳过展开动画 /
+    /// Skips the expand animation when Reduce Motion is turned on
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// 当前区域 / Current region
     private var region: AppRegion { settings.first?.region ?? .australia }
@@ -49,7 +54,6 @@ struct GameDetailView: View {
                 .ignoresSafeArea()
 
             content
-                .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         // 参数由视图传入，`@State` 里的 view model 只接收调用 /
@@ -62,12 +66,19 @@ struct GameDetailView: View {
         .task(id: reloadKey) {
             await gameDetailViewModel.load(route: route, region: region, language: language)
         }
-        // 来源页把导航栏藏起来了（`.toolbar(.hidden, for: .navigationBar)`），
-        // 不在这里显式恢复的话详情页会连返回按钮一起没有 /
-        // The source screen hides the navigation bar, so it has to be re-enabled here or the
-        // detail page would also lose its back button
         .toolbar(.visible, for: .navigationBar)
+        .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var navigationTitle: String {
+        if case .loaded(let details) = gameDetailViewModel.state,
+           let name = details.name,
+           !name.isEmpty {
+            return name
+        }
+
+        return route.title
     }
 
     /// 按状态切换的页面主体 / The page body, switched on the load state
@@ -110,25 +121,213 @@ struct GameDetailView: View {
     /// price section come next
     private func detailContent(_ details: SteamAppDetails) -> some View {
         ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 18) {
-                header(details)
+            VStack(alignment: .leading, spacing: 0) {
+                mediaGallery(details)
 
-                if let description = details.shortDescription {
-                    Text(description)
-                        .font(.system(size: 15))
-                        .foregroundStyle(.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 22) {
+                    steamReleaseSection(details)
+
+                    steamDetailSection(details)
+
+                    infoSection
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 32)
+            }
+        }
+    }
 
-                infoSection
+    /// Steam 图片分页，第一张使用商店主图，随后展示 Steam 截图 /
+    /// Steam media paging: the store header image first, followed by Steam screenshots
+    @ViewBuilder
+    private func mediaGallery(_ details: SteamAppDetails) -> some View {
+        let imageURLs = ([details.headerImage] + (details.screenshots ?? []).compactMap(\.full))
+            .compactMap { $0 }
 
-                priceSection
+        if imageURLs.isEmpty {
+            Color.surfaceElevated
+                .frame(maxWidth: .infinity)
+                .aspectRatio(16 / 9, contentMode: .fit)
+                .overlay {
+                    Image(systemName: "photo")
+                        .font(.system(size: 30, weight: .medium))
+                        .foregroundStyle(.secondaryText)
+                }
+        } else {
+            TabView {
+                ForEach(Array(imageURLs.enumerated()), id: \.offset) { _, imageURL in
+                    AsyncImage(url: URL(string: imageURL)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        case .failure:
+                            Color.surfaceElevated
+                                .overlay {
+                                    Image(systemName: "photo.badge.exclamationmark")
+                                        .font(.system(size: 30, weight: .medium))
+                                        .foregroundStyle(.secondaryText)
+                                }
+                        case .empty:
+                            Color.surfaceElevated
+                                .overlay {
+                                    ProgressView()
+                                        .tint(.brandGreen)
+                                }
+                        @unknown default:
+                            Color.surfaceElevated
+                        }
+                    }
+                    .clipped()
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: imageURLs.count > 1 ? .automatic : .never))
+            .frame(maxWidth: .infinity)
+            .aspectRatio(16 / 9, contentMode: .fit)
+        }
+    }
 
-                parameterList
+    /// 只展示 Steam 的发售事实，避免与 ITAD 的补充数据混在一起 /
+    /// Steam release facts stay separate from the supplementary ITAD data
+    @ViewBuilder
+    private func steamReleaseSection(_ details: SteamAppDetails) -> some View {
+        if let date = details.releaseDate?.date {
+            HStack(spacing: 10) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.brandGreen)
 
-                Spacer(minLength: 0)
+                Text(details.isComingSoon ? "Coming soon · \(date)" : "Released · \(date)")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primaryText)
+            }
+        }
+    }
+
+    /// Steam 简介、开发商与发行商的折叠区：平铺在页面上，不用卡片包裹 /
+    /// Collapsible Steam description and credits, laid out flat rather than inside a card
+    ///
+    /// 收起时简介只露三行，蓝色 `More ⌄` 贴在最后一行的右端；没被截断时它退到文字下方 /
+    /// Collapsed, the description shows three lines with a blue `More ⌄` riding the end of the last
+    /// one; when nothing is truncated the control drops below the text instead
+    @ViewBuilder
+    private func steamDetailSection(_ details: SteamAppDetails) -> some View {
+        let developers = details.developers?.filter { !$0.isEmpty } ?? []
+        let publishers = details.publishers?.filter { !$0.isEmpty } ?? []
+
+        if let description = details.shortDescription {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("GAME DETAIL")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.brandGreen)
+
+                if isSteamDetailExpanded {
+                    descriptionText(description)
+
+                    creditsList(developers: developers, publishers: publishers)
+
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 0)
+
+                        Button {
+                            toggleSteamDetail()
+                        } label: {
+                            toggleLabel("Show less", isExpanded: true)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Show less")
+                    }
+                } else {
+                    descriptionText(description, lineLimit: 3)
+                        .overlay(alignment: .bottomTrailing) {
+                            inlineMoreButton
+                        }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        } else if !developers.isEmpty || !publishers.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("GAME DETAIL")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.brandGreen)
+
+                creditsList(developers: developers, publishers: publishers)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// 贴在简介最后一行右端的展开开关，左侧渐变让底下的文字自然淡出，避免生硬的截断 /
+    /// The expand control riding the end of the description's last line; the gradient fades the text
+    /// out underneath instead of cutting it off
+    private var inlineMoreButton: some View {
+        Button {
+            toggleSteamDetail()
+        } label: {
+            toggleLabel("More", isExpanded: false)
+                .padding(.leading, 36)
+                .padding(.vertical, 3)
+                .background(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .appBackground.opacity(0), location: 0),
+                            .init(color: .appBackground, location: 0.35),
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Show more")
+    }
+
+    /// 简介正文的统一样式 / Shared styling for the description body
+    private func descriptionText(_ text: String, lineLimit: Int? = nil) -> some View {
+        Text(text)
+            .font(.system(size: 17, weight: .regular, design: .rounded))
+            .foregroundStyle(.secondaryText)
+            .lineSpacing(5)
+            .lineLimit(lineLimit)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// 厂商信息，展开后才出现 / The credits, shown once the section is expanded
+    @ViewBuilder
+    private func creditsList(developers: [String], publishers: [String]) -> some View {
+        if !developers.isEmpty {
+            infoRow(label: "Developer", value: developers.joined(separator: ", "))
+        }
+        if !publishers.isEmpty {
+            infoRow(label: "Publisher", value: publishers.joined(separator: ", "))
+        }
+    }
+
+    /// 蓝色 `More ⌄` / `Show less ⌃`，文字和箭头始终挨在一起；收起向下、展开向上 /
+    /// The blue `More ⌄` and `Show less ⌃`, with the label and its chevron always together; down
+    /// while collapsed, up while expanded
+    private func toggleLabel(_ title: String, isExpanded: Bool) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+
+            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                .font(.system(size: 12, weight: .bold))
+        }
+        .foregroundStyle(.brandBlue)
+    }
+
+    /// 展开与收起；开了减弱动态效果就直接切换，不带动画 /
+    /// Toggles the section; with Reduce Motion on it switches without the transition
+    private func toggleSteamDetail() {
+        if reduceMotion {
+            isSteamDetailExpanded.toggle()
+        } else {
+            withAnimation(.snappy(duration: 0.3)) {
+                isSteamDetailExpanded.toggle()
+            }
         }
     }
 
@@ -136,8 +335,8 @@ struct GameDetailView: View {
     @ViewBuilder
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("ITAD INFO")
-                .font(.system(size: 13, weight: .bold))
+            Text("ITAD details")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.brandGreen)
 
             switch gameDetailViewModel.infoState {
@@ -183,7 +382,7 @@ struct GameDetailView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     /// 一行信息 / One info row
@@ -264,27 +463,6 @@ struct GameDetailView: View {
             if let detail {
                 Text(detail)
                     .font(.system(size: 13))
-                    .foregroundStyle(.secondaryText)
-            }
-        }
-    }
-
-    /// 标题区：优先用 Steam 的本地化标题，数据回来前用列表传过来的名字 /
-    /// Title block; the localised Steam title once it is in, falling back to the list title
-    private func header(_ details: SteamAppDetails) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("GAME DETAIL")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.brandGreen)
-
-            Text(details.name ?? route.title)
-                .font(.system(size: 30, weight: .heavy, design: .rounded))
-                .foregroundStyle(.primaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let date = details.releaseDate?.date {
-                Text(details.isComingSoon ? "Coming soon · \(date)" : date)
-                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondaryText)
             }
         }
