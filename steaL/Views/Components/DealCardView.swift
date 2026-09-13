@@ -201,7 +201,7 @@ struct DealCardView: View {
                 Text(price.amount, format: .currency(code: price.currency))
             }
         }
-        .font(.system(size: 26, weight: .heavy, design: .rounded))
+        .font(.system(size: 26, weight: .bold, design: .monospaced))
         .foregroundStyle(.brandGreen)
     }
 
@@ -212,7 +212,7 @@ struct DealCardView: View {
 
         if regular.amountInt > deal.deal.price.amountInt {
             Text(regular.amount, format: .currency(code: regular.currency))
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 16, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondaryText)
                 .strikethrough()
         }

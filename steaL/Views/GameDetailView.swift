@@ -442,7 +442,7 @@ struct GameDetailView: View {
                 if !reviews.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Reviews")
-                            .font(.system(size: 22, weight: .heavy, design: .rounded))
+                            .font(.system(size: 22, weight: .heavy))
                             .foregroundStyle(.primaryText)
 
                         ForEach(Array(reviews.enumerated()), id: \.offset) { _, review in
@@ -731,14 +731,14 @@ struct GameDetailView: View {
 
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(offer.price.amount.formatted(.currency(code: offer.price.currency)))
-                        .font(.system(size: 19, weight: .heavy, design: .rounded))
+                        .font(.system(size: 19, weight: .bold, design: .monospaced))
                         .foregroundStyle(isBest ? .brandGreen : .primaryText)
 
                     if offer.cut > 0 {
                         Text(
                             offer.regular.amount.formatted(.currency(code: offer.regular.currency))
                         )
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundStyle(.secondaryText)
                         .strikethrough()
                     }
@@ -771,7 +771,7 @@ struct GameDetailView: View {
             Spacer(minLength: 12)
 
             Text(price.amount.formatted(.currency(code: price.currency)))
-                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                .font(.system(size: 20, weight: .bold, design: .monospaced))
                 .foregroundStyle(accent)
         }
         .padding(.vertical, 6)

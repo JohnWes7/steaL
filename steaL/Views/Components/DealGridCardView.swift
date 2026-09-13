@@ -214,7 +214,7 @@ struct DealGridCardView: View {
                 Text(price.amount, format: .currency(code: price.currency))
             }
         }
-        .font(.system(size: 19, weight: .heavy, design: .rounded))
+        .font(.system(size: 19, weight: .bold, design: .monospaced))
         .foregroundStyle(.brandGreen)
         .lineLimit(1)
         .minimumScaleFactor(0.7)

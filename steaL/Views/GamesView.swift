@@ -355,7 +355,7 @@ struct GamesView: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 0) {
                 Text("STEAM PRICE TRACKER")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 13, weight: .bold, design: .default))
                     .foregroundStyle(.brandGreen)
                 
                 HStack(spacing: 0) {
@@ -365,7 +365,7 @@ struct GamesView: View {
                     Text("L")
                         .foregroundStyle(.brandBlue)
                 }
-                .font(.system(size: 44, weight: .heavy, design: .rounded))
+                .font(.system(size: 44, weight: .bold, design: .default))
             }
             
             Spacer()
