@@ -17,6 +17,18 @@ import Foundation
 @Observable
 final class GameDetailViewModel {
 
+    /// Steam 游戏 App ID / The Steam game app ID
+    var appID: Int {
+        didSet {
+            if appID != oldValue {
+                uuid = nil
+            }
+        }
+    }
+
+    /// 导航传入的初始标题 / The initial title received from navigation
+    let initialTitle: String
+
     /// 页面当前状态 / Current state of the page
     enum State: Equatable {
         /// 首次加载或重试中 / First load, or a retry in progress
@@ -71,20 +83,35 @@ final class GameDetailViewModel {
     /// ITAD 游戏信息的状态，独立于页面主状态 / The ITAD info state, independent of the page state
     private(set) var infoState: InfoState = .idle
 
+    /// 可用于 ITAD 请求的游戏 UUID / The game UUID used for ITAD requests
+    private(set) var uuid: String?
+
+    /// 用导航参数创建详情页状态机 / Creates the detail state machine from its navigation payload
+    init(route: GameDetailRoute) {
+        appID = route.appID
+        initialTitle = route.title
+        uuid = route.uuid
+    }
+
+    /// 当前页面标题；优先使用 Steam 返回的名称 / Current page title, preferring Steam's name
+    var title: String {
+        if case .loaded(let details) = state,
+            let name = details.name,
+            !name.isEmpty
+        {
+            return name
+        }
+
+        return initialTitle
+    }
+
     /// 加载一页详情 / Loads one detail page
     ///
-    /// 参数由视图传入而不是存成属性：`@State` 只在视图身份建立时求值一次，
-    /// 存下来的 route 会在推入新页面时变成旧值 /
-    /// Parameters are handed in rather than stored: a `@State` view model is only built once per
-    /// view identity, so a stored route would go stale on the next push
-    ///
     /// - Parameters:
-    ///   - route: 导航携带的 appID 与 uuid / the appID and uuid handed over by navigation
     ///   - region: 商店区域，决定货币 / store region, drives the currency
     ///   - language: 语言，Steam 会据此本地化标题与描述 / language, Steam localises the copy with it
     ///   - isRetry: 重试时保留旧内容，避免页面闪一下空白 / keeps the current content on a retry
     func load(
-        route: GameDetailRoute,
         region: AppRegion,
         language: AppLanguage,
         isRetry: Bool = false
@@ -99,7 +126,7 @@ final class GameDetailViewModel {
         // 硬门槛：拿不到 Steam 详情就没有详情页 / Hard requirement: no Steam details, no page
         do {
             let details = try await SteamAPI.fetchAppDetails(
-                appID: route.appID,
+                appID: appID,
                 region: region,
                 language: language
             )
@@ -115,7 +142,7 @@ final class GameDetailViewModel {
 
             // ITAD 增强数据共用一次 UUID lookup；已有 UUID 时不查 lookup /
             // The ITAD enhancements share one UUID lookup; an existing UUID skips that lookup
-            let uuid = await resolveUUID(for: route)
+            let uuid = await resolveUUID()
             if let uuid {
                 pricesState = .loading
                 infoState = .loading
@@ -127,7 +154,7 @@ final class GameDetailViewModel {
                 let loadedInfo = await info
                 pricesState = loadedPrices.map(PricesState.loaded) ?? .unavailable
                 infoState = loadedInfo.map(InfoState.loaded) ?? .unavailable
-            } else if route.uuid == nil {
+            } else if uuid == nil {
                 pricesState = .unavailable
                 infoState = .unavailable
             }
@@ -142,6 +169,36 @@ final class GameDetailViewModel {
 
             state = .failed(LoadError.from(error))
         }
+    }
+
+    /// 重试 ITAD 比价；没有 UUID 时先按 Steam appID 查找 / Retries ITAD prices, resolving the UUID first when needed
+    func retryPrices(region: AppRegion) async {
+        pricesState = .loading
+
+        guard !Task.isCancelled else { return }
+        guard let uuid = await resolveUUID() else {
+            pricesState = .unavailable
+            return
+        }
+
+        let prices = await fetchPricesIfPossible(uuid: uuid, region: region)
+        guard !Task.isCancelled else { return }
+        pricesState = prices.map(PricesState.loaded) ?? .unavailable
+    }
+
+    /// 重试 ITAD 游戏信息；没有 UUID 时先按 Steam appID 查找 / Retries ITAD info, resolving the UUID first when needed
+    func retryInfo() async {
+        infoState = .loading
+
+        guard !Task.isCancelled else { return }
+        guard let uuid = await resolveUUID() else {
+            infoState = .unavailable
+            return
+        }
+
+        let info = await fetchInfoIfPossible(uuid: uuid)
+        guard !Task.isCancelled else { return }
+        infoState = info.map(InfoState.loaded) ?? .unavailable
     }
 
     /// 拿到这个游戏在各商店的价格，拿不到就返回 `nil` /
@@ -178,13 +235,16 @@ final class GameDetailViewModel {
     }
 
     /// 优先使用路由 UUID，否则按 Steam appID 查一次 / Uses the route UUID, or looks it up once by Steam appID
-    private func resolveUUID(for route: GameDetailRoute) async -> String? {
-        if let uuid = route.uuid {
+    private func resolveUUID() async -> String? {
+        if let uuid {
             return uuid
         }
 
         do {
-            return try await ITADAPI.lookupUUID(appID: route.appID)
+            let uuid = try await ITADAPI.lookupUUID(appID: appID)
+            guard !Task.isCancelled else { return nil }
+            self.uuid = uuid
+            return uuid
         } catch {
             if !(error is CancellationError) {
                 print("[GameDetailViewModel] UUID lookup failed / failed: \(error)")

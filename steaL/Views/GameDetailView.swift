@@ -16,16 +16,18 @@ import SwiftUI
 /// ITAD price and info steps joining the same `load` once their DTOs exist
 struct GameDetailView: View {
 
-    /// 导航携带的参数 / The payload handed over by the navigation stack
-    let route: GameDetailRoute
-
     /// 设置单例，用来决定请求的区域与语言 / The settings singleton, which decides region and language
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
 
-    @State private var gameDetailViewModel = GameDetailViewModel()
+    @State private var gameDetailViewModel: GameDetailViewModel
     @State private var isSteamDetailExpanded = false
     @State private var offerFilter: OfferFilter = .steam
+
+    /// 用导航参数创建详情页及其状态机 / Creates the detail page and its state machine from the route
+    init(route: GameDetailRoute) {
+        _gameDetailViewModel = State(initialValue: GameDetailViewModel(route: route))
+    }
 
     /// 用户开了「减弱动态效果」时跳过展开动画 /
     /// Skips the expand animation when Reduce Motion is turned on
@@ -44,7 +46,6 @@ struct GameDetailView: View {
     private var language: AppLanguage { settings.first?.language ?? .english }
 
     struct ReloadKey: Equatable, Hashable {
-        let route: GameDetailRoute
         let region: AppRegion
         let language: AppLanguage
     }
@@ -52,7 +53,7 @@ struct GameDetailView: View {
     /// 参数签名：route 或设置变了就重新加载 /
     /// Parameter signature; a change to the route or the settings triggers a reload
     private var reloadKey: ReloadKey {
-        ReloadKey(route: route, region: region, language: language)
+        ReloadKey(region: region, language: language)
     }
 
     var body: some View {
@@ -63,15 +64,12 @@ struct GameDetailView: View {
             content
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // 参数由视图传入，`@State` 里的 view model 只接收调用 /
-        // The view hands the parameters in; the `@State` view model only receives calls
-        //
         // 用 `.task(id:)` 而不是 `onAppear` + `hasStarted`：详情页没有「切 Tab 不能被取消」的需求，
         // 而 `.task` 在参数变化时自动重跑、视图离开时自动取消在飞请求 /
         // `.task(id:)` rather than `onAppear` + a started flag: unlike the feed, the detail page
         // wants the request cancelled when it goes away, and to re-run when parameters change
         .task(id: reloadKey) {
-            await gameDetailViewModel.load(route: route, region: region, language: language)
+            await gameDetailViewModel.load(region: region, language: language)
         }
         .toolbar(.visible, for: .navigationBar)
         .navigationTitle(navigationTitle)
@@ -79,14 +77,7 @@ struct GameDetailView: View {
     }
 
     private var navigationTitle: String {
-        if case .loaded(let details) = gameDetailViewModel.state,
-            let name = details.name,
-            !name.isEmpty
-        {
-            return name
-        }
-
-        return route.title
+        gameDetailViewModel.title
     }
 
     /// 按状态切换的页面主体 / The page body, switched on the load state
@@ -110,7 +101,6 @@ struct GameDetailView: View {
                 Button("Try Again") {
                     Task {
                         await gameDetailViewModel.load(
-                            route: route,
                             region: region,
                             language: language,
                             isRetry: true
@@ -485,12 +475,28 @@ struct GameDetailView: View {
                 }
 
             case .unavailable:
-                Text("No info data")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondaryText)
+                unavailableState("No info data") {
+                    Task {
+                        await gameDetailViewModel.retryInfo()
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 无数据时的重试提示 / Retry prompt for an unavailable optional section
+    private func unavailableState(_ message: String, retry: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundStyle(.secondaryText)
+
+            Button("Retry", action: retry)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.brandBlue)
+                .buttonStyle(.plain)
+        }
     }
 
     /// ITAD 底部指标：图标、重点数字与简短标签 /
@@ -638,9 +644,11 @@ struct GameDetailView: View {
                 currentOffers(prices)
 
             case .unavailable:
-                Text("No historical price data")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondaryText)
+                unavailableState("No historical price data") {
+                    Task {
+                        await gameDetailViewModel.retryPrices(region: region)
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -796,8 +804,12 @@ struct GameDetailView: View {
     /// easy to tell apart
     private var parameterList: some View {
         VStack(alignment: .leading, spacing: 12) {
-            row(label: "appID", value: String(route.appID), isMissing: false)
-            row(label: "uuid", value: route.uuid ?? "—", isMissing: route.uuid == nil)
+            row(label: "appID", value: String(gameDetailViewModel.appID), isMissing: false)
+            row(
+                label: "uuid",
+                value: gameDetailViewModel.uuid ?? "—",
+                isMissing: gameDetailViewModel.uuid == nil
+            )
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
