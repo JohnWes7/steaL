@@ -13,6 +13,67 @@ import Foundation
 /// Unlike `ITADAPI` this needs **no API key**; `cc` and `l` alone decide the currency and language
 class SteamAPI {
 
+    /// 按名称搜索 Steam 商店 / Searches the Steam store by name
+    ///
+    /// `GET https://store.steampowered.com/api/storesearch?term=<query>&cc=<region>&l=<language>`
+    ///
+    /// 返回的是列表用轻量数据；点击结果后仍应通过 `fetchAppDetails` 获取完整详情 /
+    /// Returns lightweight list data; use `fetchAppDetails` after an item is selected
+    ///
+    /// - Parameters:
+    ///   - query: 用户输入的搜索词 / Search text entered by the user
+    ///   - region: 区域，决定价格和货币 / Region used for pricing and currency
+    ///   - language: 返回名称的语言 / Language used for localised names
+    /// - Returns: 搜索总数与结果条目 / The match count and search items
+    static func searchStore(
+        query: String,
+        region: AppRegion = .australia,
+        language: AppLanguage = .english
+    ) async throws -> SteamSearchResponse {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else { return .empty }
+
+        var urlComponents = URLComponents(string: "https://store.steampowered.com/api/storesearch")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "term", value: trimmedQuery),
+            URLQueryItem(name: "cc", value: region.apiRegionCode),
+            URLQueryItem(name: "l", value: language.apiCode),
+        ]
+        guard let url = urlComponents.url else { throw URLError(.badURL) }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        #if DEBUG
+        logRequest(request)
+        #endif
+
+        let (data, resp) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = resp as? HTTPURLResponse else {
+            throw SteamAPIError.invalidResponse
+        }
+
+        #if DEBUG
+        logResponse(httpResponse, data: data)
+        #endif
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw SteamAPIError.requestFailed(
+                statusCode: httpResponse.statusCode,
+                body: String(data: data, encoding: .utf8)
+            )
+        }
+
+        do {
+            return try JSONDecoder().decode(SteamSearchResponse.self, from: data)
+        } catch {
+            #if DEBUG
+            print("[Steam] 搜索解码失败 / Search decoding failed: \(error)")
+            #endif
+            throw error
+        }
+    }
+
     /// 获取游戏详情 / Fetches one game's store details
     ///
     /// `GET https://store.steampowered.com/api/appdetails?appids=<id>&cc=<region>&l=<language>`

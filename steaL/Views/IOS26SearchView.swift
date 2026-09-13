@@ -14,6 +14,7 @@ struct IOS26SearchView: View {
 
     /// 搜索关键字 / Search keyword
     @State private var query = ""
+    @State private var searchViewModel = SearchViewModel()
 
     var body: some View {
         ZStack {
