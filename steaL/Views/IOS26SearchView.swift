@@ -41,6 +41,9 @@ struct IOS26SearchView: View {
 
             await searchViewModel.search(query: trimmedQuery)
         }
+        .navigationDestination(for: GameDetailRoute.self) { route in
+            GameDetailView(route: route)
+        }
     }
 
     @ViewBuilder
@@ -68,10 +71,16 @@ struct IOS26SearchView: View {
                 ContentUnavailableView.search(text: trimmedQuery)
             } else {
                 List(items) { item in
-                    searchResultRow(item)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 14))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    NavigationLink(value: GameDetailRoute(
+                        appID: item.id,
+                        uuid: nil,
+                        title: item.name
+                    )) {
+                        searchResultRow(item)
+                    }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 14))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -102,8 +111,8 @@ struct IOS26SearchView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 7)
         }
-        .background(Color.surfaceElevated.opacity(0.82))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        // .background(Color.surfaceElevated.opacity(0.82))
+        // .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func resultArtwork(_ item: SteamSearchItem) -> some View {
