@@ -577,7 +577,6 @@ struct GameDetailView: View {
                     .foregroundStyle(.secondaryText)
             }
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
