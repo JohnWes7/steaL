@@ -109,23 +109,26 @@ struct GameDetailView: View {
     /// The Steam half plus a provisional price block for now; screenshots, movies and the real
     /// price section come next
     private func detailContent(_ details: SteamAppDetails) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            header(details)
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 18) {
+                header(details)
 
-            if let description = details.shortDescription {
-                Text(description)
-                    .font(.system(size: 15))
-                    .foregroundStyle(.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let description = details.shortDescription {
+                    Text(description)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                infoSection
+
+                priceSection
+
+                parameterList
+
+                Spacer(minLength: 0)
             }
-
-            infoSection
-
-            priceSection
-
-            parameterList
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -220,21 +223,17 @@ struct GameDetailView: View {
                     .controlSize(.small)
 
             case .loaded(let prices):
-                if let best = prices.bestSteamDeal {
+                ForEach(Array(prices.steamDeals.enumerated()), id: \.offset) { _, deal in
                     priceRow(
-                        label: "Best",
-                        price: best.price,
-                        detail: "\(best.shop.name) · -\(best.cut)%"
+                        label: deal.shop.name,
+                        price: deal.price,
+                        detail: "-\(deal.cut)%"
                     )
                 }
 
                 if let low = prices.allTimeLow {
                     priceRow(label: "All-time low", price: low, detail: nil)
                 }
-
-                Text("\(prices.steamDeals.count) Steam deals")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondaryText)
 
             case .unavailable:
                 Text("No price data")
