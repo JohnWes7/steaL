@@ -30,6 +30,7 @@ struct GameDetailView: View {
     /// 用户开了「减弱动态效果」时跳过展开动画 /
     /// Skips the expand animation when Reduce Motion is turned on
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
 
     private enum OfferFilter: String, CaseIterable {
         case steam = "Steam"
@@ -79,8 +80,9 @@ struct GameDetailView: View {
 
     private var navigationTitle: String {
         if case .loaded(let details) = gameDetailViewModel.state,
-           let name = details.name,
-           !name.isEmpty {
+            let name = details.name,
+            !name.isEmpty
+        {
             return name
         }
 
@@ -244,7 +246,8 @@ struct GameDetailView: View {
             || !developers.isEmpty
             || !publishers.isEmpty
             || !categories.isEmpty
-            || hasPlatforms {
+            || hasPlatforms
+        {
             VStack(alignment: .leading, spacing: 14) {
                 Text("GAME DETAIL")
                     .font(.system(size: 13, weight: .bold))
@@ -431,9 +434,10 @@ struct GameDetailView: View {
                     .controlSize(.small)
 
             case .loaded(let info):
-                let reviews = info.reviews?.filter {
-                    $0.source?.isEmpty == false && $0.score != nil
-                } ?? []
+                let reviews =
+                    info.reviews?.filter {
+                        $0.source?.isEmpty == false && $0.score != nil
+                    } ?? []
 
                 if !reviews.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
@@ -568,7 +572,9 @@ struct GameDetailView: View {
             Divider()
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(source), \(score) percent, \(review.count.map { $0.formatted() } ?? "review count unavailable") reviews")
+        .accessibilityLabel(
+            "\(source), \(score) percent, \(review.count.map { $0.formatted() } ?? "review count unavailable") reviews"
+        )
     }
 
     /// 一行信息 / One info row
@@ -640,7 +646,6 @@ struct GameDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-
     /// 当前可购买的 Steam 激活价格 / Current prices for Steam-activating offers
     @ViewBuilder
     private func currentOffers(_ prices: ITADPriceGame) -> some View {
@@ -687,52 +692,61 @@ struct GameDetailView: View {
     ) -> some View {
         let drmNames = offer.drm.map(\.name).joined(separator: ", ")
 
-        return HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(isBest ? Color.brandGreen : Color.secondaryText.opacity(0.5))
-                .frame(width: 5, height: 42)
+        return Button {
+            guard let url = URL(string: offer.url) else { return }
+            openURL(url)
+        } label: {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(isBest ? Color.brandGreen : Color.secondaryText.opacity(0.5))
+                    .frame(width: 5, height: 42)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Text(offer.shop.name)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primaryText)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(offer.shop.name)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primaryText)
 
-                    if isBest {
-                        Text("BEST")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundStyle(.appBackground)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Color.brandGreen, in: Capsule())
+                        if isBest {
+                            Text("BEST")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(.appBackground)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(Color.brandGreen, in: Capsule())
+                        }
                     }
+
+                    Text(offer.cut > 0 ? "Save \(offer.cut)%" : "Current price")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(offer.cut > 0 ? .brandBlue : .secondaryText)
+
+                    Text(drmNames.isEmpty ? "DRM unavailable" : drmNames)
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondaryText)
+                        .lineLimit(1)
                 }
 
-                Text(offer.cut > 0 ? "Save \(offer.cut)%" : "Current price")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(offer.cut > 0 ? .brandBlue : .secondaryText)
+                Spacer(minLength: 8)
 
-                Text(drmNames.isEmpty ? "DRM unavailable" : drmNames)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondaryText)
-                    .lineLimit(1)
-            }
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(offer.price.amount.formatted(.currency(code: offer.price.currency)))
+                        .font(.system(size: 19, weight: .heavy, design: .rounded))
+                        .foregroundStyle(isBest ? .brandGreen : .primaryText)
 
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(offer.price.amount.formatted(.currency(code: offer.price.currency)))
-                    .font(.system(size: 19, weight: .heavy, design: .rounded))
-                    .foregroundStyle(isBest ? .brandGreen : .primaryText)
-
-                if offer.cut > 0 {
-                    Text(offer.regular.amount.formatted(.currency(code: offer.regular.currency)))
+                    if offer.cut > 0 {
+                        Text(
+                            offer.regular.amount.formatted(.currency(code: offer.regular.currency))
+                        )
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondaryText)
                         .strikethrough()
+                    }
                 }
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.vertical, 8)
         .overlay(alignment: .bottom) {
             Divider()
@@ -820,9 +834,10 @@ private struct FlowLayout: Layout {
         cache: inout ()
     ) -> CGSize {
         let rows = makeRows(width: proposal.width, subviews: subviews)
-        let height = rows.reduce(0) { total, row in
-            total + row.height
-        } + CGFloat(max(0, rows.count - 1)) * rowSpacing
+        let height =
+            rows.reduce(0) { total, row in
+                total + row.height
+            } + CGFloat(max(0, rows.count - 1)) * rowSpacing
 
         return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: height)
     }
@@ -861,7 +876,8 @@ private struct FlowLayout: Layout {
 
         for index in subviews.indices {
             let size = subviews[index].sizeThatFits(.unspecified)
-            let proposedWidth = current.width + (current.indices.isEmpty ? 0 : itemSpacing) + size.width
+            let proposedWidth =
+                current.width + (current.indices.isEmpty ? 0 : itemSpacing) + size.width
 
             if !current.indices.isEmpty && proposedWidth > availableWidth {
                 rows.append(current)
