@@ -150,8 +150,11 @@ struct ITADPriceDeal: Codable, Hashable, Sendable {
     /// ITAD 跳转链接 / ITAD redirect link
     let url: String
 
-    /// 防御性检查：该 Key 是否在 Steam（`61`）激活 / Defensive check that the key activates on Steam (`61`)
-    var isSteamActivation: Bool { (drm ?? []).contains { $0.id == 61 } }
+    /// 判断该价格是否属于 Steam 激活：Steam 直购或 DRM 明确包含 Steam /
+    /// Treat a deal as Steam activation when it is bought from Steam or explicitly lists Steam as DRM
+    var isSteamActivation: Bool {
+        shop.id == 61 || (drm ?? []).contains { $0.id == 61 }
+    }
 
     /// ITAD 的 `"H"` 标记：这条 deal 触达了全史最低价 / ITAD's `"H"` flag: this deal hit an all-time low
     var isHistoricalLow: Bool { flag == "H" }

@@ -36,7 +36,7 @@ class ITADAPI {
             )
         }
 
-        return try JSONDecoder().decode(ITADLookupGame?.self, from: data)?.id
+        return try JSONDecoder().decode(ITADGameLookupResponse?.self, from: data)?.id
     }
 
     static func fetchDeals(body: [String: Any] = [:]) async throws -> ITADDealsResponse {
@@ -386,12 +386,6 @@ class ITADAPI {
         }
     }
 
-}
-
-/// ITAD lookup 返回的最小游戏对象 / Minimal game object returned by the ITAD lookup endpoint
-private struct ITADLookupGame: Decodable {
-    /// ITAD 游戏 UUID / ITAD game UUID
-    let id: String
 }
 
 enum ITADAPIError: Error, LocalizedError {
