@@ -5,6 +5,7 @@
 //  Created by yijiang on 2026/9/12.
 //
 
+import SwiftData
 import SwiftUI
 
 /// 搜索页。搜索完全交给系统：这里只挂一个 `.searchable`，聚焦、弹键盘、取消都由系统接管 /
@@ -15,6 +16,25 @@ struct IOS26SearchView: View {
     /// 搜索关键字 / Search keyword
     @State private var query = ""
     @State private var searchViewModel = SearchViewModel()
+
+    /// 用户设置单例行 / Singleton user-settings row
+    @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
+    private var settings: [UserSettingModel]
+
+    /// 当前搜索区域 / Current search region
+    private var region: AppRegion {
+        settings.first?.region ?? .australia
+    }
+
+    /// 当前搜索语言 / Current search language
+    private var language: AppLanguage {
+        settings.first?.language ?? .english
+    }
+
+    /// 搜索任务参数；关键词或设置变化时重新搜索 / Search task inputs; reruns when the query or settings change
+    private var searchRequest: SearchRequest {
+        SearchRequest(query: trimmedQuery, region: region, language: language)
+    }
 
     /// 去掉首尾空白的输入 / Keyword with surrounding whitespace removed
     private var trimmedQuery: String {
@@ -30,16 +50,24 @@ struct IOS26SearchView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .searchable(text: $query, prompt: "Search games, publishers...")
-        .task(id: trimmedQuery) {
+        .task(id: searchRequest) {
             guard !trimmedQuery.isEmpty else {
-                await searchViewModel.search(query: trimmedQuery)
+                await searchViewModel.search(
+                    query: trimmedQuery,
+                    region: region,
+                    language: language
+                )
                 return
             }
 
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
 
-            await searchViewModel.search(query: trimmedQuery)
+            await searchViewModel.search(
+                query: trimmedQuery,
+                region: region,
+                language: language
+            )
         }
         .navigationDestination(for: GameDetailRoute.self) { route in
             GameDetailView(route: route)

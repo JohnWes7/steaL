@@ -27,6 +27,9 @@ class SearchViewModel {
 	/// 当前搜索状态 / Current search state
 	private(set) var state: SearchState = .idle
 
+	/// 最近一次成功搜索的条件 / Conditions of the most recent successful search
+	private var loadedRequest: SearchRequest?
+
 	/// 调用 Steam 搜索接口 / Calls Steam's store search endpoint
 	///
 	/// 空白输入不会发请求，并会清空旧结果。请求失败会转换成 UI 可用的 `LoadError` /
@@ -40,7 +43,13 @@ class SearchViewModel {
 		let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
 
 		guard !trimmedQuery.isEmpty else {
+			loadedRequest = nil
 			state = .idle
+			return
+		}
+
+		let request = SearchRequest(query: trimmedQuery, region: region, language: language)
+		if loadedRequest == request {
 			return
 		}
 
@@ -54,6 +63,7 @@ class SearchViewModel {
 			)
 
 			guard !Task.isCancelled else { return }
+			loadedRequest = request
 			state = .loaded(response.items)
 		} catch {
 			guard !Task.isCancelled else { return }
