@@ -131,6 +131,8 @@ struct GameDetailView: View {
 
                     steamDetailSection(details)
 
+                    priceSection
+
                     infoSection
                 }
                 .padding(.horizontal, 20)
@@ -410,7 +412,7 @@ struct GameDetailView: View {
     @ViewBuilder
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("ITAD details")
+            Text("ITAD DETAILS")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.brandGreen)
 
@@ -526,16 +528,15 @@ struct GameDetailView: View {
         }
     }
 
-    /// 临时的比价区块：只验证数据接上没有，版式后续重做 /
-    /// Provisional price block: only proves the data is wired up; the layout comes later
+    /// 历史价格窗口 / Historical price windows
     ///
     /// 比价晚于详情到达，所以它自己带一个小加载态，不让整页回到转圈 /
     /// The prices arrive after the details, so the section carries its own little loading state
     /// instead of sending the whole page back to a spinner
     @ViewBuilder
     private var priceSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("ITAD PRICES")
+        VStack(alignment: .leading, spacing: 16) {
+            Text("PRICES")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.brandGreen)
 
@@ -548,49 +549,69 @@ struct GameDetailView: View {
                     .controlSize(.small)
 
             case .loaded(let prices):
-                ForEach(Array(prices.steamDeals.enumerated()), id: \.offset) { _, deal in
-                    priceRow(
-                        label: deal.shop.name,
-                        price: deal.price,
-                        detail: "-\(deal.cut)%"
-                    )
+                let lows = [
+                    ("All-time low", prices.historyLow?.all),
+                    ("1 year low", prices.historyLow?.y1),
+                    ("3 months low", prices.historyLow?.m3),
+                ].compactMap { label, price in
+                    price.map { (label, $0) }
                 }
 
-                if let low = prices.allTimeLow {
-                    priceRow(label: "All-time low", price: low, detail: nil)
+                if lows.isEmpty {
+                    Text("No historical price data")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondaryText)
+                } else {
+                    ForEach(Array(lows.enumerated()), id: \.offset) { index, entry in
+                        historicalPriceRow(
+                            label: entry.0,
+                            price: entry.1,
+                            accent: priceAccent(for: index)
+                        )
+                    }
                 }
 
             case .unavailable:
-                Text("No price data")
+                Text("No historical price data")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondaryText)
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    /// 一行价格 / One price line
-    private func priceRow(label: String, price: ITADPrice, detail: String?) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+    /// 一条历史价格 / One historical price row
+    private func historicalPriceRow(label: String, price: ITADPrice, accent: Color) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(accent)
+                .frame(width: 5, height: 42)
+
             Text(label)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.secondaryText)
-                .frame(width: 96, alignment: .leading)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primaryText)
 
-            // 货币代码取数据自带的那个，不硬编码区域 /
-            // The currency code comes from the payload rather than a hard-coded region
+            Spacer(minLength: 12)
+
             Text(price.amount.formatted(.currency(code: price.currency)))
-                .font(.system(size: 18, weight: .heavy, design: .rounded))
-                .foregroundStyle(.brandGreen)
+                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                .foregroundStyle(accent)
+        }
+        .padding(.vertical, 6)
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+    }
 
-            if let detail {
-                Text(detail)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondaryText)
-            }
+    private func priceAccent(for index: Int) -> Color {
+        switch index {
+        case 0:
+            return .brandGreen
+        case 1:
+            return .brandBlue
+        default:
+            return .secondaryText
         }
     }
 
