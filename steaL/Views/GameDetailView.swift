@@ -111,6 +111,10 @@ struct GameDetailView: View {
         let galleryImageURLs = ([details.headerImage] + (details.screenshots ?? []).compactMap(\.full))
             .compactMap { $0 }
 
+        // 试玩版既没有比价也没有 ITAD 资料（ITAD 不收录试玩版），两块直接不渲染 /
+        // A demo has neither prices nor ITAD data, so both sections stay hidden
+        let isDemo = details.type?.caseInsensitiveCompare("demo") == .orderedSame
+
         return ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
                 MediaGalleryView(imageURLs: galleryImageURLs)
@@ -129,16 +133,18 @@ struct GameDetailView: View {
                         DemoSectionView(appID: demo.appID, name: demo.name)
                     }
 
-                    PriceSectionView(
-                        state: gameDetailViewModel.pricesState,
-                        offerFilter: $offerFilter,
-                        retry: retryPrices
-                    )
+                    if !isDemo {
+                        PriceSectionView(
+                            state: gameDetailViewModel.pricesState,
+                            offerFilter: $offerFilter,
+                            retry: retryPrices
+                        )
 
-                    ITADInfoSectionView(
-                        state: gameDetailViewModel.infoState,
-                        retry: retryInfo
-                    )
+                        ITADInfoSectionView(
+                            state: gameDetailViewModel.infoState,
+                            retry: retryInfo
+                        )
+                    }
 
                     DetailFooterView(
                         appID: gameDetailViewModel.appID,
