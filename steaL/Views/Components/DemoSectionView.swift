@@ -15,37 +15,20 @@ import SwiftUI
 /// instead of pushing another detail screen
 struct DemoSectionView: View {
 
-    /// 本体名称，Steam 没给试玩版名字时用它拼标题 /
-    /// The base game's name, used for the title when Steam leaves the demo's own name empty
-    let gameName: String
+    /// 试玩版在 Steam 上的 appid / The demo's appid on Steam
+    let appID: Int
 
-    /// Steam 给这个游戏列的试玩版 / The demos Steam lists for this game
-    let demos: [SteamDemo]
+    /// 试玩版标题，直接用 Steam 给的名字 / The demo's title, taken from Steam as-is
+    let name: String
 
     /// 用来打开外部的商店页 / Used to open the external store page
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ForEach(demos, id: \.self) { demo in
-                demoBlock(demo)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// 一块试玩版按钮 / One demo button
-    private func demoBlock(_ demo: SteamDemo) -> some View {
-        // Steam 很少填试玩版自己的名字（实测 6 个里只有 1 个有），空串时退回「本体名 + Demo」/
-        // Steam rarely fills in the demo's own name, so an empty one falls back to the base game
-        let name = demo.description.flatMap { $0.isEmpty ? nil : $0 } ?? "\(gameName) Demo"
-
-        return Button {
-            // 旧试玩版在 Steam 上会被重定向回本体，这里按它给的 appid 拼地址即可 /
+        Button {
+            // 退役的试玩版会被 Steam 重定向回本体，所以照 appid 拼地址就够了 /
             // Retired demos redirect back to the base game on Steam's side, so the appid is enough
-            guard let appID = demo.appid,
-                let url = URL(string: "https://store.steampowered.com/app/\(appID)/")
-            else { return }
+            guard let url = URL(string: "https://store.steampowered.com/app/\(appID)/") else { return }
 
             openURL(url)
         } label: {
@@ -80,17 +63,14 @@ struct DemoSectionView: View {
     }
 }
 
-#Preview("有试玩版 / With demos") {
+#Preview("试玩版入口 / Demo entry") {
     VStack(alignment: .leading, spacing: 22) {
         DemoSectionView(
-            gameName: "Probably Stolen - Cyberpunk Shopkeeper Sim",
-            demos: [SteamDemo(appid: 4349200, description: "")]
+            appID: 4349200,
+            name: "Probably Stolen - Cyberpunk Shopkeeper Sim Demo"
         )
 
-        DemoSectionView(
-            gameName: "Factorio",
-            demos: [SteamDemo(appid: 452280, description: "Factorio Demo")]
-        )
+        DemoSectionView(appID: 452280, name: "Factorio Demo")
     }
     .padding(20)
     .background(Color.appBackground)

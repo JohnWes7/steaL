@@ -125,11 +125,8 @@ struct GameDetailView: View {
                         isExpanded: $isSteamDetailExpanded
                     )
 
-                    if let demos = details.demos, !demos.isEmpty {
-                        DemoSectionView(
-                            gameName: gameDetailViewModel.title,
-                            demos: demos
-                        )
+                    if let demo = demoLink(details) {
+                        DemoSectionView(appID: demo.appID, name: demo.name)
                     }
 
                     PriceSectionView(
@@ -211,6 +208,25 @@ struct GameDetailView: View {
         Task {
             await gameDetailViewModel.retryInfo()
         }
+    }
+
+    /// 试玩版入口要跳到哪个 appid：本体的页面上是 Steam 列的试玩版，试玩版页面上是它自己 /
+    /// Which appid the demo entry opens: a demo Steam lists on a base game, or the demo itself
+    private func demoLink(_ details: SteamAppDetails) -> (appID: Int, name: String)? {
+        if let demo = details.demos?.first, let appID = demo.appid {
+            // Steam 很少填试玩版自己的名字（实测 6 个里只有 1 个有），空串时退回「本体名 + Demo」/
+            // Steam rarely fills in the demo's own name, so an empty one falls back to the base game
+            let fallback = "\(gameDetailViewModel.title) Demo"
+            return (appID, demo.description.flatMap { $0.isEmpty ? nil : $0 } ?? fallback)
+        }
+
+        // 试玩版自己的页面上 `demos` 是空的，它的页面标题就是试玩版名 /
+        // A demo's own page carries no `demos`, and its page title already is the demo's name
+        guard details.type?.caseInsensitiveCompare("demo") == .orderedSame,
+            let appID = details.steamAppID
+        else { return nil }
+
+        return (appID, details.name ?? "Demo")
     }
 }
 
