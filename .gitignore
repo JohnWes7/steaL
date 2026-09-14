@@ -15,6 +15,7 @@ docs/
 
 AGENTS.md
 .github/copilot-instructions.md
+.agents/
 
 # Swift Package Manager / 构建产物
 .build/
