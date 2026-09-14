@@ -111,10 +111,6 @@ struct GameDetailView: View {
         let galleryImageURLs = ([details.headerImage] + (details.screenshots ?? []).compactMap(\.full))
             .compactMap { $0 }
 
-        // 试玩版既没有比价也没有 ITAD 资料（ITAD 不收录试玩版），两块直接不渲染 /
-        // A demo has neither prices nor ITAD data, so both sections stay hidden
-        let isDemo = details.type?.caseInsensitiveCompare("demo") == .orderedSame
-
         return ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
                 MediaGalleryView(imageURLs: galleryImageURLs)
@@ -133,7 +129,9 @@ struct GameDetailView: View {
                         DemoSectionView(appID: demo.appID, name: demo.name)
                     }
 
-                    if !isDemo {
+                    // 试玩版不单独售卖（价格恒空），ITAD 也基本没有它的条目，两块直接不渲染 /
+                    // A demo is never sold and ITAD barely tracks demos, so both stay hidden
+                    if !details.isDemo {
                         PriceSectionView(
                             state: gameDetailViewModel.pricesState,
                             offerFilter: $offerFilter,
@@ -228,7 +226,7 @@ struct GameDetailView: View {
 
         // 试玩版自己的页面上 `demos` 是空的，它的页面标题就是试玩版名 /
         // A demo's own page carries no `demos`, and its page title already is the demo's name
-        guard details.type?.caseInsensitiveCompare("demo") == .orderedSame,
+        guard details.isDemo,
             let appID = details.steamAppID
         else { return nil }
 

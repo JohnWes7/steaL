@@ -149,7 +149,7 @@ final class GameDetailViewModel {
             // Steam 自己说明这东西没有价格可比：免费 / 试玩 / 还没发售 /
             // Steam itself says there is nothing to price: free, a demo, or unreleased
             var fixedPriceState: PricesState?
-            if details.type?.caseInsensitiveCompare("demo") == .orderedSame {
+            if details.isDemo {
                 fixedPriceState = .demo
             } else if details.isFree == true {
                 fixedPriceState = .free

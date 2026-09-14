@@ -361,8 +361,11 @@ private extension KeyedDecodingContainer {
 
 extension SteamAppDetails {
 
+    /// 是否是试玩版条目 / Whether the entry is a demo
+    var isDemo: Bool { type?.caseInsensitiveCompare("demo") == .orderedSame }
+
     /// 是否免费，F2P 与 Demo 都算 / `true` for both free-to-play titles and demos
-    var isFreeOrDemo: Bool { isFree == true || type == "demo" }
+    var isFreeOrDemo: Bool { isFree == true || isDemo }
 
     /// 是否还没发售 / Whether the game has not been released yet
     var isComingSoon: Bool { releaseDate?.comingSoon == true }
