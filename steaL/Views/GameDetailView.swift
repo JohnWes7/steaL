@@ -131,7 +131,10 @@ struct GameDetailView: View {
                         retry: retryPrices
                     )
 
-                    infoSection
+                    ITADInfoSectionView(
+                        state: gameDetailViewModel.infoState,
+                        retry: retryInfo
+                    )
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
@@ -184,80 +187,6 @@ struct GameDetailView: View {
         .scrollIndicators(.hidden)
     }
 
-    /// ITAD 评分与热度 / ITAD reviews and popularity
-    @ViewBuilder
-    private var infoSection: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("ITAD DETAILS")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(.brandGreen)
-
-            switch gameDetailViewModel.infoState {
-            case .idle:
-                EmptyView()
-
-            case .loading:
-                ProgressView()
-                    .controlSize(.small)
-
-            case .loaded(let info):
-                let reviews =
-                    info.reviews?.filter {
-                        $0.source?.isEmpty == false && $0.score != nil
-                    } ?? []
-
-                if !reviews.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Reviews")
-                            .font(.system(size: 22, weight: .heavy))
-                            .foregroundStyle(.primaryText)
-
-                        ForEach(Array(reviews.enumerated()), id: \.offset) { _, review in
-                            reviewRow(review)
-                        }
-                    }
-                }
-
-                let recentPlayers = info.players?.recent.flatMap { $0 > 0 ? $0 : nil }
-                let itadRank = info.stats?.rank.flatMap { $0 > 0 ? $0 : nil }
-
-                if recentPlayers != nil || itadRank != nil {
-                    HStack(spacing: 0) {
-                        if let recentPlayers {
-                            itadMetric(
-                                icon: "person.3.fill",
-                                label: "Players online",
-                                value: recentPlayers.formatted(),
-                                tint: .brandGreen
-                            )
-                        }
-
-                        // `recentPlayers` 与 `itadRank` 都有值时加竖线分隔，避免视觉上挤在一起 / When both `recentPlayers` and `itadRank` are available, add a vertical separator to avoid visual crowding
-                        if recentPlayers != nil && itadRank != nil {
-                            Rectangle()
-                                .fill(Color.secondaryText.opacity(0.24))
-                                .frame(width: 1, height: 58)
-                                .padding(.horizontal, 16)
-                        }
-
-                        if let itadRank {
-                            itadMetric(
-                                icon: "medal.fill",
-                                label: "ITAD rank",
-                                value: "#\(itadRank)",
-                                tint: .brandBlue
-                            )
-                        }
-                    }
-                }
-
-            case .unavailable:
-                UnavailablePromptView(message: "No info data", retry: retryInfo)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
     /// 重试 ITAD 比价 / Retries the ITAD prices
     private func retryPrices() {
         Task {
@@ -270,90 +199,6 @@ struct GameDetailView: View {
         Task {
             await gameDetailViewModel.retryInfo()
         }
-    }
-
-    /// ITAD 底部指标：图标、重点数字与简短标签 /
-    /// Compact ITAD metric with an icon, a prominent value, and a short label
-    private func itadMetric(icon: String, label: String, value: String, tint: Color) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(.appBackground)
-                .frame(width: 32, height: 32)
-                .background(tint, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                    .foregroundStyle(tint)
-
-                Text(label)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondaryText)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label), \(value)")
-    }
-
-    /// 一个评分来源：分数、评分人数与视觉比例条 / A review source with score, count, and a visual ratio bar
-    private func reviewRow(_ review: ITADReview) -> some View {
-        let score = min(max(review.score ?? 0, 0), 100)
-        let source = review.source ?? "Unknown"
-
-        return VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .firstTextBaseline) {
-                HStack(spacing: 6) {
-                    Image(systemName: "hand.thumbsup.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.brandGreen)
-
-                    Text("\(score)%")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundStyle(.brandGreen)
-                }
-
-                Spacer(minLength: 12)
-
-                Text(review.count.map { "\($0.formatted()) reviews" } ?? "Review count unavailable")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondaryText)
-            }
-
-            GeometryReader { proxy in
-                HStack(spacing: 3) {
-                    Capsule()
-                        .fill(Color.brandGreen)
-                        .frame(width: proxy.size.width * CGFloat(score) / 100)
-
-                    Capsule()
-                        .fill(Color.red.opacity(0.75))
-                }
-            }
-            .frame(height: 7)
-
-            HStack {
-                Text(source)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primaryText)
-
-                Spacer(minLength: 12)
-
-                Text("\(score)/100")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondaryText)
-            }
-        }
-        .padding(.vertical, 12)
-        .overlay(alignment: .bottom) {
-            Divider()
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "\(source), \(score) percent, \(review.count.map { $0.formatted() } ?? "review count unavailable") reviews"
-        )
     }
 }
 
