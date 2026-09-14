@@ -52,6 +52,11 @@ struct PriceSectionView: View {
                     .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundStyle(.brandGreen)
 
+            case .comingSoon:
+                Text("Not released yet")
+                    .font(.system(size: 14, weight: .regular, design: .rounded))
+                    .foregroundStyle(.secondaryText)
+
             case .loaded(let prices):
                 let lows = [
                     ("All-time low", prices.historyLow.all),
@@ -258,6 +263,7 @@ enum OfferFilter: String, CaseIterable {
             PriceSectionView(state: .loading, offerFilter: .constant(.steam), retry: {})
             PriceSectionView(state: .free, offerFilter: .constant(.steam), retry: {})
             PriceSectionView(state: .demo, offerFilter: .constant(.steam), retry: {})
+            PriceSectionView(state: .comingSoon, offerFilter: .constant(.steam), retry: {})
             PriceSectionView(state: .unavailable, offerFilter: .constant(.steam), retry: {})
         }
         .padding(20)

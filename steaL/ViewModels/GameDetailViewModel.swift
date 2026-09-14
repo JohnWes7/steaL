@@ -57,6 +57,8 @@ final class GameDetailViewModel {
         case free
         /// Steam 标记为试玩版 / Steam identifies the title as a demo
         case demo
+        /// Steam 标记为还没发售 / Steam identifies the title as unreleased
+        case comingSoon
         /// 查到了 / The prices are in
         case loaded(ITADPriceGame)
         /// 问过了，没有可显示的价格 / Asked, and there is nothing to show
@@ -144,13 +146,20 @@ final class GameDetailViewModel {
             // without holding the first frame back
             state = .loaded(details)
 
+            // Steam 自己说明这东西没有价格可比：免费 / 试玩 / 还没发售 /
+            // Steam itself says there is nothing to price: free, a demo, or unreleased
+            var fixedPriceState: PricesState?
+            if details.type?.caseInsensitiveCompare("demo") == .orderedSame {
+                fixedPriceState = .demo
+            } else if details.isFree == true {
+                fixedPriceState = .free
+            } else if details.isComingSoon {
+                fixedPriceState = .comingSoon
+            }
+            pricesState = fixedPriceState ?? .loading
+
             // ITAD 增强数据共用一次 UUID lookup；已有 UUID 时不查 lookup /
             // The ITAD enhancements share one UUID lookup; an existing UUID skips that lookup
-            let fixedPriceState: PricesState? =
-                details.type?.caseInsensitiveCompare("demo") == .orderedSame
-                ? .demo
-                : details.isFree == true ? .free : nil
-            pricesState = fixedPriceState ?? .loading
 
             let uuid = await resolveUUID()
             if let uuid {
