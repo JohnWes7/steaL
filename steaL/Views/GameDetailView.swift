@@ -118,9 +118,12 @@ struct GameDetailView: View {
     /// The Steam half plus a provisional price block for now; screenshots, movies and the real
     /// price section come next
     private func detailContent(_ details: SteamAppDetails) -> some View {
-        ScrollView(.vertical) {
+        let galleryImageURLs = ([details.headerImage] + (details.screenshots ?? []).compactMap(\.full))
+            .compactMap { $0 }
+
+        return ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
-                mediaGallery(details)
+                MediaGalleryView(imageURLs: galleryImageURLs)
 
                 VStack(alignment: .leading, spacing: 22) {
                     genreChips(details)
@@ -147,57 +150,6 @@ struct GameDetailView: View {
 
         if !genres.isEmpty {
             chipRow(genres)
-        }
-    }
-
-    /// Steam 图片分页，第一张使用商店主图，随后展示 Steam 截图 /
-    /// Steam media paging: the store header image first, followed by Steam screenshots
-    @ViewBuilder
-    private func mediaGallery(_ details: SteamAppDetails) -> some View {
-        let imageURLs = ([details.headerImage] + (details.screenshots ?? []).compactMap(\.full))
-            .compactMap { $0 }
-
-        if imageURLs.isEmpty {
-            Color.surfaceElevated
-                .frame(maxWidth: .infinity)
-                .aspectRatio(16 / 9, contentMode: .fit)
-                .overlay {
-                    Image(systemName: "photo")
-                        .font(.system(size: 30, weight: .medium))
-                        .foregroundStyle(.secondaryText)
-                }
-        } else {
-            TabView {
-                ForEach(Array(imageURLs.enumerated()), id: \.offset) { _, imageURL in
-                    AsyncImage(url: URL(string: imageURL)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        case .failure:
-                            Color.surfaceElevated
-                                .overlay {
-                                    Image(systemName: "photo.badge.exclamationmark")
-                                        .font(.system(size: 30, weight: .medium))
-                                        .foregroundStyle(.secondaryText)
-                                }
-                        case .empty:
-                            Color.surfaceElevated
-                                .overlay {
-                                    ProgressView()
-                                        .tint(.brandGreen)
-                                }
-                        @unknown default:
-                            Color.surfaceElevated
-                        }
-                    }
-                    .clipped()
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: imageURLs.count > 1 ? .automatic : .never))
-            .frame(maxWidth: .infinity)
-            .aspectRatio(16 / 9, contentMode: .fit)
         }
     }
 
