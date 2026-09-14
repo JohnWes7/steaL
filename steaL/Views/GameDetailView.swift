@@ -135,6 +135,11 @@ struct GameDetailView: View {
                         state: gameDetailViewModel.infoState,
                         retry: retryInfo
                     )
+
+                    DetailFooterView(
+                        appID: gameDetailViewModel.appID,
+                        itadID: gameDetailViewModel.uuid
+                    )
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
