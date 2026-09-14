@@ -53,6 +53,10 @@ final class GameDetailViewModel {
         case idle
         /// 正在查 / Asking
         case loading
+        /// Steam 标记为免费游戏 / Steam identifies the title as free to play
+        case free
+        /// Steam 标记为试玩版 / Steam identifies the title as a demo
+        case demo
         /// 查到了 / The prices are in
         case loaded(ITADPriceGame)
         /// 问过了，没有可显示的价格 / Asked, and there is nothing to show
@@ -142,20 +146,32 @@ final class GameDetailViewModel {
 
             // ITAD 增强数据共用一次 UUID lookup；已有 UUID 时不查 lookup /
             // The ITAD enhancements share one UUID lookup; an existing UUID skips that lookup
+            let fixedPriceState: PricesState? =
+                details.type?.caseInsensitiveCompare("demo") == .orderedSame
+                ? .demo
+                : details.isFree == true ? .free : nil
+            pricesState = fixedPriceState ?? .loading
+
             let uuid = await resolveUUID()
             if let uuid {
-                pricesState = .loading
                 infoState = .loading
 
-                async let prices = fetchPricesIfPossible(uuid: uuid, region: region)
-                async let info = fetchInfoIfPossible(uuid: uuid)
+                if fixedPriceState == nil {
+                    async let prices = fetchPricesIfPossible(uuid: uuid, region: region)
+                    async let info = fetchInfoIfPossible(uuid: uuid)
 
-                let loadedPrices = await prices
-                let loadedInfo = await info
-                pricesState = loadedPrices.map(PricesState.loaded) ?? .unavailable
-                infoState = loadedInfo.map(InfoState.loaded) ?? .unavailable
+                    let loadedPrices = await prices
+                    let loadedInfo = await info
+                    pricesState = loadedPrices.map(PricesState.loaded) ?? .unavailable
+                    infoState = loadedInfo.map(InfoState.loaded) ?? .unavailable
+                } else {
+                    let loadedInfo = await fetchInfoIfPossible(uuid: uuid)
+                    infoState = loadedInfo.map(InfoState.loaded) ?? .unavailable
+                }
             } else if uuid == nil {
-                pricesState = .unavailable
+                if fixedPriceState == nil {
+                    pricesState = .unavailable
+                }
                 infoState = .unavailable
             }
 

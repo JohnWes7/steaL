@@ -618,6 +618,16 @@ struct GameDetailView: View {
                 ProgressView()
                     .controlSize(.small)
 
+            case .free:
+                Text("Free")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.brandGreen)
+
+            case .demo:
+                Text("Demo")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.brandGreen)
+
             case .loaded(let prices):
                 let lows = [
                     ("All-time low", prices.historyLow.all),
