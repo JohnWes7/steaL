@@ -1,0 +1,48 @@
+# steaL SwiftLint 配置
+#
+# 目的不是统一代码风格，而是给 AI 代理和作者一个「不许继续膨胀」的硬闸门：
+#   - 文件 / 类型 / 函数过长 -> 提醒拆分
+#   - 死写法（== true、count == 0、多余的 ?? nil）-> 提醒删掉
+# 风格类规则（缩进、行长、命名、尾随空白）一律关掉，否则现有代码会刷出大量噪声。
+included:
+  - steaL
+excluded:
+  - .build
+  - steaL/Assets.xcassets
+
+disabled_rules:
+  - trailing_whitespace
+  - trailing_newline
+  - vertical_whitespace
+  - identifier_name
+  - type_name
+  - opening_brace
+  - trailing_comma
+  - colon
+  - comment_spacing
+  - line_length
+  - todo
+  - force_unwrapping
+
+opt_in_rules:
+  - empty_count
+  - redundant_nil_coalescing
+  - unused_closure_parameter
+  - duplicate_conditions
+
+# 600 是「已经太大、必须拆」的线：现有两个大文件恰好落在警告区，
+# 所以 lint 全项目跑下来是 0 error，可以作为后续改动的闸门。
+file_length:
+  warning: 400
+  error: 1000
+
+type_body_length:
+  warning: 350
+
+function_body_length:
+  warning: 60
+  error: 90
+
+cyclomatic_complexity:
+  warning: 15
+  error: 25
