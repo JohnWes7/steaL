@@ -149,10 +149,12 @@ struct DealCardView: View {
     /// 图片底部的质量标签与标题 / Quality tag and title pinned over the bottom of the artwork
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(qualityLabel)
-                .font(.system(size: 12, weight: .heavy))
-                .tracking(0.6)
-                .foregroundStyle(.brandGreen)
+            if let qualityLabel {
+                Text(qualityLabel)
+                    .font(.system(size: 12, weight: .heavy))
+                    .tracking(0.6)
+                    .foregroundStyle(.brandGreen)
+            }
 
             Text(deal.title)
                 .font(.system(size: 26, weight: .bold))
@@ -232,11 +234,8 @@ struct DealCardView: View {
 
     // MARK: - 派生数据 / Derived values
 
-    /// 图片上的绿色标签。`/deals/v2` 不返回游戏类型，因此这里用真实可得的优惠质量信息替代，
-    /// 依次判断全史最低、近三月最低，最后回落到激活平台 /
-    /// Green tag. `/deals/v2` has no genre field, so this reports real deal quality instead:
-    /// all-time low, then three-month low, then the activation platform
-    private var qualityLabel: String {
+    /// 图片上的绿色标签，依次判断全史最低、近三月最低和激活平台 / Green tag for deal quality or activation platform
+    private var qualityLabel: String? {
         let info = deal.deal
 
         if info.flag == "H" || info.flag == "N" || info.isHistoricalLow {
@@ -252,7 +251,7 @@ struct DealCardView: View {
             return "STEAM"
         }
 
-        return deal.type.uppercased()
+        return nil
     }
 }
 
