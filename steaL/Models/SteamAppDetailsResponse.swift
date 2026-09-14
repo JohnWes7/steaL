@@ -107,6 +107,8 @@ struct SteamAppDetails: Codable, Hashable, Sendable {
     let isFree: Bool?
     /// 基础游戏（仅 Demo 等条目有值），指回本体 / The base game, present for demos and similar
     let fullgame: SteamFullGame?
+    /// 这个游戏的试玩版，仅本体条目有值 / Demos of this title, present on the base game's entry
+    let demos: [SteamDemo]?
 
     // MARK: 价格 / Price
 
@@ -130,7 +132,7 @@ struct SteamAppDetails: Codable, Hashable, Sendable {
     /// Maps JSON keys to Swift properties; the snake_case keys need explicit names
     enum CodingKeys: String, CodingKey {
         case name, type, movies, screenshots, platforms, developers, publishers
-        case categories, genres, fullgame
+        case categories, genres, fullgame, demos
         case steamAppID = "steam_appid"
         case requiredAge = "required_age"
         case shortDescription = "short_description"
@@ -167,6 +169,7 @@ struct SteamAppDetails: Codable, Hashable, Sendable {
         releaseDate = try container.decodeIfPresent(SteamReleaseDate.self, forKey: .releaseDate)
         isFree = try container.decodeIfPresent(Bool.self, forKey: .isFree)
         fullgame = try container.decodeIfPresent(SteamFullGame.self, forKey: .fullgame)
+        demos = try container.decodeIfPresent([SteamDemo].self, forKey: .demos)
 
         priceOverview = try container.decodeIfPresent(SteamPriceOverview.self, forKey: .priceOverview)
 
@@ -278,6 +281,15 @@ struct SteamFullGame: Codable, Hashable, Sendable {
     let appid: String?
     /// 本体的名称 / The base game's name
     let name: String?
+}
+
+/// 试玩版的引用（本体 `demos` 里的一项），appid 是数字 / Reference to a demo, one item of the base game's `demos`; the appid is a number
+struct SteamDemo: Codable, Hashable, Sendable {
+
+    /// 试玩版自己的 appid / The demo's own appid
+    let appid: Int?
+    /// 描述，实测为空字符串 / Description; observed empty in practice
+    let description: String?
 }
 
 /// 名称型描述项，`categories` 与 `genres` 共用 / A named descriptor, shared by `categories` and `genres`
