@@ -13,6 +13,9 @@ UserInterfaceState.xcuserstate
 # 项目文档 (如需入库可删掉下一行)
 docs/
 
+AGENTS.md
+.github/copilot-instructions.md
+
 # Swift Package Manager / 构建产物
 .build/
 DerivedData/
