@@ -125,6 +125,13 @@ struct GameDetailView: View {
                         isExpanded: $isSteamDetailExpanded
                     )
 
+                    if let demos = details.demos, !demos.isEmpty {
+                        DemoSectionView(
+                            gameName: gameDetailViewModel.title,
+                            demos: demos
+                        )
+                    }
+
                     PriceSectionView(
                         state: gameDetailViewModel.pricesState,
                         offerFilter: $offerFilter,
