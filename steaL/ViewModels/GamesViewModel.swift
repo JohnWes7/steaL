@@ -137,11 +137,11 @@ final class GamesViewModel {
             "country": region.apiRegionCode,
             "offset": 0,
             "limit": 20,
-//            "sort": "-cut",
+           "sort": "-hot",
             "nondeals": false,
             "filter": [
                 "type": [1],
-                "wasSpotlight": true,
+                // "wasSpotlight": true,
                 "drm": [61],
             ],
         ]
