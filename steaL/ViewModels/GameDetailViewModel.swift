@@ -7,12 +7,9 @@
 
 import Foundation
 
-/// 游戏详情页的数据状态机 / State machine for the game detail page
-///
-/// Steam 的 `appdetails` 是硬门槛，ITAD 的比价是可选增强：拿不到评分与比价时页面照常渲染，
-/// 只是少一块 /
-/// Steam's `appdetails` is the hard requirement; the ITAD prices are an enhancement, so a failure
-/// there only costs one section instead of the whole page
+/// 游戏详情页的数据状态机：Steam 的 `appdetails` 是硬门槛，ITAD 比价失败只少一块区块 /
+/// State machine for the game detail page: Steam's `appdetails` is the hard requirement, while a
+/// failed ITAD call only costs one section
 @MainActor
 @Observable
 final class GameDetailViewModel {
@@ -29,7 +26,7 @@ final class GameDetailViewModel {
     /// 导航传入的初始标题 / The initial title received from navigation
     let initialTitle: String
 
-    /// 页面当前状态 / Current state of the page
+    /// 整页状态；详情是硬门槛 / The page's state; the details are the hard requirement
     enum State: Equatable {
         /// 首次加载或重试中 / First load, or a retry in progress
         case loading
@@ -39,28 +36,22 @@ final class GameDetailViewModel {
         case failed(LoadError)
     }
 
-    /// 比价区块自己的状态 / The price section's own state
-    ///
-    /// 它是页面上的一块，慢一点不该把整页拖成加载态，所以单独一个状态机 /
-    /// It is one section of the page, so it must not hold the whole page in a loading state; hence
-    /// a state machine of its own
-    ///
-    /// 查不到与请求失败归为同一种结果（`.unavailable`）—— 对界面来说都只是「没有比价数据」/
-    /// "Nothing found" and "the request failed" collapse into `.unavailable`: the UI cannot tell
-    /// them apart anyway, and a failure here never fails the page
+    /// 比价区块自己的状态：慢一块不该把整页拖成加载态，查不到与请求失败都归 `.unavailable` /
+    /// The price section's own state: one slow section must not hold the page loading, and a miss
+    /// and a failure both become `.unavailable`
     enum PricesState: Equatable {
-        /// ViewModel 判定这个类型不该出现价格区块 / The view model decided this kind has no price section
+        /// ViewModel 判定这个类型不该有比价 / The view model decided this kind has no prices
         case hidden
         /// 正在查 / Asking
         case loading
-        /// 查到了：历史低价 + 当前报价 / The prices are in: the historical lows plus the current offers
+        /// 比价到手，含历史低价 / The prices are in, historical lows included
         case loaded(ITADPriceGame)
-        /// 查到了，但不显示历史低价（永久免费的游戏）/ The prices are in, minus the historical lows
+        /// 比价到手，但不显示历史低价（永久免费）/ The prices are in, minus the historical lows
         case loadedWithoutHistory(ITADPriceGame)
         /// 问过了，没有可显示的价格 / Asked, and there is nothing to show
         case unavailable
 
-        /// 一次比价请求的结果落成的状态 / The state a prices result resolves to
+        /// 把一次比价的结果落成状态 / Resolves one prices result into a state
         static func from(_ prices: ITADPriceGame?, showsHistory: Bool) -> PricesState {
             guard let prices, !prices.isEmpty else { return .unavailable }
 
@@ -70,33 +61,29 @@ final class GameDetailViewModel {
 
     /// ITAD 游戏信息区块自己的状态 / The info section's own state
     enum InfoState: Equatable {
-        /// ViewModel 判定这个类型不该出现信息区块 / The view model decided this kind has no info section
+        /// ViewModel 判定这个类型不该有信息 / The view model decided this kind has no info
         case hidden
         /// 正在查 / Asking
         case loading
-        /// 查到了 / The info is in
+        /// 信息到手 / The info is in
         case loaded(ITADGameInfoResponse)
         /// 问过了，没有可显示的信息 / Asked, and there is no info to show
         case unavailable
     }
 
-    /// 页面当前状态，决定整页显示什么 / Current state of the page; decides what the whole page shows
-    ///
-    /// 详情是硬门槛，所以它是状态机的主轴 / The details are the hard requirement, so they drive the
-    /// state machine
+    /// 页面当前状态 / Current state of the page
     private(set) var state: State = .loading
 
-    /// ITAD 比价的状态，独立于主状态；详情到手前是 `.hidden` /
-    /// The ITAD prices' own state, independent of the main one; `.hidden` until the details are in
+    /// ITAD 比价的状态；详情到手前是 `.hidden` / The ITAD prices' state, hidden until the details are in
     private(set) var pricesState: PricesState = .hidden
 
-    /// ITAD 游戏信息的状态，独立于页面主状态 / The ITAD info state, independent of the page state
+    /// ITAD 游戏信息的状态 / The ITAD info state
     private(set) var infoState: InfoState = .hidden
 
-    /// 可用于 ITAD 请求的游戏 UUID / The game UUID used for ITAD requests
+    /// ITAD 请求用的游戏 UUID / The game UUID used for ITAD requests
     private(set) var uuid: String?
 
-    /// 用导航参数创建详情页状态机 / Creates the detail state machine from its navigation payload
+    /// 用导航参数创建状态机 / Creates the state machine from its navigation payload
     init(route: GameDetailRoute) {
         appID = route.appID
         initialTitle = route.title
@@ -117,10 +104,9 @@ final class GameDetailViewModel {
 
     /// 加载一页详情 / Loads one detail page
     ///
-    /// - Parameters:
-    ///   - region: 商店区域，决定货币 / store region, drives the currency
-    ///   - language: 语言，Steam 会据此本地化标题与描述 / language, Steam localises the copy with it
-    ///   - isRetry: 重试时保留旧内容，避免页面闪一下空白 / keeps the current content on a retry
+    /// - Parameter region: 商店区域，决定货币 / the store region, which drives the currency
+    /// - Parameter language: 语言，Steam 据此本地化文案 / the language Steam localises the copy with
+    /// - Parameter isRetry: 重试时保留旧内容 / keeps the current content on a retry
     func load(
         region: AppRegion,
         language: AppLanguage,
@@ -139,41 +125,33 @@ final class GameDetailViewModel {
                 language: language
             )
 
-            // 页面已经离开（或在飞请求被 `.task` 取消）时不写状态 /
-            // Do not write state once the view is gone or the request was cancelled
+            // 视图消失或请求被取消后不再写状态 / No writes once the view is gone or cancelled
             guard !Task.isCancelled else { return }
 
-            // 详情到手就切状态，页面马上渲染；比价随后单独补上，不挡首屏 /
-            // Switch as soon as the details land so the page renders; the prices fill in afterwards
-            // without holding the first frame back
+            // 详情一到就切状态，比价随后补上，不挡首屏 / Switch as the details land; prices fill in later
             state = .loaded(details)
 
             // 游戏类型决定 ITAD 的两块要不要查 / The kind of game decides which ITAD section is loaded
             switch details.gameKind {
-            // 试玩版两块都不查：`prices/v3` 对试玩版恒为 `[]`，ITAD 也只收录老试玩版的信息 /
-            // A demo loads neither: `prices/v3` is always empty for one, and ITAD only covers older demos
+            // 试玩版两块都不查：`prices/v3` 恒为 `[]` / A demo loads neither: `prices/v3` is always empty
             case .demo:
                 pricesState = .hidden
                 infoState = .hidden
                 return
 
-            // 还没发售只补 ITAD 信息，没有可比的价 /
-            // An unreleased title only needs the ITAD info; there is no price to compare
+            // 未发售只补 ITAD 信息，没有可比的价 / An unreleased title only needs the ITAD info
             case .unreleased:
                 pricesState = .hidden
                 await retryInfo()
                 return
 
-            // 免费与付费一样要查：限时免费的原价还在，永久免费在别的商店也未必免费 /
-            // Free is loaded like paid: a limited-time free title still has its regular price, and a
-            // permanently free one is not free in every shop
+            // 免费也和付费一样要查：限时免费有原价，永久免费在别处未必免费 / Free is loaded like paid
             case .freeToKeep, .freeForever, .paid:
                 pricesState = .loading
                 infoState = .loading
             }
 
-            // ITAD 增强数据共用一次 UUID lookup；已有 UUID 时不查 lookup /
-            // The ITAD enhancements share one UUID lookup; an existing UUID skips that lookup
+            // 两个 ITAD 区块共用一次 UUID 查找，已有就跳过 / Both ITAD sections share one UUID lookup
             guard let uuid = await resolveUUID() else {
                 pricesState = .unavailable
                 infoState = .unavailable
@@ -198,10 +176,9 @@ final class GameDetailViewModel {
         }
     }
 
-    /// 重试 ITAD 比价；没有 UUID 时先按 Steam appID 查找 / Retries ITAD prices, resolving the UUID first when needed
+    /// 重试 ITAD 比价，必要时先按 appID 查 UUID / Retries the ITAD prices, resolving the UUID when needed
     func retryPrices(region: AppRegion) async {
-        // 详情到手才点得到 Retry，用它的类型决定要不要显示历史低价 /
-        // A retry is only reachable once the details are in, whose kind decides whether the lows show
+        // Retry 只在详情到手后可点，用它的类型决定是否显示历史低价 / Only reachable once the details are in
         guard case .loaded(let details) = state else { return }
 
         pricesState = .loading
@@ -217,13 +194,9 @@ final class GameDetailViewModel {
         pricesState = .from(prices, showsHistory: details.gameKind.showsPriceHistory)
     }
 
-    /// 查一次 ITAD 游戏信息；没有 UUID 时先按 Steam appID 查找，拿不到就当作没有 /
-    /// Fetches the ITAD game info once, resolving the UUID first when needed, and treats a miss as
-    /// "nothing"
+    /// 查一次 ITAD 游戏信息，必要时先按 appID 查 UUID / Fetches the ITAD game info, resolving the UUID when needed
     ///
-    /// 它同时是首次加载的入口：未发售的详情页也走这里，所以 `load` 里不再另起一份 /
-    /// It doubles as the first-load entry point for unreleased titles, so `load` reuses it instead of
-    /// duplicating the sequence
+    /// 它也是未发售详情页的首次加载入口 / It is also the first-load entry for unreleased titles
     func retryInfo() async {
         infoState = .loading
 
@@ -238,20 +211,17 @@ final class GameDetailViewModel {
         infoState = info.map(InfoState.loaded) ?? .unavailable
     }
 
-    /// 拿到这个游戏在各商店的价格，拿不到就返回 `nil` /
-    /// Fetches the game's prices, returning `nil` when there is nothing to show
+    /// 拿到这个游戏在各商店的价格，没有就返回 `nil` / Fetches the prices, `nil` when there are none
     ///
-    /// 响应是**稀疏数组**，只能按 `id` 取；查不到（没有价格数据）不是错误 /
-    /// The response is a **sparse array**, so the entry has to be found by `id`; a missing entry
-    /// (the game has no price data) is not an error
+    /// 响应是**稀疏数组**，只能按 `id` 取；查不到不是错误 /
+    /// The response is a **sparse array**, found by `id`; a missing entry is not an error
     private func fetchPricesIfPossible(uuid: String, region: AppRegion) async -> ITADPriceGame? {
         do {
             let response = try await ITADAPI.fetchPrices(uuids: [uuid], region: region)
             return response.entry(for: uuid)
 
         } catch {
-            // 取消是正常的（页面离开），其余失败只记日志 /
-            // Cancellation is normal (the page went away); anything else is only logged
+            // 取消是正常的（页面离开），其余失败只记日志 / Cancellation is normal; the rest is just logged
             if !(error is CancellationError) {
                 print("[GameDetailViewModel] prices failed / failed: \(error)")
             }
@@ -259,7 +229,7 @@ final class GameDetailViewModel {
         }
     }
 
-    /// 获取 ITAD 游戏信息，失败时静默降级 / Fetches ITAD game info, degrading silently on failure
+    /// 获取 ITAD 游戏信息，失败时静默降级 / Fetches the ITAD game info, degrading silently on failure
     private func fetchInfoIfPossible(uuid: String) async -> ITADGameInfoResponse? {
         do {
             return try await ITADAPI.fetchGameInfo(uuid: uuid)
