@@ -42,12 +42,6 @@ struct GamesView: View {
         loadTask = Task { await gamesViewModel.load(region: region) }
     }
 
-    /// 两列等宽网格 / Two equal-width grid columns
-    private let gridColumns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-    ]
-    
     /// 页面骨架：背景 + 两个各自管理状态的区块 + 顶部固定 header /
     /// Screen skeleton: background, two self-managed sections and the pinned header
     var body: some View {
@@ -59,13 +53,19 @@ struct GamesView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     Section {
-                        dealsSection
+                        DealsSectionView(
+                            state: gamesViewModel.dealState,
+                            isFavorite: gamesViewModel.isFavorite,
+                            onToggleFavorite: gamesViewModel.toggleFavorite,
+                            onSelect: handleTap,
+                            retry: retryDeals
+                        )
                     } header: {
                         hotDealsHeader
                     }
 
                     Section {
-                        giveawaySection
+                        GiveawaysSectionView(state: gamesViewModel.giveawaysState, retry: retryGiveaways)
                     } header: {
                         giveawayHeader
                     }
@@ -142,160 +142,19 @@ struct GamesView: View {
         }
     }
 
-    // MARK: - 状态分支 / State branches
+    // MARK: - 重试 / Retry
 
-    /// 区块内加载中 / In-section loading
-    @ViewBuilder
-    private var loadingState: some View {
-        ProgressView()
-            .progressViewStyle(.circular)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 40)
+    /// 重试 deals，只影响第一个区块 / Retries deals; only the first section is affected
+    private func retryDeals() {
+        Task { await gamesViewModel.retryDeals() }
     }
 
-    /// 区块内加载失败，附重试入口 / In-section failure with a retry action
-    @ViewBuilder
-    private func errorState(_ error: LoadError, retry: @escaping () async -> Void) -> some View {
-        ContentUnavailableView {
-            Label(error.title, systemImage: error.symbolName)
-                .foregroundStyle(.secondaryText)
-        } description: {
-            Text(error.message)
-                .foregroundStyle(.secondaryText)
-        } actions: {
-            retryButton(title: "Try Again", action: retry)
-        }
-        .frame(maxWidth: .infinity)
+    /// 重试 giveaways，只影响第二个区块 / Retries giveaways; only the second section is affected
+    private func retryGiveaways() {
+        Task { await gamesViewModel.retryGiveaways() }
     }
 
-    /// 区块内列表为空，附刷新入口 / In-section empty list with a refresh action
-    @ViewBuilder
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Deals Found", systemImage: "tag.slash")
-                .foregroundStyle(.secondaryText)
-        } description: {
-            Text("There are no discounted games to show right now. Try again later.")
-                .foregroundStyle(.secondaryText)
-        } actions: {
-            retryButton(title: "Refresh") {
-                await gamesViewModel.retryDeals()
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    /// 失败态与空态共用的重试按钮 / Retry button shared by the failure and empty states
-    @ViewBuilder
-    private func retryButton(title: String, action: @escaping () async -> Void) -> some View {
-        Button(title) {
-            Task { await action() }
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(.brandBlue)
-    }
-
-    // MARK: - 内容 / Content
-
-    /// 「Hot Deals」区块内容，跟随 dealState 渲染加载 / 失败 / 空 / 列表 /
-    /// Hot Deals section content; renders loading, failure, empty or the list based on dealState
-    @ViewBuilder
-    private var dealsSection: some View {
-        switch gamesViewModel.dealState {
-        case .loading:
-            loadingState
-        case .failed(let error):
-            errorState(error) {
-                await gamesViewModel.retryDeals()
-            }
-        case .loaded(let items):
-            // 请求成功但列表为空 / Request succeeded with an empty list
-            if items.isEmpty {
-                emptyState
-            } else {
-                dealsContent(items)
-            }
-        }
-    }
-
-    /// 首条 hero 卡 + 其余两列网格 / Hero card first, then a two-column grid
-    ///
-    /// 收 `[HomeDealItem]` 而不是 `ITADDealsResponse`：条目除了 deal 还带着 Steam appID 的解析结果，
-    /// 视图只需要渲染，不需要知道分页字段 /
-    /// Takes `[HomeDealItem]` rather than `ITADDealsResponse`: each row now also carries its Steam
-    /// appID resolution, and the view never needs the pagination fields
-    @ViewBuilder
-    private func dealsContent(_ items: [HomeDealItem]) -> some View {
-
-        // 首条 hero 卡 / Hero card for the first item
-        if let firstItem = items.first {
-            // 卡片直接包成 `Button`：点击结果由 `handleTap` 决定，`.plain` 让卡片内收藏按钮的点击不被外层吞掉 /
-            // The card is wrapped in a plain `Button`: `handleTap` decides the outcome, and `.plain` keeps the card's own favourite button clickable
-            Button {
-                handleTap(firstItem)
-            } label: {
-                DealCardView(
-                    deal: firstItem.deal,
-                    isFavorite: gamesViewModel.isFavorite(firstItem.id),
-                    onToggleFavorite: {
-                        gamesViewModel.toggleFavorite(firstItem.id)
-                    }
-                )
-            }
-            .buttonStyle(.plain)
-        }
-
-        // 其余条目排成两列网格 / Rest of the items in a two-column grid
-        LazyVGrid(columns: gridColumns, spacing: 12) {
-            ForEach(items.dropFirst()) { item in
-                Button {
-                    handleTap(item)
-                } label: {
-                    DealGridCardView(
-                        deal: item.deal,
-                        isFavorite: gamesViewModel.isFavorite(item.id),
-                        onToggleFavorite: {
-                            gamesViewModel.toggleFavorite(item.id)
-                        }
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    /// 「Giveaways」区块内容，跟随 giveawaysState 渲染加载 / 失败 / 空 / 行列表 /
-    /// Giveaways section content; renders loading, failure, empty or the rows based on giveawaysState
-    @ViewBuilder
-    private var giveawaySection: some View {
-        switch gamesViewModel.giveawaysState {
-        case .loading:
-            loadingState
-        case .failed(let error):
-            errorState(error) {
-                await gamesViewModel.retryGiveaways()
-            }
-        case .loaded(let giveaways):
-            if giveaways.isEmpty {
-                giveawayEmptyState
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(giveaways) { giveaway in
-                        GiveawayRowView(giveaway: giveaway)
-                    }
-                }
-            }
-        }
-    }
-
-    /// Giveaways 为空时的轻量提示 / Lightweight note when no giveaways are active
-    @ViewBuilder
-    private var giveawayEmptyState: some View {
-        Text("No giveaways right now. Check back later.")
-            .font(.system(size: 14))
-            .foregroundStyle(.secondaryText)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
+    // MARK: - 区块标题 / Section titles
 
     /// 「Hot Deals」区块标题 / Section title for the Hot Deals block
     @ViewBuilder
