@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+/// 报价筛选：只看 Steam 激活，或全部商店 / The offer filter: Steam activation only, or every shop
+enum OfferFilter: String, CaseIterable {
+    case steam = "Steam"
+    case all = "All"
+}
+
 /// 历史价格窗口与当前报价 /
 /// The historical price windows and the current offers
 ///
@@ -58,12 +64,13 @@ struct PriceSectionView: View {
                     .foregroundStyle(.secondaryText)
 
             case .loaded(let prices):
-                let lows = [
+                let lows: [(String, ITADPrice)] = [
                     ("All-time low", prices.historyLow.all),
                     ("1 year low", prices.historyLow.y1),
                     ("3 months low", prices.historyLow.m3),
                 ].compactMap { label, price in
-                    price.map { (label, $0) }
+                    guard let price else { return nil }
+                    return (label, price)
                 }
 
                 if lows.isEmpty {
@@ -92,8 +99,11 @@ struct PriceSectionView: View {
     /// 当前可购买的 Steam 激活价格 / Current prices for Steam-activating offers
     @ViewBuilder
     private func currentOffers(_ prices: ITADPriceGame) -> some View {
-        let offers = (offerFilter == .steam ? prices.steamDeals : prices.deals)
-            .sorted { $0.price.amountInt < $1.price.amountInt }
+        let (selected, best) = switch offerFilter {
+        case .steam: (prices.steamDeals, prices.bestSteamDeal)
+        case .all: (prices.deals, prices.bestDeal)
+        }
+        let offers = selected.sorted { $0.price.amountInt < $1.price.amountInt }
 
         if !offers.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
@@ -115,11 +125,8 @@ struct PriceSectionView: View {
                 .pickerStyle(.segmented)
                 .tint(.brandBlue)
 
-                ForEach(Array(offers.enumerated()), id: \.offset) { index, offer in
-                    currentOfferRow(
-                        offer,
-                        isBest: index == 0
-                    )
+                ForEach(offers, id: \.self) { offer in
+                    currentOfferRow(offer, isBest: offer == best)
                 }
             }
         } else if offerFilter == .all {
@@ -235,12 +242,6 @@ struct PriceSectionView: View {
             return .secondaryText
         }
     }
-}
-
-/// 报价筛选：只看 Steam 激活，或全部商店 / The offer filter: Steam activation only, or every shop
-enum OfferFilter: String, CaseIterable {
-    case steam = "Steam"
-    case all = "All"
 }
 
 #Preview("加载完 / Loaded") {
