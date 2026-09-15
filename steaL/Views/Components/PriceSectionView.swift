@@ -13,12 +13,8 @@ enum OfferFilter: String, CaseIterable {
     case all = "All"
 }
 
-/// 历史价格窗口与当前报价 /
-/// The historical price windows and the current offers
-///
-/// 比价晚于详情到达，所以它自己带一个小加载态，不让整页回到转圈 /
-/// The prices arrive after the details, so the section carries its own little loading state
-/// instead of sending the whole page back to a spinner
+/// 历史价格窗口与当前报价；比价晚于详情到达，所以自带小加载态、不拖整页 /
+/// The historical price windows and current offers; it carries its own little loading state
 struct PriceSectionView: View {
 
     /// 比价区块的状态 / The state of the price section

@@ -7,14 +7,10 @@
 
 import SwiftUI
 
-/// 「Giveaways」区块内容：跟随自己的状态机渲染加载 / 失败 / 空 / 行列表 /
+/// 「Giveaways」区块内容：按自己的状态机渲染加载 / 失败 / 空 / 行列表，标题留在页面 /
 /// Giveaways section content; renders loading, failure, empty or the rows from its own state
-/// machine
 ///
-/// 标题仍由 `GamesView` 的 `Section { } header: { }` 提供，所以这里只有内容 ——
-/// 区块间距由 `LazyVStack` 与 header 的 padding 决定，搬进组件反而要重新对一遍 /
-/// The title stays with `GamesView`'s `Section { } header: { }`, so this view is content only:
-/// the section rhythm comes from the `LazyVStack` and the header's padding
+/// 区块间距由 `LazyVStack` 与 header 的 padding 决定，搬进组件要重新对一遍 / The rhythm comes from `LazyVStack`
 struct GiveawaysSectionView: View {
 
     /// 区块状态 / The state of the section

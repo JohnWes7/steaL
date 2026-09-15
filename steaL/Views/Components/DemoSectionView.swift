@@ -7,12 +7,8 @@
 
 import SwiftUI
 
-/// 有试玩版时的入口：一块实心绿色按钮，点开直接交给浏览器 /
-/// The demo entry shown when a demo exists: one solid green block that hands off to the browser
-///
-/// ITAD 不收录试玩版，比价对它没有意义，所以这里不推详情页，而是跳 Steam 商店页 /
-/// ITAD does not track demos, so pricing is meaningless for them; this opens the Steam store page
-/// instead of pushing another detail screen
+/// 有试玩版时的入口：一块实心绿色按钮，点开交给浏览器（ITAD 不收录试玩版，比价没意义）/
+/// The demo entry shown when a demo exists: a green slab that hands off to the browser
 struct DemoSectionView: View {
 
     /// 试玩版在 Steam 上的 appid / The demo's appid on Steam
@@ -26,8 +22,7 @@ struct DemoSectionView: View {
 
     var body: some View {
         Button {
-            // 退役的试玩版会被 Steam 重定向回本体，所以照 appid 拼地址就够了 /
-            // Retired demos redirect back to the base game on Steam's side, so the appid is enough
+            // 退役的试玩版会被 Steam 重定向回本体，拼 appid 就够了 / Retired demos redirect to the base game
             guard let url = URL(string: "https://store.steampowered.com/app/\(appID)/") else { return }
 
             openURL(url)

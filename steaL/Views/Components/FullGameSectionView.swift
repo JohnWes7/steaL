@@ -7,14 +7,9 @@
 
 import SwiftUI
 
-/// 完整游戏入口：试玩版页面上用它推入本体详情页 /
-/// The full game entry: pushes the base game's detail page from a demo's page
-///
-/// 它与 `DemoSectionView` 是同一对的两个方向，形状与颜色刻意做得不同 —— 绿色实心块是离开 App
-/// 去 Steam 拿试玩版，这里的蓝色只做强调，表示点一下留在 App 里翻页 /
-/// It is the other half of the pair with `DemoSectionView`, deliberately shaped and coloured
-/// differently: the green slab leaves the app for Steam, while blue only accents a push that
-/// stays inside the app
+/// 完整游戏入口：试玩版页面上用它推入本体详情页；与 `DemoSectionView` 刻意相反（蓝 = 留在 App）/
+/// The full game entry: pushes the base game's page; the opposite of the demo entry, whose
+/// green slab leaves the app while blue only accents a push that stays inside
 struct FullGameSectionView: View {
 
     /// 完整游戏的名称 / The full game's name
@@ -52,10 +47,7 @@ struct FullGameSectionView: View {
 
                     Spacer(minLength: 12)
 
-                    // 蓝色只落在图标与这个 chevron 上：在 `surfaceElevated` 上做小面积强调够用，
-                    // 而蓝色正文只有 4.13:1，达不到正文标准 /
-                    // Blue stays on the glyph and this chevron: as a small accent on
-                    // `surfaceElevated` it reads fine, while blue body copy only reaches 4.13:1
+                    // 蓝色只做小面积强调：`surfaceElevated` 上的蓝色正文只有 4.13:1，不达标 / Blue body copy only reaches 4.13:1
                     Image(systemName: "chevron.right")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.brandBlue)

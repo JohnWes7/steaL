@@ -29,8 +29,7 @@ struct MainTabView: View {
                 }
             }
 
-            // `role: .search`：让系统把搜索框变形顶替 tab bar /
-            // `role: .search` morphs a search field into the tab bar
+            // `role: .search` 让系统把搜索框变形顶替 tab bar / `role: .search` morphs a search field into the tab bar
             Tab("Search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
                 NavigationStack {
                      IOS26SearchView()
@@ -55,8 +54,7 @@ struct MainTabView: View {
             }
         }
         .tint(selectedTab == .games ? .brandGreen : .brandBlue)
-        // 不加这行，选中搜索 tab 只会变形、不会弹键盘 /
-        // Without this, selecting the search tab only morphs the bar and never raises the keyboard
+        // 不加这行，选中搜索 tab 只会变形、不弹键盘 / Without this the search tab only morphs and never raises the keyboard
         .tabViewSearchActivation(.searchTabSelection)
     }
 }

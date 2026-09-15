@@ -7,15 +7,9 @@
 
 import SwiftUI
 
-/// 网格里的小卡片：竖版 boxart 铺满整卡，折扣徽标与收藏在顶部，
-/// 标题和玻璃价格行压在底部 /
-/// Compact grid card: portrait box art fills the whole card, with the discount badge and
-/// favourite toggle on top and the title plus a glass price row along the bottom
-///
-/// 与 `DealCardView` 的差异只有图片方向和字号：hero 用宽幅横幅 + 26pt 标题，
-/// 这里用竖版封面 + 18pt 标题 /
-/// Differs from `DealCardView` only in artwork orientation and type scale: the hero uses a
-/// wide banner with a 26pt title, this uses portrait box art with an 18pt title
+/// 网格里的小卡片：竖版 boxart 铺满整卡，折扣徽标与收藏在顶部，标题与玻璃价格行压底部 /
+/// Compact grid card: portrait box art with the discount badge and favourite on top, and the
+/// title plus a glass price row along the bottom
 struct DealGridCardView: View {
 
     /// 要展示的游戏及其当前最佳优惠 / The game and its current best deal
@@ -31,10 +25,8 @@ struct DealGridCardView: View {
     /// 比 hero 卡略小的圆角 / Slightly tighter corner radius than the hero card
     private let cornerRadius: CGFloat = 16
 
-    /// 竖版封面比例。2:3 对应 Steam 库封面与 ITAD boxart 的常见尺寸，
-    /// 正好等于源图比例时 `scaledToFill` 不会有任何裁切 /
-    /// Portrait ratio. 2:3 matches Steam library capsules and ITAD box art, so at this exact
-    /// ratio `scaledToFill` crops nothing
+    /// 竖版封面比例；2:3 与 Steam 库封面、ITAD boxart 一致，`scaledToFill` 因此不裁切 /
+    /// Portrait ratio, matching Steam capsules and ITAD box art so `scaledToFill` crops nothing
     private let artworkAspectRatio: CGFloat = 2.0 / 3.0
 
     var body: some View {
@@ -163,13 +155,8 @@ struct DealGridCardView: View {
         }
     }
 
-    /// 标题叠在封面上，所以用白色。这里不预留两行高度：短标题只占一行、紧贴价格行，
-    /// 长标题最多折成两行后截断。因为整块由 `overlay(alignment: .bottom)` 压底，
-    /// 所以无论几行都会贴着卡片底部 /
-    /// The title sits on the cover art, hence white. It no longer reserves two lines: a short
-    /// title takes a single line and hugs the price row, a longer one wraps to at most two lines
-    /// before truncating. Since the whole block is pinned by `overlay(alignment: .bottom)`,
-    /// either case stays flush with the card's bottom edge
+    /// 白字标题叠在封面上；不预留两行高度，短标题紧贴价格行，由 `overlay(alignment:)` 压底 /
+    /// White title on the cover art; no reserved second line, and the overlay keeps it flush
     private var titleBlock: some View {
         Text(deal.title)
             .font(.system(size: 18, weight: .bold))
@@ -183,10 +170,8 @@ struct DealGridCardView: View {
 
     // MARK: - 价格行 / Price row
 
-    /// Liquid Glass 价格行：整条改用 iOS 26 的 `glassEffect` 渲染，`.clear` 变体比
-    /// `ultraThinMaterial` 更透，还会随背景亮度自适应高光 /
-    /// Liquid Glass price row, rendered with the iOS 26 `glassEffect`. The `.clear` variant is
-    /// more transparent than `ultraThinMaterial` and adapts its highlight to the backdrop
+    /// Liquid Glass 价格行：iOS 26 的 `glassEffect`，`.clear` 比 `ultraThinMaterial` 更透 /
+    /// Liquid Glass price row via the iOS 26 `glassEffect`; `.clear` beats `ultraThinMaterial`
     private var priceRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             currentPrice
@@ -195,9 +180,7 @@ struct DealGridCardView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 11)
-        // 先看最透的 `.clear`：想要常规磨砂感改回 `.regular`，想压暗就叠 `.tint(...)` /
-        // Start with the most transparent `.clear`: switch back to `.regular` for the classic
-        // frosted look, or chain `.tint(...)` for a darker strip
+        // `.clear` 最透；要磨砂感换 `.regular`，要压暗叠 `.tint(...)` / `.clear` is the most transparent of the variants
         .glassEffect(.clear, in: Rectangle())
     }
 
@@ -220,10 +203,8 @@ struct DealGridCardView: View {
         .minimumScaleFactor(0.7)
     }
 
-    /// 购买商店。参考图这里原本是评分，但 `/deals/v2` 不返回评分，改为显示商店名。
-    /// 栏位较窄，`MacGameStore` 这类长名字靠缩字号而不是截断来容纳 /
-    /// Shop name. The mockup had a rating here, but `/deals/v2` has none, so the shop takes its
-    /// place. The slot is narrow, so long names like `MacGameStore` shrink instead of truncating
+    /// 购买商店名：`/deals/v2` 不返回评分，所以这个位置给商店；长名字缩字号不截断 /
+    /// Shop name in the rating's slot; long names shrink instead of truncating
     private var shopName: some View {
         Text(deal.deal.shop.name)
             .font(.system(size: 14, weight: .medium))

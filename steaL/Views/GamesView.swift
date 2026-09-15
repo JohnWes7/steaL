@@ -75,10 +75,7 @@ struct GamesView: View {
                 .padding(.top, 20)
             }
         }
-        // 玻璃背景与滚动边缘模糊交给 iOS 26 的 `safeAreaBar`。它不会替内容加 padding，
-        // 所以内边距得自己写 /
-        // The iOS 26 `safeAreaBar` supplies the glass background and scroll edge blur. It does
-        // not add padding on its own, so the padding is written out here
+        // `safeAreaBar` 提供玻璃背景与边缘模糊，但不替内容加内边距，所以这里自己写 / `safeAreaBar` supplies the blur, not the padding
         .safeAreaBar(edge: .top, spacing: 0) {
             GamesHeaderView(onSearchTapped: onSearchTapped)
                 .padding(.horizontal, 14)
@@ -119,22 +116,16 @@ struct GamesView: View {
 
     // MARK: - 进详情页 / Opening the detail page
 
-    /// 条目的点击行为 / What happens when a row is tapped
-    ///
-    /// 三种状态对应三种结果，这正是 `HomeDealItem.steam` 用三态而不是 `Int?` 的原因 ——
-    /// 只看 `appID == nil` 无法区分「还在查」和「查过了没有」/
-    /// Three states, three outcomes: this is exactly why `steam` is a three-case enum rather than
-    /// an `Int?`, since a bare `nil` cannot tell "still resolving" from "resolved and absent"
+    /// 条目的点击行为：三态对应三种结果，`Int?` 区分不了「还在查」与「查过没有」/
+    /// What happens when a row is tapped; three states, which a single `Int?` could not express
     private func handleTap(_ item: HomeDealItem) {
         switch item.steam {
         case .pending:
-            // 预取通常几百毫秒就回来，这期间静默忽略，不打扰用户 /
-            // Prefetch usually lands within a few hundred milliseconds; stay quiet until then
+            // 预取几百毫秒就回来，这期间静默忽略 / Prefetch lands within a few hundred milliseconds
             break
 
         case .resolved(let appID):
-            // 赋值即跳转：`.navigationDestination(item:)` 在 `non-nil` 时推入详情页 /
-            // Assigning navigates: `.navigationDestination(item:)` pushes once the value is non-nil
+            // 赋值即跳转，`item:` 非空就推栈 / Assigning navigates: `.navigationDestination(item:)` pushes once non-nil
             homeDetailItem = GameDetailRoute(appID: appID, uuid: item.id, title: item.deal.title)
 
         case .unavailable:
@@ -196,10 +187,7 @@ struct GamesView: View {
 }
 
 #Preview {
-    // 复刻 `MainTabView` 的接线：`GamesView` 自己用 `.navigationDestination(item:)` 推栈，
-    // 但那个修饰符只有在 `NavigationStack` 的内容树里才生效 /
-    // Mirrors `MainTabView`: `GamesView` pushes through its own
-    // `.navigationDestination(item:)`, which only takes effect inside a `NavigationStack`
+    // 复刻 `MainTabView`：`navigationDestination` 只在 `NavigationStack` 里生效 / Mirrors `MainTabView`; the modifier needs a `NavigationStack`
     NavigationStack {
         GamesView(onSearchTapped: {})
     }

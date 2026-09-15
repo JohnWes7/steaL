@@ -10,9 +10,7 @@ import SwiftUI
 /// Steam 简介、开发商与发行商的折叠区：平铺在页面上，不用卡片包裹 /
 /// Collapsible Steam description and credits, laid out flat rather than inside a card
 ///
-/// 收起时简介只露三行，蓝色 `More ⌄` 贴在最后一行的右端；没被截断时它退到文字下方 /
-/// Collapsed, the description shows three lines with a blue `More ⌄` riding the end of the last
-/// one; when nothing is truncated the control drops below the text instead
+/// 收起时露三行、`More ⌄` 贴最后一行右端，没截断时退到文字下方 / Collapsed shows three lines
 struct SteamDetailSectionView: View {
 
     /// Steam 详情 / The Steam details

@@ -105,28 +105,14 @@ class ITADAPI {
         }
     }
 
-    /// 批量把 ITAD 游戏 ID 换成 Steam 商店 ID /
+    /// 批量把 ITAD 游戏 ID 换成 Steam 商店 ID（`POST .../lookup/shop/61/id/v1`）/
     /// Batch-converts ITAD game IDs into Steam shop IDs
     ///
-    /// `POST https://api.isthereanydeal.com/lookup/shop/61/id/v1`
-    ///
-    /// 请求体是**裸 UUID 的数组**（`["<uuid>", ...]`），60 个实测一次返回，无需分批 /
-    /// The body is a plain array of bare UUIDs; 60 of them were verified in a single call, so
-    /// no chunking is needed for a home feed
-    ///
-    /// 注意「裸」是重点：另一个方向的接口（`lookup/id/shop/61/v1`）反而要求 `"app/123"` 前缀，
-    /// 两个接口规则相反，很容易写错 /
-    /// "Bare" matters: the reverse endpoint requires an `"app/123"` prefix instead, and mixing
-    /// the two up is the easiest mistake to make here
-    ///
-    /// 解析交给 `ITADShopIDsResponse`，调用方只需 `appID(for:)` /
-    /// Parsing lives in `ITADShopIDsResponse`, so callers only need `appID(for:)`
+    /// 请求体是裸 UUID 数组（60 个一次返回）；反向接口要 `"app/123"` 前缀 / A plain array of bare UUIDs
     ///
     /// - Parameter uuids: ITAD 游戏 UUID 列表 / ITAD game UUIDs
-    /// - Returns: 以 UUID 为 key 的查表结果 / a lookup keyed by UUID
     static func lookupShopIDs(uuids: [String]) async throws -> ITADShopIDsResponse {
-        // 空数组会被服务端拒绝（`Request body must be non-empty JSON array`），
-        // 也会让请求失去意义 —— 直接短路，连网络都不发 /
+        // 空数组会被服务端拒绝（`Request body must be non-empty JSON array`），直接短路 /
         // An empty array is rejected by the server, so short-circuit before any request
         guard !uuids.isEmpty else { return ITADShopIDsResponse(entries: [:]) }
 
@@ -240,25 +226,13 @@ class ITADAPI {
         }
     }
 
-    /// 查一批游戏在各商店的价格与历史低价 / Loads prices and historical lows for a batch of games
+    /// 查一批游戏在各商店的价格与历史低价（`POST .../games/prices/v3`，裸 UUID 数组，最多 200）/
+    /// Loads prices and historical lows for a batch of games
     ///
-    /// `POST https://api.isthereanydeal.com/games/prices/v3?country=<CC>&deals=false`
+    /// ⚠️ 响应**稀疏**：没有价格数据的游戏整条不返回，所以必须按 `id` 匹配 / ⚠️ The response is **sparse**
     ///
-    /// 请求体是**裸 UUID 数组**，最多 200 个 / the body is a plain array of bare UUIDs, at most 200
-    ///
-    /// ⚠️ 响应是**稀疏数组**：没有价格数据的游戏整条不返回，
-    /// 调用方必须按 `id` 匹配；某个 UUID 查不到就当作「没有比价数据」处理，不是错误 /
-    /// ⚠️ The response is **sparse**: a game without price data is omitted entirely,
-    /// Portal 2 returning an empty array). Callers match by `id`, and a missing UUID means
-    /// "no price data", not an error
-    ///
-    /// `deals=false` 返回完整价格：包括普通价格、折扣价格与历史低价 /
-    /// `deals=false` returns complete pricing, including regular prices, discounted prices, and lows
-    ///
-    /// - Parameters:
-    ///   - uuids: ITAD 游戏 UUID 列表，最多 200 个 / ITAD game UUIDs, at most 200
-    ///   - region: 区域，决定货币与可用商店 / Region, drives the currency and available shops
-    /// - Returns: 查到价格的游戏，顺序与请求无关 / The games that have prices, in no particular order
+    /// - Parameter uuids: ITAD 游戏 UUID 列表，最多 200 个 / ITAD game UUIDs, at most 200
+    /// - Parameter region: 区域，决定货币与可用商店 / the region, which drives currency and shops
     static func fetchPrices(uuids: [String], region: AppRegion) async throws -> ITADPricesResponse {
         // 空数组会被服务端拒绝，也不会返回任何数据 —— 直接短路，连网络都不发 /
         // An empty array would be rejected by the server and could not return anything anyway
@@ -318,24 +292,12 @@ class ITADAPI {
         }
     }
 
-    /// 查一个游戏的评分、标签与热度 / Loads one game's reviews, tags and popularity
+    /// 查一个游戏的评分、标签与热度（`GET .../games/info/v2?id=<uuid>`）/
+    /// Loads one game's reviews, tags and popularity
     ///
-    /// `GET https://api.isthereanydeal.com/games/info/v2?id=<uuid>`
+    /// 详情页的**可选增强**：拿不到就少一块；未发售游戏 `releaseDate` 为 `null` / An optional enhancement
     ///
-    /// 这是详情页的**可选增强**：拿不到就少一块评分与热度，主流程不受影响。
-    /// 未发售的游戏也能查到（实测 The Wolf Among Us 2），只是 `releaseDate` 为 `null`、
-    /// `reviews` 为空数组、`players` 四个值都是 `0` /
-    /// This is an **optional enhancement** for the detail page: without it there is simply no
-    /// review or popularity block. Unreleased games are covered as well (verified with
-    /// The Wolf Among Us 2); they just carry a `null` `releaseDate`, an empty `reviews` array and
-    /// four zeroed `players` counts
-    ///
-    /// ⚠️ `assets` 字段在同一接口里会返回**数组或对象**两种形态，DTO 里已兼容 /
-    /// ⚠️ The `assets` field arrives as either an array or an object; the DTO handles both
-    ///
-    /// - Parameters:
-    ///   - uuid: ITAD 游戏 UUID / ITAD game UUID
-    /// - Returns: 该游戏的评分与热度信息 / The game's review and popularity info
+    /// - Parameter uuid: ITAD 游戏 UUID / ITAD game UUID
     static func fetchGameInfo(uuid: String) async throws -> ITADGameInfoResponse {
         // 构建请求 URL，鉴权沿用其它接口的 key 查询参数写法 /
         // Construct request URL; authentication follows the other endpoints' key query parameter

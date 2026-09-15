@@ -35,11 +35,8 @@ struct DealCardView: View {
 
     // MARK: - 图片区 / Artwork
 
-    /// 图片区域。上下各叠一层内容：顶部徽标与收藏，底部标签与标题。
-    /// 末尾的 `.clipped()` 把 `scaledToFill` 的溢出切在图片框内，否则图片会盖到价格行上 /
-    /// Artwork area with overlays: badges on top, quality tag and title pinned to the bottom.
-    /// The trailing `.clipped()` keeps the `scaledToFill` overflow inside the frame, otherwise
-    /// the image would paint over the price row
+    /// 图片区域：顶部徽标与收藏、底部标签与标题；末尾的 `.clipped()` 把溢出切在框内 /
+    /// Artwork area with overlays; the trailing `.clipped()` keeps the fill inside the frame
     private var artwork: some View {
         Color.clear
             .aspectRatio(2, contentMode: .fit)

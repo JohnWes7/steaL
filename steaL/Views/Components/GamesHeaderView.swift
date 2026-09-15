@@ -7,10 +7,8 @@
 
 import SwiftUI
 
-/// 主页顶部栏内容：品牌标题 + 通知入口 + 搜索框。只有内容，不含背景与内边距 ——
-/// 内边距和背景都写在调用点（`GamesView` 的 `.safeAreaBar`）上 /
-/// Top bar content: brand title, notification entry and the search field. Content only, no
-/// background or padding — both live at the `.safeAreaBar` call site in `GamesView`.
+/// 主页顶部栏内容：品牌标题 + 通知入口 + 搜索框；背景与内边距写在调用点 /
+/// Top bar content: brand title, notification entry and search field; padding lives at the call site
 struct GamesHeaderView: View {
 
     /// 点击搜索入口时交给调用方处理 / Handed to the caller when the search affordance is tapped
@@ -70,11 +68,8 @@ struct GamesHeaderView: View {
         .accessibilityLabel("Notifications")
     }
 
-    /// 搜索入口。外观与 `SearchView` 的输入框完全一致（共用 `SearchBarShell`），
-    /// 但本身不可编辑：点击只发出"去搜索"的信号，由 `MainTabView` 把它变成切 tab /
-    /// Search entry point. Identical in appearance to the `SearchView` text field (both wrap
-    /// `SearchBarShell`), but not editable: tapping only sends a "go search" signal, which
-    /// `MainTabView` turns into a tab switch
+    /// 搜索入口：与 `SearchView` 的输入框共用 `SearchBarShell`，点击只发出切 tab 的信号 /
+    /// Search entry point, sharing `SearchBarShell`; a tap only signals "switch to search"
     @ViewBuilder
     private var searchField: some View {
         SearchBarButton(placeholder: "Search games, publishers...", action: onSearchTapped)

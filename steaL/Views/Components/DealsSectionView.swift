@@ -7,12 +7,8 @@
 
 import SwiftUI
 
-/// 「Hot Deals」区块内容：跟随自己的状态机渲染加载 / 失败 / 空 / 列表 /
+/// 「Hot Deals」区块内容：按自己的状态机渲染加载 / 失败 / 空 / 列表，标题与跳转留在页面 /
 /// Hot Deals section content; renders loading, failure, empty or the list from its own state
-///
-/// 标题、跳转与提示都留在 `GamesView`：这里只把状态渲染成卡片，点击通过 `onSelect` 交回页面 /
-/// The title, the navigation and the alert stay with `GamesView`: this view only renders the state
-/// into cards, and hands a tap back through `onSelect`
 struct DealsSectionView: View {
 
     /// 区块状态 / The state of the section
@@ -68,19 +64,14 @@ struct DealsSectionView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// 首条 hero 卡 + 其余两列网格 / Hero card first, then a two-column grid
-    ///
-    /// 收 `[HomeDealItem]` 而不是 `ITADDealsResponse`：条目除了 deal 还带着 Steam appID 的解析结果，
-    /// 视图只需要渲染，不需要知道分页字段 /
-    /// Takes `[HomeDealItem]` rather than `ITADDealsResponse`: each row now also carries its Steam
-    /// appID resolution, and the view never needs the pagination fields
+    /// 首条 hero 卡 + 其余两列网格；收 `HomeDealItem` 是因为每行还要带 Steam appID 的解析结果 /
+    /// Hero card first, then a two-column grid; each row also carries its Steam appID resolution
     @ViewBuilder
     private func content(_ items: [HomeDealItem]) -> some View {
 
         // 首条 hero 卡 / Hero card for the first item
         if let firstItem = items.first {
-            // 卡片直接包成 `Button`：点击结果由 `onSelect` 决定，`.plain` 让卡片内收藏按钮的点击不被外层吞掉 /
-            // The card is wrapped in a plain `Button`: `onSelect` decides the outcome, and `.plain` keeps the card's own favourite button clickable
+            // 卡片包成 `Button`，`.plain` 让卡内收藏按钮的点击不被外层吞掉 / `.plain` keeps the card's own favourite button clickable
             Button {
                 onSelect(firstItem)
             } label: {

@@ -30,11 +30,8 @@ class SearchViewModel {
 	/// 最近一次成功搜索的条件 / Conditions of the most recent successful search
 	private var loadedRequest: SearchRequest?
 
-	/// 调用 Steam 搜索接口 / Calls Steam's store search endpoint
-	///
-	/// 空白输入不会发请求，并会清空旧结果。请求失败会转换成 UI 可用的 `LoadError` /
-	/// Blank input skips the request and clears old results. Failures are mapped to `LoadError`
-	/// for presentation by the UI.
+	/// 调用 Steam 搜索接口；空白输入不发请求并清空旧结果，失败转成 `LoadError` /
+	/// Calls Steam's store search endpoint; blank input requests nothing, failures become `LoadError`
 	func search(
 		query: String,
 		region: AppRegion = .australia,

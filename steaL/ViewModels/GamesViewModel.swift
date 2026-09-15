@@ -7,10 +7,9 @@
 
 import Foundation
 
-/// 面向 UI 的错误类型：把网络层的各种失败归一成几种用户能理解的状况，
-/// 每种自带固定英文文案与 SF Symbol /
-/// UI-facing error: normalises network failures into a few actionable cases, each with fixed
-/// English copy and an SF Symbol
+/// 面向 UI 的错误类型：把网络层的失败归一成几种状况，每种自带固定英文文案与 SF Symbol /
+/// UI-facing error: normalises network failures into a few cases, each with fixed copy and an
+/// SF Symbol
 enum LoadError: Error, Equatable {
     /// 无网络，或连不上主机 / No connection, or the host cannot be reached
     case offline
@@ -71,9 +70,7 @@ enum LoadError: Error, Equatable {
                 return .server(statusCode: statusCode)
             }
 
-        // Steam 的失败同样是网络层，`gameNotFound` 归一成离线以外的通用失败 /
-        // Steam failures are network failures too; `gameNotFound` is normalised into a generic
-        // failure rather than an offline one
+        // Steam 的 `gameNotFound` 归一成通用失败，不当作离线 / `gameNotFound` becomes a generic failure, not offline
         case let apiError as SteamAPIError:
             switch apiError {
             case .invalidResponse, .gameNotFound:
@@ -99,13 +96,9 @@ final class GamesViewModel {
     enum DealLoadState: Equatable {
         /// 首次加载或重试中 / First load, or a retry in progress
         case loading
-        /// 请求成功，注意列表本身可能为空 /
-        /// Request succeeded; the list itself may still be empty
-        ///
-        /// 装的是 `HomeDealItem` 而不是 `ITADDealsResponse`：列表渲染需要的是「deal + appID」，
-        /// 分页状态暂时用不到，留在 `fetchDeals` 内部即可 /
-        /// Carries `HomeDealItem` rather than `ITADDealsResponse`: rendering needs deal plus appID,
-        /// and the pagination fields are not needed yet
+        /// 请求成功，列表可能为空；装 `HomeDealItem` 是因为渲染只要「deal + appID」/
+        /// Request succeeded, the list may still be empty; carries `HomeDealItem` because rendering
+        /// only needs deal plus appID
         case loaded([HomeDealItem])
         /// 请求失败，携带归一化后的错误 / Request failed, carrying the normalised error
         case failed(LoadError)
@@ -141,7 +134,6 @@ final class GamesViewModel {
             "nondeals": false,
             "filter": [
                 "type": [1],
-                // "wasSpotlight": true,
                 "drm": [61],
             ],
         ]
@@ -162,13 +154,10 @@ final class GamesViewModel {
 
         do {
             let data = try await ITADAPI.fetchDeals(body: requestBody)
-            // 状态先落地，让卡片能立刻渲染。appID 是 `.pending`，点开时会被拦下 /
-            // Publish first so the cards render immediately; their appID is still `.pending` and
-            // a tap is held back until resolution finishes
+            // 先发布状态让卡片立刻渲染，appID 仍是 `.pending` / Publish first so the cards render; the appID is still `.pending`
             dealState = .loaded(data.list.map { HomeDealItem(deal: $0) })
 
-            // 预取放在渲染之后，不阻塞首屏 /
-            // Prefetch runs after publishing so it never delays the first frame
+            // 预取在渲染之后，不挡首屏 / Prefetch runs after publishing so it never delays the first frame
             await prefetchAppIDs()
 
         } catch {
@@ -192,18 +181,10 @@ final class GamesViewModel {
 
     // MARK: - Steam appID 预取 / Prefetching Steam appIDs
 
-    /// 给当前列表里的每个游戏补上 Steam appID /
-    /// Resolves the Steam appID for every game currently in the feed
+    /// 给列表里每个游戏批量补上 Steam appID（实测 60 个 UUID 一次请求即可）/
+    /// Resolves the Steam appID for every game in the feed, in one batch
     ///
-    /// 这一步是「从主页进详情页」的前提：详情页的本体是 Steam 数据，所以必须先有 appID。
-    /// 放在列表层批量做，而不是点一次查一次 —— 实测 60 个 UUID 一次请求即可返回 /
-    /// This is what makes the home feed able to open a detail page at all, since the detail page
-    /// is built on Steam data. Doing it as one batch beats one lookup per tap: 60 UUIDs were
-    /// verified in a single request
-    ///
-    /// 失败**不改变 `dealState`**：列表本身是好的，只是暂时进不了详情页 /
-    /// A failure deliberately does not touch `dealState`: the feed is still valid, only the
-    /// detail pages are unreachable
+    /// 失败不改 `dealState`：列表是好的，只是进不了详情页 / A failure leaves `dealState` alone
     func prefetchAppIDs() async {
         guard case .loaded(let items) = dealState else { return }
         guard !items.isEmpty else { return }
@@ -213,12 +194,10 @@ final class GamesViewModel {
         do {
             let lookup = try await ITADAPI.lookupShopIDs(uuids: uuids)
 
-            // 请求期间用户可能切了地区或重试，那时结果已经过期 /
-            // The region may have changed, or a retry may have started, while this was in flight
+            // 请求在飞时可能换了地区或重试，结果已过期 / The region may have changed while this was in flight
             guard !Task.isCancelled else { return }
 
-            // 一次性写回整批，避免 N 次数组复制 /
-            // Apply the whole batch in one pass instead of N array copies
+            // 整批一次写回，避免 N 次数组复制 / Apply the whole batch in one pass
             applyAppIDs { lookup.appID(for: $0) }
 
             #if DEBUG
@@ -233,8 +212,7 @@ final class GamesViewModel {
                 print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
             }
 
-            // 把还挂在 `.pending` 上的条目一次性标成 `.unavailable`，否则卡片会永远点不动 /
-            // Settle anything still `.pending`, otherwise those cards would stay untappable forever
+            // 还挂在 `.pending` 的条目标成 `.unavailable`，否则卡片永远点不动 / Settle anything still `.pending`
             settlePendingAsUnavailable()
         }
     }

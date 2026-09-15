@@ -8,12 +8,9 @@
 import SwiftData
 import SwiftUI
 
-/// 游戏详情页 / Game detail page
-///
-/// 数据由 `GameDetailViewModel` 加载：先拿 Steam 详情（硬门槛），ITAD 的比价与评分等接入时
-/// 继续往同一个 `load` 里加 /
-/// Data is loaded by `GameDetailViewModel`: Steam details first (the hard requirement), with the
-/// ITAD price and info steps joining the same `load` once their DTOs exist
+/// 游戏详情页：数据由 `GameDetailViewModel` 加载，Steam 详情是硬门槛，ITAD 比价与评分随后补齐 /
+/// Game detail page; `GameDetailViewModel` loads the Steam details first as the hard
+/// requirement, with the ITAD price and info sections filling in afterwards
 struct GameDetailView: View {
 
     /// 设置单例，用来决定请求的区域与语言 / The settings singleton, which decides region and language
@@ -57,19 +54,14 @@ struct GameDetailView: View {
             content
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // 用 `.task(id:)` 而不是 `onAppear` + `hasStarted`：详情页没有「切 Tab 不能被取消」的需求，
-        // 而 `.task` 在参数变化时自动重跑、视图离开时自动取消在飞请求 /
-        // `.task(id:)` rather than `onAppear` + a started flag: unlike the feed, the detail page
-        // wants the request cancelled when it goes away, and to re-run when parameters change
+        // 用 `.task(id:)`：参数变化自动重跑，离开时自动取消在飞请求 / `.task(id:)` re-runs on a parameter change and cancels on disappear
         .task(id: reloadKey) {
             await gameDetailViewModel.load(region: region, language: language)
         }
         .toolbar(.visible, for: .navigationBar)
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
-        // 详情页自己注册跳转目标，这样从别人推入的页面里再推一页不必依赖外层栈是否注册过 /
-        // The page registers its own destination, so pushing from an already pushed page does not
-        // depend on the enclosing stack having registered one
+        // 详情页自己注册跳转目标，从被推入的页面再推一页不靠外层栈 / Register our own destination; the enclosing stack needs no `for:`
         .navigationDestination(item: $fullGameRoute) { route in
             GameDetailView(route: route)
         }
@@ -111,11 +103,7 @@ struct GameDetailView: View {
         }
     }
 
-    /// 数据就绪后的内容 / The page once the data is in
-    ///
-    /// 目前只用到 Steam 那一半加上一块临时比价；截图、视频与完整价格区后续往里加 /
-    /// The Steam half plus a provisional price block for now; screenshots, movies and the real
-    /// price section come next
+    /// 数据就绪后的内容：画廊 + 详情区块 / The page once the data is in: gallery plus the detail sections
     private func detailContent(_ details: SteamAppDetails) -> some View {
         let galleryImageURLs = ([details.headerImage] + (details.screenshots ?? []).compactMap(\.full))
             .compactMap { $0 }
@@ -144,9 +132,7 @@ struct GameDetailView: View {
                         }
                     }
 
-                    // 试玩版与未发售由 ViewModel 定成 `.hidden`，两块自己不渲染 /
-                    // The view model marks a demo or an unreleased title `.hidden`, and the sections
-                    // render nothing for it
+                    // 该不该出现由 ViewModel 定成 `.hidden`，区块自己不渲染 / The view model decides via `.hidden`
                     PriceSectionView(
                         state: gameDetailViewModel.pricesState,
                         offerFilter: $offerFilter,
@@ -232,14 +218,12 @@ struct GameDetailView: View {
     /// Which appid the demo entry opens: a demo Steam lists on a base game, or the demo itself
     private func demoLink(_ details: SteamAppDetails) -> (appID: Int, name: String)? {
         if let demo = details.demos?.first, let appID = demo.appid {
-            // Steam 很少填试玩版自己的名字（实测 6 个里只有 1 个有），空串时退回「本体名 + Demo」/
-            // Steam rarely fills in the demo's own name, so an empty one falls back to the base game
+            // Steam 很少填试玩版自己的名字（6 个里只 1 个有），空串退回「本体名 + Demo」/ Rarely filled in; empty falls back
             let fallback = "\(gameDetailViewModel.title) Demo"
             return (appID, demo.description.flatMap { $0.isEmpty ? nil : $0 } ?? fallback)
         }
 
-        // 试玩版自己的页面上 `demos` 是空的，它的页面标题就是试玩版名 /
-        // A demo's own page carries no `demos`, and its page title already is the demo's name
+        // 试玩版自己的页面上 `demos` 是空的，标题本身就是试玩版名 / A demo's own page carries no `demos`
         guard details.isDemo,
             let appID = details.steamAppID
         else { return nil }

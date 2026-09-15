@@ -13,18 +13,14 @@ import Foundation
 /// Unlike `ITADAPI` this needs **no API key**; `cc` and `l` alone decide the currency and language
 class SteamAPI {
 
-    /// 按名称搜索 Steam 商店 / Searches the Steam store by name
+    /// 按名称搜索 Steam 商店（`GET .../storesearch`），返回的是列表用的轻量数据 /
+    /// Searches the Steam store by name; lightweight data for the list only
     ///
-    /// `GET https://store.steampowered.com/api/storesearch?term=<query>&cc=<region>&l=<language>`
+    /// 选中后仍要走 `fetchAppDetails` 才能拿到完整详情 / Follow up with `fetchAppDetails` for details
     ///
-    /// 返回的是列表用轻量数据；点击结果后仍应通过 `fetchAppDetails` 获取完整详情 /
-    /// Returns lightweight list data; use `fetchAppDetails` after an item is selected
-    ///
-    /// - Parameters:
-    ///   - query: 用户输入的搜索词 / Search text entered by the user
-    ///   - region: 区域，决定价格和货币 / Region used for pricing and currency
-    ///   - language: 返回名称的语言 / Language used for localised names
-    /// - Returns: 搜索总数与结果条目 / The match count and search items
+    /// - Parameter query: 用户输入的搜索词 / the search text entered by the user
+    /// - Parameter region: 区域，决定价格和货币 / the region, which drives pricing and currency
+    /// - Parameter language: 返回名称的语言 / the language used for localised names
     static func searchStore(
         query: String,
         region: AppRegion = .australia,
@@ -74,24 +70,14 @@ class SteamAPI {
         }
     }
 
-    /// 获取游戏详情 / Fetches one game's store details
+    /// 获取游戏详情：详情页的**硬门槛**，`success == false` 抛 `.gameNotFound` /
+    /// Fetches one game's store details, the detail page's **hard requirement**
     ///
-    /// `GET https://store.steampowered.com/api/appdetails?appids=<id>&cc=<region>&l=<language>`
+    /// **不要**加 `filters=basic`（会裁掉 `movies` / `screenshots` / `genres`）/ **Never** pass `filters=basic`
     ///
-    /// 这是详情页的**硬门槛**：`success == false` 表示游戏在 Steam 上不存在（下架 / 锁区），
-    /// 此时抛 `.gameNotFound`，页面不该渲染 /
-    /// This is the detail page's **hard requirement**: `success == false` means the game is not on
-    /// Steam, which throws `.gameNotFound` instead of rendering a page
-    ///
-    /// 注意**不要**加 `filters=basic`，它会把 `movies` / `screenshots` / `genres` / `developers`
-    /// 全部裁掉 / Never pass `filters=basic`; it strips `movies`, `screenshots`, `genres` and
-    /// `developers` from the response
-    ///
-    /// - Parameters:
-    ///   - appID: Steam App ID / Steam application ID
-    ///   - region: 区域，决定货币与商店可用性 / Region; drives currency and store availability
-    ///   - language: 语言，Steam 会据此本地化游戏名与视频名 / Language; Steam localises the title and movie names with it
-    /// - Returns: 该游戏在 Steam 商店的详情 / The game's store details
+    /// - Parameter appID: Steam App ID / the Steam application ID
+    /// - Parameter region: 区域，决定货币与商店可用性 / the region; drives currency and availability
+    /// - Parameter language: 语言，用于本地化标题与视频名 / the language used for titles and movie names
     static func fetchAppDetails(
         appID: Int,
         region: AppRegion = .australia,
@@ -145,9 +131,8 @@ class SteamAPI {
             throw error
         }
 
-        // 只查了一个 appid，所以字典里只有一条；`success == false` 或 `data` 缺失都算查不到 /
-        // Only one appid was requested, so there is exactly one entry; a failed `success` or a
-        // missing `data` both mean the game cannot be shown
+        // 只查一个 appid，字典只有一条；`success == false` 与 `data` 缺失都算查不到 /
+        // Only one appid was requested, so a failed `success` and a missing `data` both mean a miss
         guard let details = response.entries.values.first?.data else {
             throw SteamAPIError.gameNotFound(appID: appID)
         }

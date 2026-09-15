@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-/// Giveaways 区块的通栏行：左侧满高缩略图 + 标题与商店，右侧为截止倒计时胶囊；
-/// 整行就是一个按钮，点击后打开领取链接 /
-/// Full-width row for the Giveaways section: full-height thumbnail on the left, title and shop
-/// beside it, and a countdown capsule on the right; the whole row is one button that opens the claim link
+/// Giveaways 区块的通栏行：左侧满高缩略图 + 标题与商店，右侧倒计时胶囊 /
+/// Full-width row for the Giveaways section: full-height thumbnail, title and shop, countdown capsule
+///
+/// 整行就是一个按钮，点击打开领取链接 / The whole row is one button that opens the claim link
 struct GiveawayRowView: View {
 
     /// 要展示的限时免费领取 / The giveaway to show
