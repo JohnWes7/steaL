@@ -144,20 +144,19 @@ struct GameDetailView: View {
                         }
                     }
 
-                    // 试玩版不单独售卖（价格恒空），ITAD 也基本没有它的条目，两块直接不渲染 /
-                    // A demo is never sold and ITAD barely tracks demos, so both stay hidden
-                    if !details.isDemo {
-                        PriceSectionView(
-                            state: gameDetailViewModel.pricesState,
-                            offerFilter: $offerFilter,
-                            retry: retryPrices
-                        )
+                    // 试玩版与未发售由 ViewModel 定成 `.hidden`，两块自己不渲染 /
+                    // The view model marks a demo or an unreleased title `.hidden`, and the sections
+                    // render nothing for it
+                    PriceSectionView(
+                        state: gameDetailViewModel.pricesState,
+                        offerFilter: $offerFilter,
+                        retry: retryPrices
+                    )
 
-                        ITADInfoSectionView(
-                            state: gameDetailViewModel.infoState,
-                            retry: retryInfo
-                        )
-                    }
+                    ITADInfoSectionView(
+                        state: gameDetailViewModel.infoState,
+                        retry: retryInfo
+                    )
 
                     DetailFooterView(
                         appID: gameDetailViewModel.appID,

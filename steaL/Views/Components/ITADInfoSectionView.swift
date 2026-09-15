@@ -17,15 +17,20 @@ struct ITADInfoSectionView: View {
     let retry: () -> Void
 
     var body: some View {
+        // `.hidden` 连标题一起不渲染 / `.hidden` takes the title down with it
+        if state != .hidden {
+            section
+        }
+    }
+
+    /// 区块本体 / The section itself
+    private var section: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("ITAD DETAILS")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.brandGreen)
 
             switch state {
-            case .idle:
-                EmptyView()
-
             case .loading:
                 ProgressView()
                     .controlSize(.small)
@@ -83,6 +88,10 @@ struct ITADInfoSectionView: View {
 
             case .unavailable:
                 UnavailablePromptView(message: "No info data", retry: retry)
+
+            // `body` 已经挡掉 `.hidden` / `body` filters `.hidden` out
+            case .hidden:
+                EmptyView()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -184,7 +193,6 @@ struct ITADInfoSectionView: View {
 #Preview("其他状态 / Other states") {
     ScrollView {
         VStack(alignment: .leading, spacing: 24) {
-            ITADInfoSectionView(state: .idle, retry: {})
             ITADInfoSectionView(state: .loading, retry: {})
             ITADInfoSectionView(state: .unavailable, retry: {})
         }

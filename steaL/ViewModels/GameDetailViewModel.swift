@@ -49,26 +49,29 @@ final class GameDetailViewModel {
     /// "Nothing found" and "the request failed" collapse into `.unavailable`: the UI cannot tell
     /// them apart anyway, and a failure here never fails the page
     enum PricesState: Equatable {
-        /// 还没开始查 / Not asked for yet
-        case idle
+        /// ViewModel 判定这个类型不该出现价格区块 / The view model decided this kind has no price section
+        case hidden
         /// 正在查 / Asking
         case loading
-        /// Steam 标记为免费游戏 / Steam identifies the title as free to play
-        case free
-        /// Steam 标记为试玩版 / Steam identifies the title as a demo
-        case demo
-        /// Steam 标记为还没发售 / Steam identifies the title as unreleased
-        case comingSoon
         /// 查到了 / The prices are in
         case loaded(ITADPriceGame)
         /// 问过了，没有可显示的价格 / Asked, and there is nothing to show
         case unavailable
+
+        /// 一次比价请求的结果落成的状态 / The state a prices result resolves to
+        static func from(_ prices: ITADPriceGame?) -> PricesState {
+            if let prices, !prices.isEmpty {
+                return .loaded(prices)
+            }
+
+            return .unavailable
+        }
     }
 
     /// ITAD 游戏信息区块自己的状态 / The info section's own state
     enum InfoState: Equatable {
-        /// 还没开始查 / Not asked for yet
-        case idle
+        /// ViewModel 判定这个类型不该出现信息区块 / The view model decided this kind has no info section
+        case hidden
         /// 正在查 / Asking
         case loading
         /// 查到了 / The info is in
@@ -83,11 +86,12 @@ final class GameDetailViewModel {
     /// state machine
     private(set) var state: State = .loading
 
-    /// ITAD 比价的状态，独立于主状态 / The ITAD prices' own state, independent of the main one
-    private(set) var pricesState: PricesState = .idle
+    /// ITAD 比价的状态，独立于主状态；详情到手前是 `.hidden` /
+    /// The ITAD prices' own state, independent of the main one; `.hidden` until the details are in
+    private(set) var pricesState: PricesState = .hidden
 
     /// ITAD 游戏信息的状态，独立于页面主状态 / The ITAD info state, independent of the page state
-    private(set) var infoState: InfoState = .idle
+    private(set) var infoState: InfoState = .hidden
 
     /// 可用于 ITAD 请求的游戏 UUID / The game UUID used for ITAD requests
     private(set) var uuid: String?
@@ -125,8 +129,6 @@ final class GameDetailViewModel {
         // 重试时不清空，首轮才先摆出加载态 / Only the first attempt blanks the page
         if !isRetry {
             state = .loading
-            pricesState = .idle
-            infoState = .idle
         }
 
         // 硬门槛：拿不到 Steam 详情就没有详情页 / Hard requirement: no Steam details, no page
@@ -146,43 +148,43 @@ final class GameDetailViewModel {
             // without holding the first frame back
             state = .loaded(details)
 
-            // Steam 自己说明这东西没有价格可比：免费 / 试玩 / 还没发售 /
-            // Steam itself says there is nothing to price: free, a demo, or unreleased
-            var fixedPriceState: PricesState?
-            if details.isDemo {
-                fixedPriceState = .demo
-            } else if details.isFree == true {
-                fixedPriceState = .free
-            } else if details.isComingSoon {
-                fixedPriceState = .comingSoon
+            // 游戏类型决定 ITAD 的两块要不要查 / The kind of game decides which ITAD section is loaded
+            switch details.gameKind {
+            // 试玩版两块都不查：`prices/v3` 对试玩版恒为 `[]`，ITAD 也只收录老试玩版的信息 /
+            // A demo loads neither: `prices/v3` is always empty for one, and ITAD only covers older demos
+            case .demo:
+                pricesState = .hidden
+                infoState = .hidden
+                return
+
+            // 还没发售只补 ITAD 信息，没有可比的价 /
+            // An unreleased title only needs the ITAD info; there is no price to compare
+            case .unreleased:
+                pricesState = .hidden
+                await retryInfo()
+                return
+
+            // 免费与付费一样要查：限时免费的原价还在，永久免费在别的商店也未必免费 /
+            // Free is loaded like paid: a limited-time free title still has its regular price, and a
+            // permanently free one is not free in every shop
+            case .free, .paid:
+                pricesState = .loading
+                infoState = .loading
             }
-            pricesState = fixedPriceState ?? .loading
 
             // ITAD 增强数据共用一次 UUID lookup；已有 UUID 时不查 lookup /
             // The ITAD enhancements share one UUID lookup; an existing UUID skips that lookup
-
-            let uuid = await resolveUUID()
-            if let uuid {
-                infoState = .loading
-
-                if fixedPriceState == nil {
-                    async let prices = fetchPricesIfPossible(uuid: uuid, region: region)
-                    async let info = fetchInfoIfPossible(uuid: uuid)
-
-                    let loadedPrices = await prices
-                    let loadedInfo = await info
-                    pricesState = loadedPrices.map(PricesState.loaded) ?? .unavailable
-                    infoState = loadedInfo.map(InfoState.loaded) ?? .unavailable
-                } else {
-                    let loadedInfo = await fetchInfoIfPossible(uuid: uuid)
-                    infoState = loadedInfo.map(InfoState.loaded) ?? .unavailable
-                }
-            } else if uuid == nil {
-                if fixedPriceState == nil {
-                    pricesState = .unavailable
-                }
+            guard let uuid = await resolveUUID() else {
+                pricesState = .unavailable
                 infoState = .unavailable
+                return
             }
+
+            async let prices = fetchPricesIfPossible(uuid: uuid, region: region)
+            async let info = fetchInfoIfPossible(uuid: uuid)
+
+            pricesState = .from(await prices)
+            infoState = (await info).map(InfoState.loaded) ?? .unavailable
 
         } catch {
             guard !Task.isCancelled else { return }
@@ -208,10 +210,16 @@ final class GameDetailViewModel {
 
         let prices = await fetchPricesIfPossible(uuid: uuid, region: region)
         guard !Task.isCancelled else { return }
-        pricesState = prices.map(PricesState.loaded) ?? .unavailable
+        pricesState = .from(prices)
     }
 
-    /// 重试 ITAD 游戏信息；没有 UUID 时先按 Steam appID 查找 / Retries ITAD info, resolving the UUID first when needed
+    /// 查一次 ITAD 游戏信息；没有 UUID 时先按 Steam appID 查找，拿不到就当作没有 /
+    /// Fetches the ITAD game info once, resolving the UUID first when needed, and treats a miss as
+    /// "nothing"
+    ///
+    /// 它同时是首次加载的入口：未发售的详情页也走这里，所以 `load` 里不再另起一份 /
+    /// It doubles as the first-load entry point for unreleased titles, so `load` reuses it instead of
+    /// duplicating the sequence
     func retryInfo() async {
         infoState = .loading
 

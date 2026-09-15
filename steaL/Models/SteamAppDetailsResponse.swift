@@ -370,6 +370,28 @@ extension SteamAppDetails {
     /// 是否还没发售 / Whether the game has not been released yet
     var isComingSoon: Bool { releaseDate?.comingSoon == true }
 
+    /// 商店对这款游戏的定价定性 / How the store prices this title
+    enum GameKind {
+        /// 试玩版，不单独售卖 / A demo, never sold on its own
+        case demo
+        /// 现在免费，永久免费或限时免费 / Free right now, permanently or for a limited time
+        case free
+        /// 还没发售 / Not released yet
+        case unreleased
+        /// 正常售卖 / Sold normally
+        case paid
+    }
+
+    /// 游戏类型；三个判断条件并不互斥（试玩版与限时免费同样是 `is_free == true`），
+    /// 所以下面的顺序就是优先级 / The kind of game; the three flags are not mutually exclusive
+    /// (a demo and a limited-time free title are both `is_free == true`), so the order is the priority
+    var gameKind: GameKind {
+        if isDemo { return .demo }
+        if isComingSoon { return .unreleased }
+        if isFree == true { return .free }
+        return .paid
+    }
+
     /// 支持平台的可读文本，如 `"Windows · macOS"` / Readable platform list such as "Windows · macOS"
     var platformText: String {
         guard let platforms else { return "—" }

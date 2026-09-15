@@ -35,33 +35,23 @@ struct PriceSectionView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
+        // `.hidden` 连标题一起不渲染 / `.hidden` takes the title down with it
+        if state != .hidden {
+            section
+        }
+    }
+
+    /// 区块本体 / The section itself
+    private var section: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("PRICES")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.brandGreen)
 
             switch state {
-            case .idle:
-                EmptyView()
-
             case .loading:
                 ProgressView()
                     .controlSize(.small)
-
-            case .free:
-                Text("Free")
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.brandGreen)
-
-            case .demo:
-                Text("Demo")
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.brandGreen)
-
-            case .comingSoon:
-                Text("Not released yet")
-                    .font(.system(size: 14, weight: .regular, design: .rounded))
-                    .foregroundStyle(.secondaryText)
 
             case .loaded(let prices):
                 let lows: [(String, ITADPrice)] = [
@@ -91,6 +81,10 @@ struct PriceSectionView: View {
 
             case .unavailable:
                 UnavailablePromptView(message: "No historical price data", retry: retry)
+
+            // `body` 已经挡掉 `.hidden` / `body` filters `.hidden` out
+            case .hidden:
+                EmptyView()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,7 +175,7 @@ struct PriceSectionView: View {
                 Spacer(minLength: 8)
 
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text(offer.price.amount.formatted(.currency(code: offer.price.currency)))
+                    Text(priceText(offer.price))
                         .font(.system(size: 19, weight: .bold, design: .monospaced))
                         .foregroundStyle(isBest ? .brandGreen : .primaryText)
 
@@ -222,7 +216,7 @@ struct PriceSectionView: View {
 
             Spacer(minLength: 12)
 
-            Text(price.amount.formatted(.currency(code: price.currency)))
+            Text(priceText(price))
                 .font(.system(size: 20, weight: .bold, design: .monospaced))
                 .foregroundStyle(accent)
         }
@@ -230,6 +224,13 @@ struct PriceSectionView: View {
         .overlay(alignment: .bottom) {
             Divider()
         }
+    }
+
+    /// 价格文本：0 元一律显示 `Free`，其余按数据自带的货币格式化 /
+    /// The price text: a zero amount always reads `Free`, everything else is formatted in the
+    /// payload's own currency
+    private func priceText(_ price: ITADPrice) -> String {
+        price.amountInt == 0 ? "Free" : price.amount.formatted(.currency(code: price.currency))
     }
 
     private func priceAccent(for index: Int) -> Color {
@@ -262,9 +263,6 @@ struct PriceSectionView: View {
     ScrollView {
         VStack(alignment: .leading, spacing: 24) {
             PriceSectionView(state: .loading, offerFilter: .constant(.steam), retry: {})
-            PriceSectionView(state: .free, offerFilter: .constant(.steam), retry: {})
-            PriceSectionView(state: .demo, offerFilter: .constant(.steam), retry: {})
-            PriceSectionView(state: .comingSoon, offerFilter: .constant(.steam), retry: {})
             PriceSectionView(state: .unavailable, offerFilter: .constant(.steam), retry: {})
         }
         .padding(20)
