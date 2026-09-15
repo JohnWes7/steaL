@@ -374,21 +374,35 @@ extension SteamAppDetails {
     enum GameKind {
         /// 试玩版，不单独售卖 / A demo, never sold on its own
         case demo
-        /// 现在免费，永久免费或限时免费 / Free right now, permanently or for a limited time
-        case free
+        /// 限时免费（含免费保留），原价还在 / Free for a limited time; the regular price is still there
+        case freeToKeep
+        /// 永久免费（F2P），从来没有卖过 / Permanently free; it has never been sold
+        case freeForever
         /// 还没发售 / Not released yet
         case unreleased
         /// 正常售卖 / Sold normally
         case paid
+
+        /// 要不要显示历史低价：永久免费的那几档是它免费之前的价，没有比较意义 /
+        /// Whether the historical lows are worth showing: a permanently free title's lows are prices
+        /// from before it went free, which are nothing to compare
+        var showsPriceHistory: Bool {
+            switch self {
+            case .freeForever: false
+            case .demo, .freeToKeep, .unreleased, .paid: true
+            }
+        }
     }
 
     /// 游戏类型；三个判断条件并不互斥（试玩版与限时免费同样是 `is_free == true`），
-    /// 所以下面的顺序就是优先级 / The kind of game; the three flags are not mutually exclusive
-    /// (a demo and a limited-time free title are both `is_free == true`), so the order is the priority
+    /// 所以下面的顺序就是优先级；两种免费用 `price_overview` 区分，永久免费它是 `null` /
+    /// The kind of game; the three flags are not mutually exclusive (a demo and a limited-time free
+    /// title are both `is_free == true`), so the order is the priority; the two free kinds differ by
+    /// `price_overview`, which is `null` for a permanently free title
     var gameKind: GameKind {
         if isDemo { return .demo }
         if isComingSoon { return .unreleased }
-        if isFree == true { return .free }
+        if isFree == true { return priceOverview == nil ? .freeForever : .freeToKeep }
         return .paid
     }
 

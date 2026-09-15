@@ -54,29 +54,11 @@ struct PriceSectionView: View {
                     .controlSize(.small)
 
             case .loaded(let prices):
-                let lows: [(String, ITADPrice)] = [
-                    ("All-time low", prices.historyLow.all),
-                    ("1 year low", prices.historyLow.y1),
-                    ("3 months low", prices.historyLow.m3),
-                ].compactMap { label, price in
-                    guard let price else { return nil }
-                    return (label, price)
-                }
+                priceHistory(prices)
+                currentOffers(prices)
 
-                if lows.isEmpty {
-                    Text("No historical price data")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondaryText)
-                } else {
-                    ForEach(Array(lows.enumerated()), id: \.offset) { index, entry in
-                        historicalPriceRow(
-                            label: entry.0,
-                            price: entry.1,
-                            accent: priceAccent(for: index)
-                        )
-                    }
-                }
-
+            // 永久免费的游戏不看历史低价 / A permanently free title has no use for the historical lows
+            case .loadedWithoutHistory(let prices):
                 currentOffers(prices)
 
             case .unavailable:
@@ -88,6 +70,34 @@ struct PriceSectionView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 三档历史低价；都没有就退成一行说明 /
+    /// The historical lows of the three windows, collapsing into one line when there are none
+    @ViewBuilder
+    private func priceHistory(_ prices: ITADPriceGame) -> some View {
+        let lows: [(String, ITADPrice)] = [
+            ("All-time low", prices.historyLow.all),
+            ("1 year low", prices.historyLow.y1),
+            ("3 months low", prices.historyLow.m3),
+        ].compactMap { label, price in
+            guard let price else { return nil }
+            return (label, price)
+        }
+
+        if lows.isEmpty {
+            Text("No historical price data")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondaryText)
+        } else {
+            ForEach(Array(lows.enumerated()), id: \.offset) { index, entry in
+                historicalPriceRow(
+                    label: entry.0,
+                    price: entry.1,
+                    accent: priceAccent(for: index)
+                )
+            }
+        }
     }
 
     /// 当前可购买的 Steam 激活价格 / Current prices for Steam-activating offers
@@ -263,6 +273,11 @@ struct PriceSectionView: View {
     ScrollView {
         VStack(alignment: .leading, spacing: 24) {
             PriceSectionView(state: .loading, offerFilter: .constant(.steam), retry: {})
+            PriceSectionView(
+                state: .loadedWithoutHistory(.previewSample),
+                offerFilter: .constant(.steam),
+                retry: {}
+            )
             PriceSectionView(state: .unavailable, offerFilter: .constant(.steam), retry: {})
         }
         .padding(20)

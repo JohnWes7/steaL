@@ -53,18 +53,18 @@ final class GameDetailViewModel {
         case hidden
         /// 正在查 / Asking
         case loading
-        /// 查到了 / The prices are in
+        /// 查到了：历史低价 + 当前报价 / The prices are in: the historical lows plus the current offers
         case loaded(ITADPriceGame)
+        /// 查到了，但不显示历史低价（永久免费的游戏）/ The prices are in, minus the historical lows
+        case loadedWithoutHistory(ITADPriceGame)
         /// 问过了，没有可显示的价格 / Asked, and there is nothing to show
         case unavailable
 
         /// 一次比价请求的结果落成的状态 / The state a prices result resolves to
-        static func from(_ prices: ITADPriceGame?) -> PricesState {
-            if let prices, !prices.isEmpty {
-                return .loaded(prices)
-            }
+        static func from(_ prices: ITADPriceGame?, showsHistory: Bool) -> PricesState {
+            guard let prices, !prices.isEmpty else { return .unavailable }
 
-            return .unavailable
+            return showsHistory ? .loaded(prices) : .loadedWithoutHistory(prices)
         }
     }
 
@@ -167,7 +167,7 @@ final class GameDetailViewModel {
             // 免费与付费一样要查：限时免费的原价还在，永久免费在别的商店也未必免费 /
             // Free is loaded like paid: a limited-time free title still has its regular price, and a
             // permanently free one is not free in every shop
-            case .free, .paid:
+            case .freeToKeep, .freeForever, .paid:
                 pricesState = .loading
                 infoState = .loading
             }
@@ -183,7 +183,7 @@ final class GameDetailViewModel {
             async let prices = fetchPricesIfPossible(uuid: uuid, region: region)
             async let info = fetchInfoIfPossible(uuid: uuid)
 
-            pricesState = .from(await prices)
+            pricesState = .from(await prices, showsHistory: details.gameKind.showsPriceHistory)
             infoState = (await info).map(InfoState.loaded) ?? .unavailable
 
         } catch {
@@ -200,6 +200,10 @@ final class GameDetailViewModel {
 
     /// 重试 ITAD 比价；没有 UUID 时先按 Steam appID 查找 / Retries ITAD prices, resolving the UUID first when needed
     func retryPrices(region: AppRegion) async {
+        // 详情到手才点得到 Retry，用它的类型决定要不要显示历史低价 /
+        // A retry is only reachable once the details are in, whose kind decides whether the lows show
+        guard case .loaded(let details) = state else { return }
+
         pricesState = .loading
 
         guard !Task.isCancelled else { return }
@@ -210,7 +214,7 @@ final class GameDetailViewModel {
 
         let prices = await fetchPricesIfPossible(uuid: uuid, region: region)
         guard !Task.isCancelled else { return }
-        pricesState = .from(prices)
+        pricesState = .from(prices, showsHistory: details.gameKind.showsPriceHistory)
     }
 
     /// 查一次 ITAD 游戏信息；没有 UUID 时先按 Steam appID 查找，拿不到就当作没有 /
