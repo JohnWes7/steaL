@@ -1,5 +1,5 @@
 //
-//  SettingModel.swift
+//  SettingEnum.swift
 //  steaL
 //
 //  Created by yijiang on 2026/8/28.
@@ -8,11 +8,10 @@
 import Combine
 import Foundation
 
-// MARK: - Enums
+// MARK: - 枚举 / Enums
 
-/// The app's visual appearance preference (system / light / dark).
-///
-/// Maps directly to SwiftUI's `colorScheme`. Persisted as the enum's raw value.
+/// 界面外观偏好（system / light / dark），直接映射到 SwiftUI 的 `colorScheme` /
+/// The app's visual appearance preference, mapped onto SwiftUI's `colorScheme`
 enum AppTheme: String, Codable, CaseIterable, Identifiable {
     case system
     case light
@@ -29,11 +28,8 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// The store region the user is shopping in.
-///
-/// Because Steam and authorised third-party storefronts price games per region,
-/// the selected region drives both the currency format and the API parameters used
-/// when querying the Steam / ITAD services.
+/// 购物区域；Steam 与第三方商店按区定价，它同时决定货币格式与 API 参数 /
+/// The store region the user is shopping in; it drives the currency format and the API parameters
 enum AppRegion: String, Codable, CaseIterable, Identifiable {
     case australia
     case china
@@ -57,8 +53,7 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// ISO 4217 currency code for the region (e.g. "CNY").
-    /// for dispary
+    /// 该区域的 ISO 4217 货币代码，如 `"CNY"` / The region's ISO 4217 currency code, e.g. `"CNY"`
     var currencyCode: String {
         switch self {
         case .australia: return "AUD"
@@ -71,8 +66,7 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Symbol used when formatting prices for the region.
-    /// for dispay
+    /// 该区域格式化价格时用的货币符号 / The symbol used when formatting prices for the region
     var currencySymbol: String {
         switch self {
         case .australia: return "$"
@@ -85,8 +79,7 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Country / region code used when building Steam & ITAD query payloads.
-    /// use in api to get data
+    /// 拼 Steam / ITAD 请求时用的国家或地区代码 / The country code used when building Steam and ITAD payloads
     var apiRegionCode: String {
         switch self {
         case .australia: return "AU"
@@ -100,16 +93,15 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Preferred language of the app and the Steam
-///
-/// The raw value is the Steam-compatible API language code (e.g. "schinese").
+/// App 与 Steam 的语言偏好；raw value 就是 Steam 的 API 语言代码，如 `"schinese"` /
+/// Preferred language of the app and Steam; the raw value is Steam's own API language code
 enum AppLanguage: String, Codable, CaseIterable, Identifiable {
     case english
     case simplifiedChinese
 
     var id: String { rawValue }
 
-    /// Steam  language code used in API requests.
+    /// 请求里用的 Steam 语言代码 / The Steam language code used in API requests
     var apiCode: String {
         switch self {
         case .english: return "english"

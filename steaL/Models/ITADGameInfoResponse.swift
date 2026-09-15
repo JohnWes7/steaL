@@ -9,29 +9,9 @@ import Foundation
 
 // MARK: - 根对象 / Root
 
-/// `GET https://api.isthereanydeal.com/games/info/v2?id=<uuid>` 的响应体 /
-/// Response of the game info endpoint
-///
-/// 详情页用它补 Steam 没有的东西：**评分来源聚合**（Steam 好评率 / Metascore / OpenCritic）、
-/// 标签、热度与厂商。未发售的游戏也能查到，只是 `releaseDate` 为空 /
-/// The detail page uses it for what Steam does not provide: aggregated **review sources**
-/// (Steam / Metascore / OpenCritic), tags, popularity and credits. Unreleased games are covered
-/// too; their `releaseDate` is simply `null`
-///
-/// 真实响应示例 / A real response:
-///
-/// ```json
-/// {
-///   "id": "018d937f-590c-728b-ac35-38bcff85f086",
-///   "title": "Elden Ring",
-///   "appid": 1245620,
-///   "releaseDate": "2022-02-24",
-///   "tags": ["Souls-like", "Open World"],
-///   "reviews": [{ "score": 93, "source": "Steam", "count": 830941, "url": "..." }],
-///   "stats": { "rank": 3, "waitlisted": 39860, "collected": 31572 },
-///   "players": { "recent": 45497, "day": 51345, "week": 54240, "peak": 940453 }
-/// }
-/// ```
+/// `GET .../games/info/v2?id=<uuid>` 的响应体：补 Steam 没有的评分聚合、标签、热度与厂商 /
+/// Response of the game info endpoint: the review aggregation Steam lacks, plus tags, popularity
+/// and credits — raw capture in `docs/ITAD API Handoff.md` §21
 struct ITADGameInfoResponse: Codable, Hashable, Identifiable, Sendable {
 
     // MARK: 标识 / Identity
@@ -89,15 +69,9 @@ struct ITADGameInfoResponse: Codable, Hashable, Identifiable, Sendable {
     /// 游戏页链接 / The game's page link
     let urls: ITADGameURLs?
 
-    /// `assets` 是**对象与空数组两种形态**，实测与「有没有图片」一一对应：
-    /// 有图的游戏给对象（Portal 2 / PRAGMATA），没图的给 `[]`（ELDEN RING）。
-    /// 空字典被序列化成数组是服务端的遗留行为，所以 `[]` 视为「没有图片」而非异常；
-    /// 但其它形态必须留下痕迹，不能静默变成 `nil` /
-    /// `assets` comes in **two shapes that map exactly onto "has artwork or not"**: games with
-    /// artwork return an object (Portal 2 / PRAGMATA) while games without return `[]`
-    /// (ELDEN RING). The empty-dictionary-as-array is a server-side legacy behaviour, so `[]`
-    /// means "no artwork" rather than an error — but any other shape must leave a trace instead
-    /// of silently becoming `nil`
+    /// `assets` 只有「对象（有图）」与 `[]`（没图）两种形态，其它形态会留日志并按没图处理 /
+    /// `assets` has exactly two shapes, an object (has artwork) or `[]` (none); any other shape is
+    /// logged and treated as no artwork
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -114,9 +88,7 @@ struct ITADGameInfoResponse: Codable, Hashable, Identifiable, Sendable {
             assets = try container.decodeIfPresent(ITADAssets.self, forKey: .assets)
         } catch {
             #if DEBUG
-            // 已知的数组形态不会走到这里（它在上面按 nil 处理），走到这里说明形态变了 /
-            // The known array shape does not land here (it is handled as nil above); landing here
-            // means the shape changed
+            // 已知形态不会走到这里，走到这里就说明形态变了 / Only an unknown shape lands here
             print("[ITAD] assets 形态未知，已按无图片处理 / unknown assets shape: \(error)")
             #endif
             assets = nil
@@ -156,10 +128,8 @@ struct ITADCompanyRef: Codable, Hashable, Identifiable, Sendable {
     let name: String
 }
 
-/// 一条评分聚合 / One aggregated review source
-///
-/// 一条请求就把 Steam 好评率、Metascore、Metacritic 用户分和 OpenCritic 拿全 /
-/// A single request covers Steam's rating plus Metascore, Metacritic user score and OpenCritic
+/// 一条评分聚合：一次请求就拿到 Steam / Metascore / Metacritic / OpenCritic /
+/// One aggregated review source; a single request covers all four providers
 struct ITADReview: Codable, Hashable, Sendable {
 
     /// 分数，Steam 是好评百分比 / Score; for Steam it is the positive-rating percentage
@@ -184,10 +154,8 @@ struct ITADGameStats: Codable, Hashable, Sendable {
     let collected: Int?
 }
 
-/// 玩家人数 / Player counts
-///
-/// 未发售游戏四个值都是 `0`，不是 `nil` /
-/// All four are `0` rather than `nil` for unreleased games
+/// 玩家人数；未发售游戏四个值都是 `0` 而不是 `nil` /
+/// Player counts; all four are `0` rather than `nil` for unreleased games
 struct ITADPlayerCounts: Codable, Hashable, Sendable {
 
     /// 最近在线 / Most recent count

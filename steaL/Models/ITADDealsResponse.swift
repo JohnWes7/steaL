@@ -156,10 +156,8 @@ extension ITADAssets {
     }
 }
 
-/// 不同卡片形状需要不同方向的图片，这里把挑选规则集中在一处，
-/// 避免每个卡片视图各写一份回退链 /
-/// Different card shapes need different artwork orientations, so the pick order lives in one
-/// place instead of being duplicated in every card view
+/// 不同卡片形状要不同方向的图，挑选顺序集中在这里，避免每个卡片视图各写一份回退链 /
+/// Different card shapes need different orientations, so the pick order lives in one place
 extension ITADDeal {
 
     /// 宽幅图，供 hero 卡这类横向卡片使用：优先 banner，最后才回落到竖版封面 /

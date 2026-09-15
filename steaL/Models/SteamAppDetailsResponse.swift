@@ -9,24 +9,9 @@ import Foundation
 
 // MARK: - 根对象 / Root
 
-/// `https://store.steampowered.com/api/appdetails` 的响应体 /
-/// Response of the Steam store `appdetails` endpoint
-///
-/// 顶层是**以 appid 为 key 的字典**（即使只查一个 app 也是字典），值里再分 `success` 与 `data` /
-/// The root is a **dictionary keyed by appid** even for a single lookup; each value carries
-/// `success` and `data`
-///
-/// 真实响应示例 / A real response:
-///
-/// ```json
-/// {
-///   "1245620": {
-///     "success": true,
-///     "data": { "type": "game", "name": "ELDEN RING", "is_free": false, "...": "..." }
-///   },
-///   "9999999": { "success": false }
-/// }
-/// ```
+/// `appdetails` 的响应体；顶层是以 appid 字符串为 key 的字典，值里分 `success` 与 `data` /
+/// Response of the Steam store `appdetails` endpoint; a dictionary keyed by appid, each value
+/// carrying `success` and `data` — raw capture in `docs/Game Detail Planning.md` §9
 struct SteamAppDetailsResponse: Codable, Hashable, Sendable {
 
     /// appid 字符串 → 查询结果 / appid string to its lookup result
@@ -63,9 +48,8 @@ struct SteamAppDetailsEntry: Codable, Hashable, Sendable {
 
 /// Steam 游戏详情页的全部数据 / Everything the Steam store page carries for one game
 ///
-/// 字段按详情页的用途分组，除标题与类型外全部可选 —— Steam 对不同游戏返回的字段差异很大 /
-/// Fields are grouped by how the detail page uses them; everything except the title and type is
-/// optional, because Steam's payload varies a lot between games
+/// 除标题与类型外字段全部可选，Steam 对不同游戏返回的差异很大 /
+/// Everything except the title and type is optional; Steam's payload varies a lot between games
 struct SteamAppDetails: Codable, Hashable, Sendable {
 
     // MARK: 标识 / Identity
@@ -145,10 +129,8 @@ struct SteamAppDetails: Codable, Hashable, Sendable {
         case priceOverview = "price_overview"
     }
 
-    /// `required_age` 在实测响应里有两种形态：`0`（数字）与 `"18"`（字符串）。
-    /// 用合成的解码会把整个详情页搞挂，所以两种都收 /
-    /// `required_age` arrives both as `0` and as `"18"`. The synthesised decoding would fail the
-    /// whole payload over it, so both shapes are accepted
+    /// `required_age` 有 `0` 与 `"18"` 两种形态，合成解码会让整页失败，所以两种都收 /
+    /// `required_age` arrives both as `0` and as `"18"`, which the synthesised decoding rejects
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -201,11 +183,8 @@ struct SteamScreenshot: Codable, Hashable, Sendable {
     }
 }
 
-/// 单个视频 / One movie
-///
-/// `hls_h264` 是 HLS 播放列表，`AVPlayer` 原生支持；`webm` 只有浏览器用得上，这里一并留着备用 /
-/// `hls_h264` is an HLS playlist that `AVPlayer` handles natively; `webm` is only useful to
-/// browsers but is kept for reference
+/// 单个视频：`hls_h264` 是 `AVPlayer` 原生支持的播放列表，`webm` 只留给浏览器备用 /
+/// One movie; `hls_h264` is an HLS playlist `AVPlayer` handles natively, `webm` is kept as a spare
 struct SteamMovie: Codable, Hashable, Sendable {
 
     /// Steam 内部视频 ID，拼封面图会用到 / Steam internal movie id, used to build the poster URL
@@ -294,11 +273,8 @@ struct SteamDemo: Codable, Hashable, Sendable {
 
 /// 名称型描述项，`categories` 与 `genres` 共用 / A named descriptor, shared by `categories` and `genres`
 ///
-/// 两边的 `id` 类型在响应里**不一致**：`genres` 给字符串（`"1"`）、`categories` 给数字（`2`），
-/// 所以这里两种都收，统一转成 `Int`；两边 ID 本就不是同一套命名空间，只用作稳定标识 /
-/// The two payloads disagree on `id`: `genres` sends `"1"` while `categories` sends `2`. Both
-/// are accepted and normalised to `Int`; the two ID spaces are unrelated, so the value is only
-/// used as a stable identifier
+/// 两边 `id` 类型**不一致**（`genres` 给 `"1"`、`categories` 给 `2`），两种都收并统一成 `Int` /
+/// The two payloads disagree on `id`: `"1"` versus `2`; both are accepted and normalised to `Int`
 struct SteamDescriptor: Codable, Hashable, Sendable {
 
     /// 描述项 ID / Descriptor id
@@ -341,11 +317,6 @@ private extension KeyedDecodingContainer {
 
     /// 读一个可能以数字或字符串给出的整数，两种形态都收 /
     /// Reads an integer that may arrive as a number or as a string; both are accepted
-    ///
-    /// Steam 的同一字段在不同游戏上会换类型（实测 `required_age` 既有 `0` 也有 `"18"`），
-    /// 所以不能直接 `decode(Int.self:)` /
-    /// Steam switches the type of the same field between games, so a plain
-    /// `decode(Int.self:)` would throw and lose the whole payload
     func flexibleInt(forKey key: Key) -> Int? {
         if let number = try? decodeIfPresent(Int.self, forKey: key) {
             return number
@@ -383,9 +354,8 @@ extension SteamAppDetails {
         /// 正常售卖 / Sold normally
         case paid
 
-        /// 要不要显示历史低价：永久免费的那几档是它免费之前的价，没有比较意义 /
-        /// Whether the historical lows are worth showing: a permanently free title's lows are prices
-        /// from before it went free, which are nothing to compare
+        /// 要不要显示历史低价：永久免费的低价是它免费之前的价 /
+        /// Whether the historical lows are worth showing; a permanently free title has none worth it
         var showsPriceHistory: Bool {
             switch self {
             case .freeForever: false
@@ -394,11 +364,10 @@ extension SteamAppDetails {
         }
     }
 
-    /// 游戏类型；三个判断条件并不互斥（试玩版与限时免费同样是 `is_free == true`），
-    /// 所以下面的顺序就是优先级；两种免费用 `price_overview` 区分，永久免费它是 `null` /
-    /// The kind of game; the three flags are not mutually exclusive (a demo and a limited-time free
-    /// title are both `is_free == true`), so the order is the priority; the two free kinds differ by
-    /// `price_overview`, which is `null` for a permanently free title
+    /// 游戏类型；三个条件并不互斥（试玩版与限时免费都是 `is_free == true`），顺序即优先级 /
+    /// The kind of game; the flags are not mutually exclusive, so their order is the priority
+    ///
+    /// 两种免费用 `price_overview` 区分（永久免费是 `null`）/ The two free kinds differ by `price_overview`
     var gameKind: GameKind {
         if isDemo { return .demo }
         if isComingSoon { return .unreleased }

@@ -11,14 +11,10 @@ import Foundation
 
 extension ITADGameInfoResponse {
 
-    /// 预览用示例数据，由真实响应形状的 JSON 解码得到 /
-    /// Sample data for previews, decoded from JSON shaped like a real response
+    /// 预览用示例数据：解码是手写的（`assets` 两种形态），没有 memberwise init，只能从 JSON 构造 /
+    /// Sample data for previews; the hand-written `init(from:)` leaves no memberwise init to use
     ///
-    /// 该类型的解码是手写的（`assets` 有对象与空数组两种形态），没有 memberwise init，所以样例
-    /// 只能从 JSON 构造；第三条 review 故意没有 `score`，正是区块的过滤器要丢掉的那种 /
-    /// The type hand-writes `init(from:)` (`assets` arrives as an object or as an empty array), so
-    /// it has no memberwise init and the sample is built from JSON. The third review deliberately
-    /// has no `score`, which is exactly what the section's filter drops
+    /// 第三条 review 故意没有 `score`，正是区块过滤器要丢掉的那种 / The third review has no `score`
     static let previewSample: ITADGameInfoResponse = {
         let json = """
             {

@@ -35,7 +35,7 @@ struct SteamSearchItem: Codable, Hashable, Sendable, Identifiable {
     /// 本地化名称 / Localised name
     let name: String
 
-    /// Steam App ID / Steam application ID
+    /// Steam 应用 ID / The Steam application ID
     let id: Int
 
     /// 当前地区价格；免费、未发售或不可购买时可能缺失 /

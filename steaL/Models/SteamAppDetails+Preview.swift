@@ -11,13 +11,8 @@ import Foundation
 
 extension SteamAppDetails {
 
-    /// 预览用示例数据，由真实响应形状的 JSON 解码得到 /
-    /// Sample data for previews, decoded from JSON shaped like a real response
-    ///
-    /// `SteamAppDetails` 的解码是手写的（`required_age` 有数字与字符串两种形态），没有
-    /// memberwise init，所以样例只能从 JSON 构造 /
-    /// `SteamAppDetails` hand-writes `init(from:)` — `required_age` arrives as both a number and a
-    /// string — so it has no memberwise init and the sample has to be built from JSON
+    /// 预览用示例数据：`SteamAppDetails` 手写了 `init(from:)`，没有 memberwise init，只能从 JSON 构造 /
+    /// Sample data for previews; the hand-written `init(from:)` leaves no memberwise init to use
     static let previewSample: SteamAppDetails = {
         let json = """
             {

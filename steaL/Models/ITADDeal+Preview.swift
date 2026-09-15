@@ -11,13 +11,8 @@ import Foundation
 
 extension ITADDeal {
 
-    /// 预览用示例数据，字段结构对齐 ITAD 真实响应 /
-    /// Sample data for previews, shaped like a real ITAD response
-    ///
-    /// 放在独立文件里而不是某个 View 内，是为了让 `DealCardView` 和 `DealGridCardView`
-    /// 的预览都能复用同一份数据 /
-    /// Kept in its own file rather than inside a view so both `DealCardView` and
-    /// `DealGridCardView` previews can share one sample
+    /// 预览用示例数据，结构对齐 ITAD 真实响应；独立成文件是为了两个卡片视图共用一份 /
+    /// Sample data for previews, shaped like a real response, shared by both card views
     static let previewSample = ITADDeal(
         id: "01973dd3-e247-712c-aaee-acff181a3175",
         slug: "cyberpunk-2077",

@@ -26,7 +26,7 @@ struct ITADLookupGame: Codable, Hashable, Sendable {
     /// ITAD 游戏 UUID / ITAD game UUID
     let id: String
 
-    /// URL slug / URL slug
+    /// 可读短标识 / Human readable slug
     let slug: String?
 
     /// ITAD 标题 / ITAD title

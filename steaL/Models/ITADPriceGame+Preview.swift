@@ -11,13 +11,10 @@ import Foundation
 
 extension ITADPriceGame {
 
-    /// 预览用示例数据，字段结构对齐 ITAD 真实响应 /
+    /// 预览用示例数据，结构对齐 ITAD 真实响应 /
     /// Sample data for previews, shaped like a real response
     ///
-    /// 商店 ID 只有 `61`（Steam）是实测确认的，另外两个是示意值；三条 deal 覆盖
-    /// 「Steam 直购」「第三方但 Steam 激活」「不激活 Steam」三种情况 /
-    /// Only shop id 61 (Steam) is verified; the other two ids are placeholders. The three deals
-    /// cover Steam direct, a third-party Steam key, and a key that does not activate on Steam
+    /// 商店 ID 只有 `61`（Steam）是实测的，三条 deal 覆盖三种激活情况 / Only shop id 61 is verified
     static let previewSample = ITADPriceGame(
         id: "018d937f-0f5c-72f6-9b1e-2e5b3c4d5e6f",
         historyLow: ITADPriceHistory(

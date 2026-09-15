@@ -1,5 +1,5 @@
 //
-//  GameMetaDataModel.swift
+//  GameDetailDataModel.swift
 //  steaL
 //
 //  Created by yijiang on 2026/8/28.
@@ -8,7 +8,6 @@
 import Foundation
 import SwiftData
 
-// 先保持未使用 之后要缓存在用
 @Model
 final class GameDetaildataModel {
     @Attribute(.unique) var appID: Int
@@ -20,7 +19,7 @@ final class GameDetaildataModel {
     var tags: [String]
     var trailerURL: String?
 
-    /// last time when fetch it
+    /// 上次抓取时间 / When the record was last fetched
     var fetchedAt: Date
 
     init(appID: Int, name: String, gameDescription: String,

@@ -9,11 +9,8 @@ import Foundation
 
 // MARK: - 根对象 / Root
 
-/// `GET https://api.isthereanydeal.com/giveaways/v1` 的响应体 /
-/// Response of the giveaways endpoint
-///
-/// 顶层直接是数组，没有 `nextOffset` / `hasMore` 分页包装，翻页靠递增 `offset` /
-/// The top level is a plain array with no `nextOffset` / `hasMore` wrapper, so paging relies on an increasing `offset`
+/// `GET .../giveaways/v1` 的响应体：顶层就是数组，没有 `nextOffset` / `hasMore` 分页包装 /
+/// Response of the giveaways endpoint: a plain array with no paging wrapper
 typealias ITADGiveawaysResponse = [ITADGiveaway]
 
 // MARK: - 列表项 / Giveaway item
@@ -45,10 +42,8 @@ struct ITADGiveaway: Codable, Hashable, Identifiable, Sendable {
 
 // MARK: - 游戏 / Game
 
-/// giveaway 内包含的单个游戏 / One game included in a giveaway
-///
-/// 同样的结构也由 `GET /games/giveaways/v1` 返回 /
-/// The same shape is also returned by `GET /games/giveaways/v1`
+/// giveaway 内包含的单个游戏；`GET /games/giveaways/v1` 返回同样的结构 /
+/// One game included in a giveaway; `GET /games/giveaways/v1` returns the same shape
 struct ITADGiveawayGame: Codable, Hashable, Identifiable, Sendable {
     /// ITAD 游戏 UUID / ITAD game UUID
     let id: String

@@ -14,30 +14,30 @@ final class UserSettingModel {
 
     @Attribute(.unique) private(set) var id = "main"
 
-    // MARK: Display
+    // MARK: - 显示 / Display
 
-    /// Display theme (system / light / dark).
+    /// 显示主题（system / light / dark）/ The display theme
     var theme: AppTheme = AppTheme.system
 
-    // MARK: Region & currency
+    // MARK: - 区域与货币 / Region & currency
 
-    /// Store region & currency.
+    /// 商店区域与货币 / The store region and its currency
     var region: AppRegion = AppRegion.australia
 
-    // MARK: Language
+    // MARK: - 语言 / Language
 
-    /// Preferred app / API language.
+    /// App 与 API 的语言 / The preferred app and API language
     var language: AppLanguage = AppLanguage.english
 
-    // MARK: Notification toggles (Bool)
+    // MARK: - 通知开关 / Notification toggles
 
-    /// Whether price-drop notifications are enabled.
+    /// 是否开启降价通知 / Whether price-drop notifications are on
     var isPriceDropAlertsEnabled: Bool = true
 
-    /// Whether game-release notifications are enabled.
+    /// 是否开启发售通知 / Whether release notifications are on
     var isGameReleaseAlertsEnabled: Bool = true
 
-    // MARK: Init
+    // MARK: - 初始化 / Init
 
     init(
         theme: AppTheme = AppTheme.system,

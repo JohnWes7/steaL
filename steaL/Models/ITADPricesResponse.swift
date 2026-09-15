@@ -9,14 +9,10 @@ import Foundation
 
 // MARK: - 根对象 / Root
 
-/// `POST https://api.isthereanydeal.com/games/prices/v3` 的响应体 /
-/// Response of the prices endpoint
+/// `POST .../games/prices/v3` 的响应体：**数组且稀疏**，没有 deal 的游戏整条不返回（实测 Portal 2）/
+/// Response of the prices endpoint: an array, and a **sparse** one — a game with no deals is omitted
 ///
-/// 顶层是**数组**且是**稀疏的**：请求 2 个 ID 可能只回 1 条，**没有 deal 的游戏整条不返回**
-/// （实测 Portal 2 单查返回空数组）。所以调用方必须按 `id` 匹配，不能按下标对应 /
-/// The root is an array and it is **sparse**: asking for two ids can return one entry, and a game
-/// with no deals is omitted entirely (Portal 2 returned an empty array when queried alone).
-/// Callers must therefore match by `id` rather than by position
+/// 调用方必须按 `id` 匹配，不能按下标 / Callers must match by `id`, never by position
 typealias ITADPricesResponse = [ITADPriceGame]
 
 
@@ -24,11 +20,9 @@ typealias ITADPricesResponse = [ITADPriceGame]
 
 extension ITADPricesResponse {
 
-    /// 取某个游戏的条目，没有（当前无折扣价）时返回 `nil` /
-    /// The entry for one game, `nil` when ITAD has no price data for it
+    /// 取某个游戏的条目，没有价格数据时返回 `nil` / The entry for one game, `nil` when there is none
     ///
-    /// 响应是稀疏数组，**不能按下标取** —— 传 2 个 ID 可能只回 1 条 /
-    /// The response is sparse, so never index into it: two requested ids can come back as one entry
+    /// 稀疏数组，**不能按下标取** / The response is sparse, so never index into it
     func entry(for uuid: String) -> ITADPriceGame? {
         first { $0.id == uuid }
     }
@@ -39,10 +33,7 @@ extension ITADPricesResponse {
 /// 一个游戏的价格总览：历史低价 + 当前全部商店的 deal /
 /// One game's price overview: the historical lows plus every shop's current deal
 ///
-/// 与 `/deals/v2` 的关键区别：那边每个游戏只给**一个** deal（ITAD 选出的最佳价），
-/// 这边给**全部**商店的 deal，正好用来做跨店比价 /
-/// The key difference from `/deals/v2`: that endpoint returns a single best deal per game, while
-/// this one returns every shop's deal, which is what a comparison list needs
+/// 与 `/deals/v2` 的区别是那边只给一个最佳 deal，这边给全部商店 / Unlike `/deals/v2`, which picks one deal
 struct ITADPriceGame: Codable, Hashable, Identifiable, Sendable {
 
     /// ITAD 游戏 UUID / ITAD game UUID
@@ -51,10 +42,8 @@ struct ITADPriceGame: Codable, Hashable, Identifiable, Sendable {
     /// 历史低价，按时间窗口分档 / Historical lows, split by time window
     let historyLow: ITADPriceHistory
 
-    /// 各商店当前的优惠，按价格从低到高（实测），数组可以为空 / Current deals per shop, cheapest first; the array may be empty
-    ///
-    /// **可能为空数组**（接口没有该游戏的价格数据时会省略它）/
-    /// **Can be empty**; games with no price data are omitted by the API
+    /// 各商店当前的优惠，按价格从低到高（实测），**可能为空数组**（没有价格数据时整条被省略）/
+    /// Current deals per shop, cheapest first; **can be empty** when the game has no price data
     let deals: [ITADPriceDeal]
 
     /// 全史最低价，供 UI 直接取 / The all-time low, ready for the UI
@@ -77,15 +66,12 @@ struct ITADPriceGame: Codable, Hashable, Identifiable, Sendable {
 
 /// 历史低价的三档窗口 / The three historical-low windows
 ///
-/// ⚠️ 与 `/deals/v2` 里 `<Deal>` 的**扁平** `historyLow` 不同构（那边是三个平铺字段），
-/// 所以复用不到一起 / Structurally different from the flat history-low fields inside
-/// `/deals/v2`'s deal object, so the two cannot share a type
+/// ⚠️ 与 `/deals/v2` 里 `<Deal>` 的**扁平** `historyLow` 不同构，两者不能复用 /
+/// Structurally different from the flat history-low fields inside `/deals/v2`'s deal object
 struct ITADPriceHistory: Codable, Hashable, Sendable {
 
-    /// 全史最低价 / All-time low
-    ///
-    /// 服务端 schema 标为可空，实测有值时拿得到；没有价格历史的游戏可能为 `nil` /
-    /// Marked nullable in the schema; games without any price history can have `nil`
+    /// 全史最低价；schema 标为可空，没有价格历史的游戏是 `nil` /
+    /// All-time low; nullable in the schema and absent for games without price history
     let all: ITADPrice?
 
     /// 近一年最低价 / Lowest price within the last year
@@ -98,12 +84,8 @@ struct ITADPriceHistory: Codable, Hashable, Sendable {
 
 // MARK: - 单条优惠 / One deal
 
-/// 某个商店当前的一条优惠 / One shop's current deal
-///
-/// 字段与 `/deals/v2` 的 deal 基本一致，但**没有** `historyLow` / `historyLow_1y` /
-/// `historyLow_3m` 三个字段 —— 这个接口把历史低价挪到了游戏层级（`ITADPriceGame.historyLow`）/
-/// Shares most fields with `/deals/v2`'s deal, but **lacks** the three `historyLow*` fields,
-/// which this endpoint lifts up to the game level instead
+/// 某个商店当前的一条优惠：字段与 `/deals/v2` 的 deal 基本一致，但**没有**三个 `historyLow*` /
+/// One shop's current deal; the same fields as `/deals/v2`'s deal minus the three `historyLow*` ones
 struct ITADPriceDeal: Codable, Hashable, Sendable {
 
     /// 购买商店 / Where the key is bought from
