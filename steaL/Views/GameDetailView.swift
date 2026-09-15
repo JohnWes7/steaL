@@ -24,6 +24,9 @@ struct GameDetailView: View {
     @State private var isSteamDetailExpanded = false
     @State private var offerFilter: OfferFilter = .steam
 
+    /// 完整游戏的路由，非空即推入 / The full game's route; a push happens once it is non-nil
+    @State private var fullGameRoute: GameDetailRoute?
+
     /// 用导航参数创建详情页及其状态机 / Creates the detail page and its state machine from the route
     init(route: GameDetailRoute) {
         _gameDetailViewModel = State(initialValue: GameDetailViewModel(route: route))
@@ -64,6 +67,12 @@ struct GameDetailView: View {
         .toolbar(.visible, for: .navigationBar)
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
+        // 详情页自己注册跳转目标，这样从别人推入的页面里再推一页不必依赖外层栈是否注册过 /
+        // The page registers its own destination, so pushing from an already pushed page does not
+        // depend on the enclosing stack having registered one
+        .navigationDestination(item: $fullGameRoute) { route in
+            GameDetailView(route: route)
+        }
     }
 
     private var navigationTitle: String {
@@ -127,6 +136,12 @@ struct GameDetailView: View {
 
                     if let demo = demoLink(details) {
                         DemoSectionView(appID: demo.appID, name: demo.name)
+                    }
+
+                    if let fullGame = fullGameLink(details) {
+                        FullGameSectionView(name: fullGame.title) {
+                            fullGameRoute = fullGame
+                        }
                     }
 
                     // 试玩版不单独售卖（价格恒空），ITAD 也基本没有它的条目，两块直接不渲染 /
@@ -231,6 +246,16 @@ struct GameDetailView: View {
         else { return nil }
 
         return (appID, details.name ?? "Demo")
+    }
+
+    /// 完整游戏的入口：只有试玩版条目带 `fullgame`，它的 appid 是**字符串**，要转一次 /
+    /// The full game's entry: only demo entries carry `fullgame`, whose appid is a **string**
+    private func fullGameLink(_ details: SteamAppDetails) -> GameDetailRoute? {
+        guard let fullGame = details.fullgame,
+            let appID = fullGame.appid.flatMap(Int.init)
+        else { return nil }
+
+        return GameDetailRoute(appID: appID, uuid: nil, title: fullGame.name ?? "Full game")
     }
 }
 
