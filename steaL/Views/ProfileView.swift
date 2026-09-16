@@ -53,39 +53,111 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        ZStack {
-            // 背景色 / Background color
-            Color.appBackground
-                .ignoresSafeArea()
+        List {
+            ProfileIdentityCardView(user: .mock)
+                .listRowInsets(EdgeInsets())        // 去掉 List 给行的边距
+                .listRowBackground(Color.clear)     // 去掉行底色，只留卡片自己的
+                .listRowSeparator(.hidden)          // 顶层行还会画一条分隔线，一起关掉
 
-            ScrollView {
-                // 分组只靠卡片间距区分，不加 section 标题，跟系统设置一致 /
-                // Groups are told apart by spacing alone, with no section titles, as in Settings
-                VStack(alignment: .leading, spacing: 24) {
-                    ProfileIdentityCardView(user: .mock)
+            Section("Preferences") {
+                HStack(spacing: 12) {
+                    IconTileView(icon: "globe.asia.australia.fill", tint: .brandGreen)
 
-                    PreferencesSectionView(region: region, theme: theme, language: language)
-
-                    NotificationsSectionView(
-                        isPriceDropAlertsEnabled: isPriceDropAlertsEnabled,
-                        isReleaseAlertsEnabled: isReleaseAlertsEnabled
-                    )
-
-                    DataSectionView(version: appVersion, build: buildNumber)
-
-                    SignOutSectionView()
-
-                    Text("steaL · FIT3178 Project")
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.secondaryText)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 12)
+                    // 选择还写不回 `UserSettingModel`，所以绑定是常量 /
+                    // The selection cannot be written back to `UserSettingModel` yet, so the binding is constant
+                    Picker("Region & Currency", selection: .constant(region)) {
+                        ForEach(AppRegion.allCases) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
+
+                HStack(spacing: 12) {
+                    IconTileView(icon: "moon.fill", tint: .secondaryText)
+
+                    Picker("Display Theme", selection: .constant(theme)) {
+                        ForEach(AppTheme.allCases) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    IconTileView(icon: "character.book.closed.fill", tint: .brandBlue)
+
+                    Picker("Language", selection: .constant(language)) {
+                        ForEach(AppLanguage.allCases) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                }
             }
+
+            Section("Notifications") {
+                Toggle(isOn: .constant(isPriceDropAlertsEnabled)) {
+                    HStack(spacing: 12) {
+                        IconTileView(icon: "bell.fill", tint: .brandBlue)
+
+                        Text("Price Drop Alerts")
+                    }
+                }
+
+                Toggle(isOn: .constant(isReleaseAlertsEnabled)) {
+                    HStack(spacing: 12) {
+                        IconTileView(icon: "calendar.badge.clock", tint: .secondaryText)
+
+                        Text("Game Release Alerts")
+                    }
+                }
+            }
+
+            Section("About") {
+                HStack(spacing: 12) {
+                    IconTileView(icon: "info.circle.fill", tint: .secondaryText)
+
+                    Text("App Version")
+
+                    Spacer(minLength: 12)
+
+                    Text("\(appVersion) (Build \(buildNumber))")
+                        .foregroundStyle(.secondaryText)
+                }
+
+                // 右侧箭头表示以后会推入一页 / The chevron marks a row that will push a page later
+                HStack(spacing: 12) {
+                    IconTileView(icon: "person.text.rectangle.fill", tint: .secondaryText)
+
+                    Text("About Me")
+
+                    Spacer(minLength: 12)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Section {
+                HStack(spacing: 12) {
+                    IconTileView(icon: "rectangle.portrait.and.arrow.right", tint: .red.opacity(0.75))
+
+                    Text("Sign Out")
+                        .foregroundStyle(.red)
+                }
+            } footer: {
+                Text("steaL · FIT3178 Project")
+                    .font(.system(size: 12, weight: .medium, design: .default))
+                    .foregroundStyle(.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 16)
+            }
+
+
         }
+        .listStyle(.insetGrouped)
+        .tint(.brandGreen)
+        .scrollContentBackground(.hidden)
+        .background(Color.appBackground)
         // 顶栏与主页同款：玻璃背景 + 内边距写在调用点 / Same top bar as home; the blur comes from here, padding at the call site
         .safeAreaBar(edge: .top, spacing: 0) {
             ProfileHeaderView()
