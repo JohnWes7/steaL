@@ -29,11 +29,15 @@ struct PreferencesSectionView: View {
                 tint: .brandGreen
             )
 
+            // 左端与行内文字对齐：14 行内边距 + 32 图标 + 12 间距 / Starts where the row's label does: 14 + 32 + 12
             Divider()
+                .padding(.leading, 58)
 
             row(icon: "moon.fill", label: "Display Theme", value: theme.displayName, tint: .secondaryText)
 
+            // 左端与行内文字对齐：14 行内边距 + 32 图标 + 12 间距 / Starts where the row's label does: 14 + 32 + 12
             Divider()
+                .padding(.leading, 58)
 
             row(icon: "character.book.closed.fill", label: "Language", value: language.displayName, tint: .brandBlue)
         }
@@ -54,7 +58,7 @@ struct PreferencesSectionView: View {
             Spacer(minLength: 12)
 
             Text(value)
-                .font(.system(size: 14, weight: .medium, design: .monospaced))
+                .font(.system(size: 14, weight: .medium, design: .default))
                 .foregroundStyle(.secondaryText)
                 .lineLimit(1)
         }

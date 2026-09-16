@@ -29,7 +29,7 @@ struct DataSectionView: View {
                 Spacer(minLength: 12)
 
                 Text("\(version) (Build \(build))")
-                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                    .font(.system(size: 14, weight: .medium, design: .default))
                     .foregroundStyle(.secondaryText)
                     .lineLimit(1)
             }
@@ -38,7 +38,9 @@ struct DataSectionView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("App Version, \(version), build \(build)")
 
+            // 左端与行内文字对齐：14 行内边距 + 32 图标 + 12 间距 / Starts where the row's label does: 14 + 32 + 12
             Divider()
+                .padding(.leading, 58)
 
             // 右侧箭头表示以后会推入一页，和其他分组的取值行区分开 /
             // The chevron marks a row that will push a page, telling it apart from the value rows

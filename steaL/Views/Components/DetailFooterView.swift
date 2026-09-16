@@ -39,7 +39,7 @@ struct DetailFooterView: View {
                 .foregroundStyle(.secondaryText)
 
             Text(value)
-                .font(.system(size: 15, weight: .medium, design: .monospaced))
+                .font(.system(size: 15, weight: .medium, design: .default))
                 .foregroundStyle(.secondaryText)
         }
         .accessibilityElement(children: .combine)

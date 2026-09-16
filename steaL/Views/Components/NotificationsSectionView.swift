@@ -22,16 +22,18 @@ struct NotificationsSectionView: View {
             switchRow(
                 icon: "bell.fill",
                 label: "Price Drop Alerts",
-                tint: .brandBlue,
+                tint: .orange,
                 isOn: isPriceDropAlertsEnabled
             )
 
+            // 左端与行内文字对齐：14 行内边距 + 32 图标 + 12 间距 / Starts where the row's label does: 14 + 32 + 12
             Divider()
+                .padding(.leading, 58)
 
             switchRow(
                 icon: "calendar.badge.clock",
                 label: "Game Release Alerts",
-                tint: .secondaryText,
+                tint: .brandBlue,
                 isOn: isReleaseAlertsEnabled
             )
         }
