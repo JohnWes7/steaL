@@ -50,6 +50,7 @@ struct MainTabView: View {
 
             Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
                 NavigationStack {
+                    ProfileView()
                 }
             }
         }
