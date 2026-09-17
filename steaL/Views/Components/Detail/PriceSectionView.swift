@@ -58,8 +58,9 @@ struct PriceSectionView: View {
                     .controlSize(.small)
 
             case .loaded(let prices):
-                priceHistory(prices)
                 currentOffers(prices)
+                priceHistory(prices)
+                
 
             case .loadedWithoutHistory(let prices):
                 currentOffers(prices)
