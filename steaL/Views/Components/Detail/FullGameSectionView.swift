@@ -21,7 +21,7 @@ struct FullGameSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("FULL GAME")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: .default))
                 .foregroundStyle(.brandGreen)
 
             Button(action: open) {

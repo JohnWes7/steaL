@@ -48,12 +48,10 @@ struct PriceSectionView: View {
     /// 区块本体 / The section itself
     private var section: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("PRICES")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.brandGreen)
-
             switch state {
             case .loading:
+                priceTitle
+
                 ProgressView()
                     .controlSize(.small)
 
@@ -66,6 +64,8 @@ struct PriceSectionView: View {
                 currentOffers(prices)
 
             case .unavailable:
+                priceTitle
+
                 UnavailablePromptView(message: "No historical price data", retry: retry)
 
             // `body` 已经挡掉 `.hidden` / `body` filters `.hidden` out
@@ -76,8 +76,15 @@ struct PriceSectionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// 三档历史低价；都没有就退成一行说明 /
-    /// The historical lows of the three windows, collapsing into one line when there are none
+    /// 还没分出区块时的标题（加载中 / 无数据）/ The title used before a part of its own exists
+    private var priceTitle: some View {
+        Text("PRICES")
+            .font(.system(size: 13, weight: .bold, design: .default))
+            .foregroundStyle(.brandGreen)
+    }
+
+    /// 区块标题与三档历史低价；都没有就退成一行说明 /
+    /// The heading plus the three historical lows, collapsing into one line when there are none
     @ViewBuilder
     private func priceHistory(_ prices: ITADPriceGame) -> some View {
         let lows: [(String, ITADPrice)] = [
@@ -89,17 +96,23 @@ struct PriceSectionView: View {
             return (label, price)
         }
 
-        if lows.isEmpty {
-            Text("No historical price data")
-                .font(.system(size: 14))
-                .foregroundStyle(.secondaryText)
-        } else {
-            ForEach(Array(lows.enumerated()), id: \.offset) { index, entry in
-                historicalPriceRow(
-                    label: entry.0,
-                    price: entry.1,
-                    accent: priceAccent(for: index)
-                )
+        VStack(alignment: .leading, spacing: 16) {
+            Text("PRICE HISTORY")
+                .font(.system(size: 13, weight: .bold, design: .default))
+                .foregroundStyle(.brandGreen)
+
+            if lows.isEmpty {
+                Text("No historical price data")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondaryText)
+            } else {
+                ForEach(Array(lows.enumerated()), id: \.offset) { index, entry in
+                    historicalPriceRow(
+                        label: entry.0,
+                        price: entry.1,
+                        accent: priceAccent(for: index)
+                    )
+                }
             }
         }
     }
@@ -119,11 +132,10 @@ struct PriceSectionView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("CURRENT OFFERS")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .default))
                         .foregroundStyle(.brandGreen)
 
                 }
-                .padding(.top, 14)
 
                 Picker("Offer filter", selection: $offerFilter) {
                     ForEach(OfferFilter.allCases, id: \.self) { filter in
@@ -197,8 +209,8 @@ struct PriceSectionView: View {
             .padding(.leading, isBest ? 16 : 0)
             .padding(.trailing, 16)
             .padding(.vertical, isBest ? 14 : 0)
-            // 最低价整块换成实心绿，配方照搬试玩版入口，绿底 = 点下去会离开 App 去商店 /
-            // The cheapest offer becomes a solid green slab; green means the tap leaves the app
+            // 最低价整块换成实心绿：绿在本项目 = 强调，点下去会离开 App 去商店 /
+            // The cheapest offer becomes a solid green slab: green is the accent colour here, and the tap leaves the app
             .background(
                 isBest ? Color.brandGreen : Color.clear,
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)

@@ -27,7 +27,7 @@ struct ITADInfoSectionView: View {
     private var section: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("ITAD DETAILS")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: .default))
                 .foregroundStyle(.brandGreen)
 
             switch state {

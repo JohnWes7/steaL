@@ -7,8 +7,10 @@
 
 import SwiftUI
 
-/// 有试玩版时的入口：一块实心绿色按钮，点开交给浏览器（ITAD 不收录试玩版，比价没意义）/
-/// The demo entry shown when a demo exists: a green slab that hands off to the browser
+/// 有试玩版时的入口：与 `FullGameSectionView` 同一套行卡片，绿色 = 出 App 去 Steam 网页
+/// （ITAD 不收录试玩版，比价没意义）/
+/// The demo entry: the same row card as `FullGameSectionView`, where green means the tap leaves
+/// the app for the Steam page (ITAD does not track demos, so a price comparison is pointless)
 struct DemoSectionView: View {
 
     /// 试玩版在 Steam 上的 appid / The demo's appid on Steam
@@ -21,40 +23,60 @@ struct DemoSectionView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        Button {
-            // 退役的试玩版会被 Steam 重定向回本体，拼 appid 就够了 / Retired demos redirect to the base game
-            guard let url = URL(string: "https://store.steampowered.com/app/\(appID)/") else { return }
+        VStack(alignment: .leading, spacing: 12) {
+            Text("DEMO")
+                .font(.system(size: 13, weight: .bold, design: .default))
+                .foregroundStyle(.brandGreen)
 
-            openURL(url)
-        } label: {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Download \(name)")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.appBackground)
-
-                    Text("Opens the Steam store page")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.appBackground.opacity(0.72))
+            Button {
+                // 退役的试玩版会被 Steam 重定向回本体，拼 appid 就够了 / Retired demos redirect to the base game
+                guard let url = URL(string: "https://store.steampowered.com/app/\(appID)/") else {
+                    return
                 }
 
-                Spacer(minLength: 12)
+                openURL(url)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.appBackground)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Color.brandGreen,
+                            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        )
 
-                Image(systemName: "arrow.up.forward.square")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.appBackground)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("\(name)")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primaryText)
+
+                        Text("Opens the Steam store page")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondaryText)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    // 与完整游戏入口同形状，靠尾符号与颜色区分出 / 入 App /
+                    // Same shape as the full-game entry; the trailing mark and its colour tell exit from push
+                    Image(systemName: "arrow.up.forward.square")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.brandGreen)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    Color.surfaceElevated,
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                Color.brandGreen,
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Download \(name), opens the Steam store page")
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Download \(name), opens the Steam store page")
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
