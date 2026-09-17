@@ -51,12 +51,7 @@ struct MainTabView: View {
                     ProfileView()
                 }
             }
-
-            Tab("Test", systemImage: "test", value: AppTab.test) {
-                NavigationStack {
-                    TrailerPlayerTestView()
-                }
-            }
+            
         }
         .tint(selectedTab == .games ? .brandGreen : .brandBlue)
         // 不加这行，选中搜索 tab 只会变形、不弹键盘 / Without this the search tab only morphs and never raises the keyboard

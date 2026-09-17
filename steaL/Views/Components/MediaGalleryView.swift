@@ -5,6 +5,7 @@
 //  Created by yijiang on 2026/9/15.
 //
 
+import AVKit
 import SwiftUI
 
 /// 详情页顶部的媒体分页：视频封面在前，随后是商店主图与截图；没有媒体时退回 16:9 占位 /
@@ -15,8 +16,15 @@ struct MediaGalleryView: View {
     /// 按顺序展示的图片地址，第一张是主图 / The image URLs to show, in order; the first one is the header
     let imageURLs: [String]
 
-    /// 视频，这里只取封面 / Movies; only their posters are used here
+    /// 视频，分页显示封面，点击后原位播放 / Movies shown as posters in the pager and played in place when tapped
     let movies: [SteamMovie]
+
+    /// 全页共用一个播放器 / One player shared by the whole gallery
+    @State private var player = AVPlayer()
+    /// 正在播的那条，`nil` = 所有页都停在封面 / The movie being played; `nil` means every page shows its poster
+    @State private var playingMovie: SteamMovie?
+    /// 当前页，划走时要靠它停播 / The current page, needed to stop playback when it is swiped away
+    @State private var page = 0
 
     /// 一页媒体：视频封面或一张图 / One media page: either a movie poster or an image
     private enum GalleryPage {
@@ -26,35 +34,57 @@ struct MediaGalleryView: View {
 
     /// 摊平成页序：视频封面在前，主图与截图在后 / Flattened page order: posters first, then the header and screenshots
     private var pages: [GalleryPage] {
-        movies.map(GalleryPage.movie) + imageURLs.map(GalleryPage.image)
+        movies.filter(\.isPlayable).map(GalleryPage.movie) + imageURLs.map(GalleryPage.image)
     }
 
     var body: some View {
-        if pages.isEmpty {
-            Color.surfaceElevated
-                .frame(maxWidth: .infinity)
-                .aspectRatio(16 / 9, contentMode: .fit)
-                .overlay {
-                    Image(systemName: "photo")
-                        .font(.system(size: 30, weight: .medium))
-                        .foregroundStyle(.secondaryText)
-                }
-        } else {
-            TabView {
-                ForEach(Array(pages.enumerated()), id: \.offset) { _, page in
-                    switch page {
-                    case .movie(let movie):
-                        mediaPage(movie.thumbnail.flatMap { URL(string: $0) })
-                            .overlay { playBadge }
-                    case .image(let urlString):
-                        mediaPage(URL(string: urlString))
+        Group {
+            if pages.isEmpty {
+                Color.surfaceElevated
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(16 / 9, contentMode: .fit)
+                    .overlay {
+                        Image(systemName: "photo")
+                            .font(.system(size: 30, weight: .medium))
+                            .foregroundStyle(.secondaryText)
+                    }
+            } else if playingMovie != nil {
+                VideoPlayer(player: player)
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(16 / 9, contentMode: .fit)
+                    .overlay(alignment: .topLeading) {
+                        Button(action: stop) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.primaryText)
+                                .frame(width: 36, height: 36)
+                                .background(Color.appBackground.opacity(0.6), in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Close trailer")
+                        .padding(12)
+                    }
+            } else {
+                TabView(selection: $page) {
+                    ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
+                        Group {
+                            switch item {
+                            case .movie(let movie):
+                                moviePage(movie)
+                            case .image(let urlString):
+                                mediaPage(URL(string: urlString))
+                            }
+                        }
+                        .tag(index)
                     }
                 }
+                .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .automatic : .never))
+                .frame(maxWidth: .infinity)
+                .aspectRatio(16 / 9, contentMode: .fit)
+                .onChange(of: page) { stop() }
             }
-            .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .automatic : .never))
-            .frame(maxWidth: .infinity)
-            .aspectRatio(16 / 9, contentMode: .fit)
         }
+        .onDisappear { stop() }
     }
 
     /// 一页媒体；没地址直接按失败算，否则 `AsyncImage` 会一直转圈 /
@@ -96,10 +126,16 @@ struct MediaGalleryView: View {
             }
     }
 
-    /// 视频页上的播放按钮，现在只长在封面上 / The play button on movie pages; it only sits on the poster for now
-    private var playBadge: some View {
+    /// 视频页：封面加播放按钮 / A movie page: a poster with a play button
+    private func moviePage(_ movie: SteamMovie) -> some View {
+        mediaPage(movie.thumbnail.flatMap { URL(string: $0) })
+            .overlay { playBadge(movie) }
+    }
+
+    /// 视频页上的播放按钮 / The play button on a movie page
+    private func playBadge(_ movie: SteamMovie) -> some View {
         Button {
-            // 接播放器的逻辑下一步再做 / Wiring up the player comes next
+            play(movie)
         } label: {
             Circle()
                 .fill(Color.appBackground.opacity(0.6))
@@ -112,6 +148,22 @@ struct MediaGalleryView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Play trailer")
+    }
+
+    /// 换 item 并起播 / Swaps the item and starts playback
+    private func play(_ movie: SteamMovie) {
+        guard let urlString = movie.preferredURL, let url = URL(string: urlString) else { return }
+
+        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        playingMovie = movie
+        player.play()
+    }
+
+    /// 停播并释放当前视频 / Stops playback and releases the current video
+    private func stop() {
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+        playingMovie = nil
     }
 }
 
