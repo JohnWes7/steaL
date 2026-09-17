@@ -75,20 +75,3 @@ enum ITADShopID {
     /// Steam subscription (package) ID prefix; a game usually has several, never usable as an appID
     static let subPrefix = "sub/"
 }
-
-// MARK: - 预览 / Preview
-
-#if DEBUG
-
-extension ITADShopIDsResponse {
-
-    /// 预览用示例，覆盖三种情况：有 `app/`、只有 `sub/`、值为 `null` /
-    /// Sample covering all three shapes: has `app/`, `sub/` only, and `null`
-    static let previewSample = ITADShopIDsResponse(entries: [
-        "018d937f-590c-728b-ac35-38bcff85f086": ["sub/432247", "sub/440410", "app/1245620", "sub/440408"],
-        "018d937f-3a1d-720b-aafa-2c1f21404d3f": ["sub/517969"],
-        "00000000-0000-0000-0000-000000000000": nil,
-    ])
-}
-
-#endif
