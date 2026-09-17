@@ -397,10 +397,6 @@ extension SteamMovie {
 
     /// 优先用于播放的地址 / The URL to play
     var preferredURL: String? { hlsH264 }
-
-    /// 封面：直接用 Steam 给的缩略图，同目录的 `movie_full.jpg` 要再下一次所以不用 /
-    /// The cover: Steam's own thumbnail; the sibling `movie_full.jpg` costs another download
-    var posterURL: URL? { thumbnail.flatMap { URL(string: $0) } }
 }
 
 extension Array where Element == SteamMovie {

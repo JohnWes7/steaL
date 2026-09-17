@@ -44,7 +44,7 @@ struct MediaGalleryView: View {
                 ForEach(Array(pages.enumerated()), id: \.offset) { _, page in
                     switch page {
                     case .movie(let movie):
-                        mediaPage(movie.posterURL)
+                        mediaPage(movie.thumbnail.flatMap { URL(string: $0) })
                             .overlay { playBadge }
                     case .image(let urlString):
                         mediaPage(URL(string: urlString))

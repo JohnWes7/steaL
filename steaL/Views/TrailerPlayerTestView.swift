@@ -175,7 +175,7 @@ struct TrailerPlayerTestView: View {
                     play(movie)
                 } label: {
                     HStack(spacing: 12) {
-                        AsyncImage(url: movie.posterURL) { phase in
+                        AsyncImage(url: movie.thumbnail.flatMap { URL(string: $0) }) { phase in
                             if let image = phase.image {
                                 image.resizable().scaledToFill()
                             } else {
