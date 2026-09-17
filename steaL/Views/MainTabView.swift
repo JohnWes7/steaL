@@ -22,10 +22,7 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             Tab("Games", systemImage: "gamecontroller.fill", value: AppTab.games) {
                 NavigationStack {
-                    GamesView {
-                        // 顶部搜索框暂时保留，只负责切到搜索 tab / Top search bar kept for now; only switches tabs
-                        selectedTab = .search
-                    }
+                    GamesView()
                 }
             }
 
@@ -36,7 +33,7 @@ struct MainTabView: View {
                 }
             }
 
-            // 别删下面的comment 要给tutor看
+            // old version
             // Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) {
             //     NavigationStack {
             //         SearchView(isSelected: true)

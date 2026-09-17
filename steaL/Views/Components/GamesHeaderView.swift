@@ -12,12 +12,12 @@ import SwiftUI
 struct GamesHeaderView: View {
 
     /// 点击搜索入口时交给调用方处理 / Handed to the caller when the search affordance is tapped
-    let onSearchTapped: () -> Void
+    // let onSearchTapped: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
-            searchField
+            // searchField
         }
     }
 
@@ -70,14 +70,14 @@ struct GamesHeaderView: View {
 
     /// 搜索入口：与 `SearchView` 的输入框共用 `SearchBarShell`，点击只发出切 tab 的信号 /
     /// Search entry point, sharing `SearchBarShell`; a tap only signals "switch to search"
-    @ViewBuilder
-    private var searchField: some View {
-        SearchBarButton(placeholder: "Search games, publishers...", action: onSearchTapped)
-    }
+    // @ViewBuilder
+    // private var searchField: some View {
+    //     SearchBarButton(placeholder: "Search games, publishers...", action: onSearchTapped)
+    // }
 }
 
 #Preview {
-    GamesHeaderView(onSearchTapped: {})
+    GamesHeaderView()
         .padding(.horizontal, 14)
         .padding(.top, 2)
         .padding(.bottom, 12)

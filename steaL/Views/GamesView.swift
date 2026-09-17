@@ -11,7 +11,7 @@ import SwiftUI
 struct GamesView: View {
     /// 点击顶部搜索入口时交给 `MainTabView` 处理：切到 Search tab 并聚焦输入框 /
     /// Handed to `MainTabView` when the top search affordance is tapped: switch to the Search tab and focus the field
-    let onSearchTapped: () -> Void
+    // let onSearchTapped: () -> Void
 
     /// 用户设置单例行，只读区域等偏好 / Singleton user-settings row; read for the region and other preferences
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
@@ -77,12 +77,12 @@ struct GamesView: View {
         }
         // `safeAreaBar` 提供玻璃背景与边缘模糊，但不替内容加内边距，所以这里自己写 / `safeAreaBar` supplies the blur, not the padding
         .safeAreaBar(edge: .top, spacing: 0) {
-            GamesHeaderView(onSearchTapped: onSearchTapped)
+            GamesHeaderView()
                 .padding(.horizontal, 14)
                 .padding(.top, 2)
                 .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.bar)
+                // .background(.bar)
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
@@ -189,7 +189,7 @@ struct GamesView: View {
 #Preview {
     // 复刻 `MainTabView`：`navigationDestination` 只在 `NavigationStack` 里生效 / Mirrors `MainTabView`; the modifier needs a `NavigationStack`
     NavigationStack {
-        GamesView(onSearchTapped: {})
+        GamesView()
     }
     .modelContainer(for: UserSettingModel.self, inMemory: true)
 }

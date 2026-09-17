@@ -142,7 +142,7 @@ struct ProfileView: View {
                     .padding(.top, 2)
                     .padding(.bottom, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.bar)
+//                    .background(.bar)
             }
             .toolbar(.hidden, for: .navigationBar)
         }
