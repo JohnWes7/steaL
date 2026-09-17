@@ -150,9 +150,17 @@ struct ProfileView: View {
 }
 
 #Preview {
+    // 便利版容器是空的，`settings.first` 取不到 `main` 行页面就整页空白，先插一条默认设置 /
+    // The convenience container is empty, and without the "main" row `settings.first` is nil so the page renders nothing
+    let container = try! ModelContainer(
+        for: UserSettingModel.self,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let _ = container.mainContext.insert(UserSettingModel())
+
     // 复刻 `MainTabView`：`toolbar` 只在 `NavigationStack` 里生效 / Mirrors `MainTabView`; the modifier needs a `NavigationStack`
     NavigationStack {
         ProfileView()
     }
-    .modelContainer(for: UserSettingModel.self, inMemory: true)
+    .modelContainer(container)
 }

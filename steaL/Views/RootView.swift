@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct RootView: View {
     var body: some View {
@@ -14,6 +15,16 @@ struct RootView: View {
     }
 }
 
+
 #Preview {
+    let container = try! ModelContainer(
+        for: UserSettingModel.self,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let _ = container.mainContext.insert(UserSettingModel())
+    
+    // 复刻 `MainTabView`：`toolbar` 只在 `NavigationStack` 里生效 / Mirrors `MainTabView`; the modifier needs a `NavigationStack`
     RootView()
+        .modelContainer(container)
 }
+
