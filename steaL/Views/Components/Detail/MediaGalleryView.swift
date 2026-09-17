@@ -95,9 +95,22 @@ struct MediaGalleryView: View {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
+                    // 完整图驱动布局：`scaledToFill` 报告的是比框更大的 cover 尺寸，放进 `ZStack` 会把页面撑宽 /
+                    // The fitted copy drives layout: `scaledToFill` reports an oversized cover size that would widen a `ZStack`
                     image
                         .resizable()
-                        .scaledToFill()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background {
+                            ZStack {
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .blur(radius: 20)
+
+                                Color.appBackground.opacity(0.5)
+                            }
+                        }
                 case .failure:
                     failedPage
                 case .empty:
