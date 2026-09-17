@@ -14,6 +14,7 @@ struct MainTabView: View {
         case search
         case wishlist
         case profile
+        case test
     }
 
     @State private var selectedTab: AppTab = .games
@@ -48,6 +49,12 @@ struct MainTabView: View {
             Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
                 NavigationStack {
                     ProfileView()
+                }
+            }
+
+            Tab("Test", systemImage: "test", value: AppTab.test) {
+                NavigationStack {
+                    TrailerPlayerTestView()
                 }
             }
         }
