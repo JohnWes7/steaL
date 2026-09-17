@@ -107,10 +107,11 @@ struct GameDetailView: View {
     private func detailContent(_ details: SteamAppDetails) -> some View {
         let galleryImageURLs = ([details.headerImage] + (details.screenshots ?? []).compactMap(\.full))
             .compactMap { $0 }
+        
 
         return ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
-                MediaGalleryView(imageURLs: galleryImageURLs)
+                MediaGalleryView(imageURLs: galleryImageURLs, movies: details.movies ?? [])
 
                 VStack(alignment: .leading, spacing: 22) {
                     genreChips(details)

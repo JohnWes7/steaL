@@ -47,4 +47,19 @@ extension SteamAppDetails {
     }()
 }
 
+extension SteamMovie {
+
+    /// 预览用示例：`posterURL` 的推导靠 `movie.293x165.jpg` 这个文件名，别改 /
+    /// Sample for previews; the `posterURL` derivation relies on that exact file name
+    static let previewSample = SteamMovie(
+        id: 5787,
+        name: "Portal 2 Trailer",
+        highlight: true,
+        thumbnail: "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/5787/movie.293x165.jpg?t=1682715616",
+        hlsH264: nil,
+        dashAV1: nil,
+        dashH264: nil
+    )
+}
+
 #endif

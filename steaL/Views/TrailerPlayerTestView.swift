@@ -175,7 +175,7 @@ struct TrailerPlayerTestView: View {
                     play(movie)
                 } label: {
                     HStack(spacing: 12) {
-                        AsyncImage(url: posterURL(movie)) { phase in
+                        AsyncImage(url: movie.posterURL) { phase in
                             if let image = phase.image {
                                 image.resizable().scaledToFill()
                             } else {
@@ -261,14 +261,6 @@ struct TrailerPlayerTestView: View {
     /// 应用清晰度上限，`.zero` 交回系统自适应 / Applies the cap; `.zero` hands control back to ABR
     private func applyQuality() {
         player.currentItem?.preferredMaximumResolution = selectedQuality ?? .zero
-    }
-
-    /// 封面大图：`thumbnail` 只有 293×165，换成同目录的 `movie_full.jpg` /
-    /// The full-size cover: the sibling `movie_full.jpg` instead of the 293×165 thumbnail
-    private func posterURL(_ movie: SteamMovie) -> URL? {
-        guard let thumbnail = movie.thumbnail else { return nil }
-
-        return URL(string: thumbnail.replacingOccurrences(of: "movie.293x165.jpg", with: "movie_full.jpg"))
     }
 }
 
