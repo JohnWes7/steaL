@@ -182,8 +182,19 @@ struct PriceSectionView: View {
                 Spacer(minLength: 8)
 
                 offerPrice(offer, isBest: isBest)
+
+                // 出 App 的符号每行都挂；绿块上是深色，普通行用次要灰，12 个图标才不至于糊成一片 /
+                // Every row carries the "leaves the app" mark: dark on the slab, muted grey on the plain
+                // rows, so twelve of them stay quiet
+                Image(systemName: "arrow.up.forward.square")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(isBest ? Color.appBackground : Color.secondaryText)
             }
-            .padding(.horizontal, isBest ? 16 : 0)
+            // 图标槽由符号自己占出来（12 间距 + 20 图标），两侧留白每行一致，价格才对成一列 /
+            // The mark itself reserves the slot (12 spacing + 20 icon); matching trailing padding on every
+            // row is what keeps the prices on one column
+            .padding(.leading, isBest ? 16 : 0)
+            .padding(.trailing, 16)
             .padding(.vertical, isBest ? 14 : 0)
             // 最低价整块换成实心绿，配方照搬试玩版入口，绿底 = 点下去会离开 App 去商店 /
             // The cheapest offer becomes a solid green slab; green means the tap leaves the app
