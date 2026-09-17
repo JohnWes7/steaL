@@ -60,7 +60,7 @@ struct SteamDetailSectionView: View {
                         Button {
                             toggleSteamDetail()
                         } label: {
-                            toggleLabel("Show less", chevronUp: true)
+                            MoreToggleLabel(isExpanded: isExpanded)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Show less")
@@ -90,7 +90,7 @@ struct SteamDetailSectionView: View {
         Button {
             toggleSteamDetail()
         } label: {
-            toggleLabel("More", chevronUp: false)
+            MoreToggleLabel(isExpanded: isExpanded)
                 .padding(.leading, 36)
                 .padding(.vertical, 3)
                 .background(
@@ -176,20 +176,6 @@ struct SteamDetailSectionView: View {
                 .foregroundStyle(.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    /// 蓝色 `More ⌄` / `Show less ⌃`，文字和箭头始终挨在一起；收起向下、展开向上 /
-    /// The blue `More ⌄` and `Show less ⌃`, with the label and its chevron always together; down
-    /// while collapsed, up while expanded
-    private func toggleLabel(_ title: String, chevronUp: Bool) -> some View {
-        HStack(spacing: 4) {
-            Text(title)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-
-            Image(systemName: chevronUp ? "chevron.up" : "chevron.down")
-                .font(.system(size: 12, weight: .bold))
-        }
-        .foregroundStyle(.brandBlue)
     }
 
     /// 展开与收起；开了减弱动态效果就直接切换，不带动画 /

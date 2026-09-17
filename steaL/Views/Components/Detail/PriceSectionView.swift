@@ -24,11 +24,19 @@ struct PriceSectionView: View {
     /// The offer filter chosen by the user; the page owns the state so a retry keeps it
     @Binding var offerFilter: OfferFilter
 
+    /// 是否展开全部报价，收起时只留最便宜的一条；状态由详情页持有 /
+    /// Whether every offer is shown, collapsed keeps only the cheapest; the page owns the state
+    @Binding var isShowingAllOffers: Bool
+
     /// 重试动作 / The retry action
     let retry: () -> Void
 
     /// 用来打开外部商店页 / Used to open the external store page
     @Environment(\.openURL) private var openURL
+
+    /// 用户开了「减弱动态效果」时跳过展开动画 /
+    /// Skips the expand animation when Reduce Motion is turned on
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         // `.hidden` 连标题一起不渲染 / `.hidden` takes the title down with it
@@ -53,7 +61,6 @@ struct PriceSectionView: View {
                 priceHistory(prices)
                 currentOffers(prices)
 
-            // 永久免费的游戏不看历史低价 / A permanently free title has no use for the historical lows
             case .loadedWithoutHistory(let prices):
                 currentOffers(prices)
 
@@ -96,7 +103,8 @@ struct PriceSectionView: View {
         }
     }
 
-    /// 当前可购买的 Steam 激活价格 / Current prices for Steam-activating offers
+    /// 当前可购买的 Steam 激活价格；默认只露最便宜的一条 /
+    /// Current prices for Steam-activating offers; only the cheapest one shows by default
     @ViewBuilder
     private func currentOffers(_ prices: ITADPriceGame) -> some View {
         let (selected, best) = switch offerFilter {
@@ -104,6 +112,7 @@ struct PriceSectionView: View {
         case .all: (prices.deals, prices.bestDeal)
         }
         let offers = selected.sorted { $0.price.amountInt < $1.price.amountInt }
+        let visibleOffers = isShowingAllOffers ? offers : Array(offers.prefix(1))
 
         if !offers.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
@@ -125,8 +134,22 @@ struct PriceSectionView: View {
                 .pickerStyle(.segmented)
                 .tint(.brandBlue)
 
-                ForEach(offers, id: \.self) { offer in
+                ForEach(visibleOffers, id: \.self) { offer in
                     currentOfferRow(offer, isBest: offer == best)
+                }
+
+                if offers.count > 1 {
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 0)
+
+                        Button {
+                            toggleOffers()
+                        } label: {
+                            MoreToggleLabel(isExpanded: isShowingAllOffers)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isShowingAllOffers ? "Show less" : "Show more")
+                    }
                 }
             }
         } else if offerFilter == .all {
@@ -136,7 +159,7 @@ struct PriceSectionView: View {
         }
     }
 
-    /// 当前报价行，最低价用品牌色标记 / Current offer row; the cheapest offer gets the brand accent
+    /// 当前报价行，最低价整行换成实心绿块 / Current offer row; the cheapest one turns into a solid green slab
     private func currentOfferRow(
         _ offer: ITADPriceDeal,
         isBest: Bool
@@ -148,54 +171,27 @@ struct PriceSectionView: View {
             openURL(url)
         } label: {
             HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(isBest ? Color.brandGreen : Color.secondaryText.opacity(0.5))
-                    .frame(width: 5, height: 42)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(offer.shop.name)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.primaryText)
-
-                        if isBest {
-                            Text("BEST")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .foregroundStyle(.appBackground)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(Color.brandGreen, in: Capsule())
-                        }
-                    }
-
-                    Text(offer.cut > 0 ? "Save \(offer.cut)%" : "Current price")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(offer.cut > 0 ? .brandBlue : .secondaryText)
-
-                    Text(drmNames.isEmpty ? "DRM unavailable" : drmNames)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.secondaryText)
-                        .lineLimit(1)
+                if !isBest {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(Color.secondaryText.opacity(0.5))
+                        .frame(width: 5, height: 42)
                 }
+
+                offerInfo(offer, isBest: isBest, drmNames: drmNames)
 
                 Spacer(minLength: 8)
 
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text(priceText(offer.price))
-                        .font(.system(size: 19, weight: .bold, design: .monospaced))
-                        .foregroundStyle(isBest ? .brandGreen : .primaryText)
-
-                    if offer.cut > 0 {
-                        Text(
-                            offer.regular.amount.formatted(.currency(code: offer.regular.currency))
-                        )
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.secondaryText)
-                        .strikethrough()
-                    }
-                }
+                offerPrice(offer, isBest: isBest)
             }
-            .contentShape(Rectangle())
+            .padding(.horizontal, isBest ? 16 : 0)
+            .padding(.vertical, isBest ? 14 : 0)
+            // 最低价整块换成实心绿，配方照搬试玩版入口，绿底 = 点下去会离开 App 去商店 /
+            // The cheapest offer becomes a solid green slab; green means the tap leaves the app
+            .background(
+                isBest ? Color.brandGreen : Color.clear,
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .padding(.vertical, 8)
@@ -207,6 +203,73 @@ struct PriceSectionView: View {
             "\(offer.shop.name), \(drmNames.isEmpty ? "DRM unavailable" : drmNames), "
                 + "\(offer.price.amount.formatted(.currency(code: offer.price.currency)))"
         )
+    }
+
+    /// 报价左栏：商店、BEST 徽标、折扣与 DRM / The left column: shop, BEST badge, discount and DRM
+    private func offerInfo(
+        _ offer: ITADPriceDeal,
+        isBest: Bool,
+        drmNames: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 8) {
+                Text(offer.shop.name)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(isBest ? Color.appBackground : Color.primaryText)
+
+                if isBest {
+                    Text("BEST")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.brandGreen)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.appBackground, in: Capsule())
+                }
+            }
+
+            Text(offer.cut > 0 ? "Save \(offer.cut)%" : "Current price")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(
+                    isBest
+                        ? Color.appBackground.opacity(0.72)
+                        : (offer.cut > 0 ? Color.brandBlue : Color.secondaryText)
+                )
+
+            Text(drmNames.isEmpty ? "DRM unavailable" : drmNames)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(isBest ? Color.appBackground.opacity(0.72) : Color.secondaryText)
+                .lineLimit(1)
+        }
+    }
+
+    /// 报价右栏：现价与划线原价 / The right column: the current price and the struck-through regular price
+    private func offerPrice(_ offer: ITADPriceDeal, isBest: Bool) -> some View {
+        VStack(alignment: .trailing, spacing: 3) {
+            Text(priceText(offer.price))
+                .font(.system(size: 19, weight: .bold, design: .monospaced))
+                .foregroundStyle(isBest ? Color.appBackground : Color.primaryText)
+
+            if offer.cut > 0 {
+                Text(
+                    offer.regular.amount.formatted(.currency(code: offer.regular.currency))
+                )
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(isBest ? Color.appBackground.opacity(0.72) : Color.secondaryText)
+                .strikethrough()
+            }
+        }
+    }
+
+    /// 展开与收起全部报价；开了减弱动态效果就直接切换，不带动画 /
+    /// Toggles the full offer list; with Reduce Motion on it switches without the transition
+    private func toggleOffers() {
+        if reduceMotion {
+            isShowingAllOffers.toggle()
+        } else {
+            withAnimation(.snappy(duration: 0.3)) {
+                isShowingAllOffers.toggle()
+            }
+        }
     }
 
     /// 一条历史价格 / One historical price row
@@ -253,11 +316,13 @@ struct PriceSectionView: View {
 
 #Preview("加载完 / Loaded") {
     @Previewable @State var offerFilter: OfferFilter = .steam
+    @Previewable @State var isShowingAllOffers = false
 
     ScrollView {
         PriceSectionView(
             state: .loaded(.previewSample),
             offerFilter: $offerFilter,
+            isShowingAllOffers: $isShowingAllOffers,
             retry: {}
         )
         .padding(20)
@@ -268,13 +333,24 @@ struct PriceSectionView: View {
 #Preview("其他状态 / Other states") {
     ScrollView {
         VStack(alignment: .leading, spacing: 24) {
-            PriceSectionView(state: .loading, offerFilter: .constant(.steam), retry: {})
+            PriceSectionView(
+                state: .loading,
+                offerFilter: .constant(.steam),
+                isShowingAllOffers: .constant(false),
+                retry: {}
+            )
             PriceSectionView(
                 state: .loadedWithoutHistory(.previewSample),
                 offerFilter: .constant(.steam),
+                isShowingAllOffers: .constant(false),
                 retry: {}
             )
-            PriceSectionView(state: .unavailable, offerFilter: .constant(.steam), retry: {})
+            PriceSectionView(
+                state: .unavailable,
+                offerFilter: .constant(.steam),
+                isShowingAllOffers: .constant(false),
+                retry: {}
+            )
         }
         .padding(20)
     }

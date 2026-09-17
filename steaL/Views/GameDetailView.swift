@@ -20,6 +20,7 @@ struct GameDetailView: View {
     @State private var gameDetailViewModel: GameDetailViewModel
     @State private var isSteamDetailExpanded = false
     @State private var offerFilter: OfferFilter = .steam
+    @State private var isShowingAllOffers = false
 
     /// 完整游戏的路由，非空即推入 / The full game's route; a push happens once it is non-nil
     @State private var fullGameRoute: GameDetailRoute?
@@ -137,6 +138,7 @@ struct GameDetailView: View {
                     PriceSectionView(
                         state: gameDetailViewModel.pricesState,
                         offerFilter: $offerFilter,
+                        isShowingAllOffers: $isShowingAllOffers,
                         retry: retryPrices
                     )
 
