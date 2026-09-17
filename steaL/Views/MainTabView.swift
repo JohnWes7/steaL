@@ -34,13 +34,6 @@ struct MainTabView: View {
                 }
             }
 
-            // old version
-            // Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) {
-            //     NavigationStack {
-            //         SearchView(isSelected: true)
-            //     }
-            // }
-
             Tab("Wishlist", systemImage: "heart", value: AppTab.wishlist) {
                 NavigationStack {
                 }

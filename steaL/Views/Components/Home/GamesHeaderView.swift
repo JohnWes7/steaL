@@ -7,17 +7,13 @@
 
 import SwiftUI
 
-/// 主页顶部栏内容：品牌标题 + 通知入口 + 搜索框；背景与内边距写在调用点 /
-/// Top bar content: brand title, notification entry and search field; padding lives at the call site
+/// 主页顶部栏内容：品牌标题 + 通知入口；背景与内边距写在调用点 /
+/// Top bar content: brand title and notification entry; padding lives at the call site
 struct GamesHeaderView: View {
-
-    /// 点击搜索入口时交给调用方处理 / Handed to the caller when the search affordance is tapped
-    // let onSearchTapped: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
-            // searchField
         }
     }
 
@@ -67,13 +63,6 @@ struct GamesHeaderView: View {
         }
         .accessibilityLabel("Notifications")
     }
-
-    /// 搜索入口：与 `SearchView` 的输入框共用 `SearchBarShell`，点击只发出切 tab 的信号 /
-    /// Search entry point, sharing `SearchBarShell`; a tap only signals "switch to search"
-    // @ViewBuilder
-    // private var searchField: some View {
-    //     SearchBarButton(placeholder: "Search games, publishers...", action: onSearchTapped)
-    // }
 }
 
 #Preview {

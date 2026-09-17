@@ -9,10 +9,6 @@ import SwiftData
 import SwiftUI
 
 struct GamesView: View {
-    /// 点击顶部搜索入口时交给 `MainTabView` 处理：切到 Search tab 并聚焦输入框 /
-    /// Handed to `MainTabView` when the top search affordance is tapped: switch to the Search tab and focus the field
-    // let onSearchTapped: () -> Void
-
     /// 用户设置单例行，只读区域等偏好 / Singleton user-settings row; read for the region and other preferences
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
