@@ -58,6 +58,8 @@ struct MediaGalleryView: View {
                 VideoPlayer(player: player)
                     .frame(maxWidth: .infinity)
                     .aspectRatio(16 / 9, contentMode: .fit)
+                    // 左上角是系统的投屏按钮，它下面那一列一直空到进度条 /
+                    // The system AirPlay button owns the top-leading corner; the column below it stays free
                     .overlay(alignment: .topLeading) {
                         // 浮在视频上的控件用系统玻璃按钮，按下有回弹 / Controls floating over media use the system glass button
                         Button(action: stop) {
@@ -68,7 +70,9 @@ struct MediaGalleryView: View {
                         .buttonStyle(.glass)
                         .buttonBorderShape(.circle)
                         .accessibilityLabel("Close trailer")
-                        .padding(12)
+                        // 系统按钮边距 8 + 直径约 38 + 间隔 8 / System inset 8 + ~38 diameter + 8 gap
+                        .padding(.leading, 4)
+                        .padding(.top, 54)
                     }
             } else {
                 TabView(selection: $page) {
