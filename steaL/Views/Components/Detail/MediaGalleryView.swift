@@ -8,16 +8,19 @@
 import AVKit
 import SwiftUI
 
-/// 详情页顶部的媒体分页：视频封面在前，随后是商店主图与截图；没有媒体时退回 16:9 占位 /
-/// The media pager at the top of the detail page: video posters first, then the store header and
+/// 详情页顶部的媒体分页：商店主图在前，随后是视频封面与截图；没有媒体时退回 16:9 占位 /
+/// The media pager at the top of the detail page: the store header first, then video posters and
 /// screenshots, falling back to a 16:9 placeholder
 struct MediaGalleryView: View {
 
-    /// 按顺序展示的图片地址，第一张是主图 / The image URLs to show, in order; the first one is the header
-    let imageURLs: [String]
+    /// 商店主图，放在第一页 / The store header image, shown on the first page
+    let headerImageURL: String?
 
     /// 视频，分页显示封面，点击后原位播放 / Movies shown as posters in the pager and played in place when tapped
     let movies: [SteamMovie]
+
+    /// 截图，排在视频之后 / Screenshots, shown after the movies
+    let screenshotURLs: [String]
 
     /// 全页共用一个播放器 / One player shared by the whole gallery
     @State private var player = AVPlayer()
@@ -32,9 +35,12 @@ struct MediaGalleryView: View {
         case image(String)
     }
 
-    /// 摊平成页序：视频封面在前，主图与截图在后 / Flattened page order: posters first, then the header and screenshots
+    /// 摊平成页序：主图 → 视频封面 → 截图 / Flattened page order: header, then posters, then screenshots
     private var pages: [GalleryPage] {
-        movies.filter(\.isPlayable).map(GalleryPage.movie) + imageURLs.map(GalleryPage.image)
+        let header: [GalleryPage] = headerImageURL.map { [.image($0)] } ?? []
+        return header
+            + movies.filter(\.isPlayable).map(GalleryPage.movie)
+            + screenshotURLs.map(GalleryPage.image)
     }
 
     var body: some View {
@@ -182,21 +188,23 @@ struct MediaGalleryView: View {
 
 #Preview("有图 / With images") {
     MediaGalleryView(
-        imageURLs: ["https://cdn.cloudflare.steamstatic.com/steam/apps/620/header.jpg"],
-        movies: []
+        headerImageURL: "https://cdn.cloudflare.steamstatic.com/steam/apps/620/header.jpg",
+        movies: [],
+        screenshotURLs: []
     )
     .background(Color.appBackground)
 }
 
-#Preview("视频封面在前 / Movies first") {
+#Preview("主图、视频、截图 / Header, movies, screenshots") {
     MediaGalleryView(
-        imageURLs: ["https://cdn.cloudflare.steamstatic.com/steam/apps/620/header.jpg"],
-        movies: [.previewSample]
+        headerImageURL: "https://cdn.cloudflare.steamstatic.com/steam/apps/620/header.jpg",
+        movies: [.previewSample],
+        screenshotURLs: ["https://cdn.cloudflare.steamstatic.com/steam/apps/620/capsule_616x353.jpg"]
     )
     .background(Color.appBackground)
 }
 
 #Preview("无图 / No images") {
-    MediaGalleryView(imageURLs: [], movies: [])
+    MediaGalleryView(headerImageURL: nil, movies: [], screenshotURLs: [])
         .background(Color.appBackground)
 }

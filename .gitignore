@@ -19,6 +19,7 @@ AGENTS.md
 CLAUDE.md
 .github/copilot-instructions.md
 .agents/
+.claude/
 
 # Swift Package Manager / 构建产物
 .build/

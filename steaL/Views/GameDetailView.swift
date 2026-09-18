@@ -106,13 +106,13 @@ struct GameDetailView: View {
 
     /// 数据就绪后的内容：画廊 + 详情区块 / The page once the data is in: gallery plus the detail sections
     private func detailContent(_ details: SteamAppDetails) -> some View {
-        let galleryImageURLs = ([details.headerImage] + (details.screenshots ?? []).compactMap(\.full))
-            .compactMap { $0 }
-        
-
-        return ScrollView(.vertical) {
+        ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
-                MediaGalleryView(imageURLs: galleryImageURLs, movies: details.movies ?? [])
+                MediaGalleryView(
+                    headerImageURL: details.headerImage,
+                    movies: details.movies ?? [],
+                    screenshotURLs: (details.screenshots ?? []).compactMap(\.full)
+                )
 
                 VStack(alignment: .leading, spacing: 22) {
                     genreChips(details)
