@@ -10,8 +10,9 @@ xcuserdata/
 *.xcuserstate
 UserInterfaceState.xcuserstate
 
-# 项目文档 (如需入库可删掉下一行)
+# document
 docs/
+reports/
 
 AGENTS.md
 .github/copilot-instructions.md
