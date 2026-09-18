@@ -161,7 +161,7 @@ struct IOS26SearchView: View {
 
     private func artworkPlaceholder(symbol: String) -> some View {
         ZStack {
-            Color.saleSurface
+            Color.imagePlaceholder
             Image(systemName: symbol)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.secondaryText)

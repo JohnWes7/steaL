@@ -76,7 +76,7 @@ struct DealGridCardView: View {
     /// 加载中占位 / Loading placeholder
     private var placeholder: some View {
         ZStack {
-            Color.saleSurface
+            Color.imagePlaceholder
             Image(systemName: "photo")
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(.secondaryText)
@@ -88,7 +88,7 @@ struct DealGridCardView: View {
     /// added, belongs here
     private var failedPlaceholder: some View {
         ZStack {
-            Color.saleSurface
+            Color.imagePlaceholder
             Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(.secondaryText)

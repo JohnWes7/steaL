@@ -74,7 +74,7 @@ struct RetryingAsyncImage<Content: View>: View {
                 .resizable()
                 .scaledToFill()
         default:
-            Color.saleSurface
+            Color.imagePlaceholder
         }
     }
     .frame(width: 320, height: 160)

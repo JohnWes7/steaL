@@ -96,7 +96,7 @@ struct GiveawayRowView: View {
     /// 加载中占位，撑满缩略图区域 / Loading placeholder that fills the thumbnail area
     private var placeholder: some View {
         ZStack {
-            Color.saleSurface
+            Color.imagePlaceholder
             Image(systemName: "photo")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.secondaryText)
@@ -108,7 +108,7 @@ struct GiveawayRowView: View {
     /// added, belongs here
     private var failedPlaceholder: some View {
         ZStack {
-            Color.saleSurface
+            Color.imagePlaceholder
             Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.secondaryText)

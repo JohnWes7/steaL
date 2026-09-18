@@ -71,7 +71,7 @@ struct DealCardView: View {
     /// 加载中占位，保证任何响应都能撑满图片区 / Loading placeholder that always fills the artwork area
     private var placeholder: some View {
         ZStack {
-            Color.saleSurface
+            Color.imagePlaceholder
             Image(systemName: "photo")
                 .font(.system(size: 32, weight: .semibold))
                 .foregroundStyle(.secondaryText)
@@ -82,7 +82,7 @@ struct DealCardView: View {
     /// Failure placeholder, told apart from the loading one by its icon; `RetryingAsyncImage` retries
     private var failedPlaceholder: some View {
         ZStack {
-            Color.saleSurface
+            Color.imagePlaceholder
             Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 32, weight: .semibold))
                 .foregroundStyle(.secondaryText)
