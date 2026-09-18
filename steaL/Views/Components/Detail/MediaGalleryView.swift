@@ -70,7 +70,7 @@ struct MediaGalleryView: View {
     /// 分页区与下方的分页点；分页点不叠在画面上，所以不会挡视频 /
     /// The pager and the dots below it; the dots sit outside the picture so they never cover a video
     private var pager: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 20) {
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 0) {
                     ForEach(Array(pages.enumerated()), id: \.offset) { _, item in
