@@ -13,6 +13,7 @@ UserInterfaceState.xcuserstate
 # document
 docs/
 reports/
+plan/
 
 AGENTS.md
 .github/copilot-instructions.md

@@ -73,7 +73,7 @@ struct GiveawayRowView: View {
     /// Thumbnail with the three phases rendered separately, so loading and failure no longer share
     /// one placeholder; the FREE badge sits in its top-leading corner
     private var thumbnail: some View {
-        AsyncImage(url: giveaway.thumbnailURL) { phase in
+        RetryingAsyncImage(url: giveaway.thumbnailURL) { phase in
             switch phase {
             case .success(let image):
                 image

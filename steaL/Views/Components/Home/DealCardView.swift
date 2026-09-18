@@ -52,7 +52,7 @@ struct DealCardView: View {
     /// share one placeholder
     @ViewBuilder
     private var banner: some View {
-        AsyncImage(url: deal.wideArtworkURL) { phase in
+        RetryingAsyncImage(url: deal.wideArtworkURL) { phase in
             switch phase {
             case .success(let image):
                 image
@@ -78,9 +78,8 @@ struct DealCardView: View {
         }
     }
 
-    /// 加载失败占位，用不同图标与加载中区分。以后要接重试，就改在这一块 /
-    /// Failure placeholder, told apart from the loading one by its icon. A retry affordance, when
-    /// added, belongs here
+    /// 加载失败占位，用不同图标与加载中区分；重试由外层 `RetryingAsyncImage` 负责 /
+    /// Failure placeholder, told apart from the loading one by its icon; `RetryingAsyncImage` retries
     private var failedPlaceholder: some View {
         ZStack {
             Color.saleSurface

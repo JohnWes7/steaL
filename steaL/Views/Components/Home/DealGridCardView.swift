@@ -54,7 +54,7 @@ struct DealGridCardView: View {
     /// longer share one placeholder
     @ViewBuilder
     private var boxArt: some View {
-        AsyncImage(url: deal.portraitArtworkURL) { phase in
+        RetryingAsyncImage(url: deal.portraitArtworkURL) { phase in
             switch phase {
             case .success(let image):
                 image
