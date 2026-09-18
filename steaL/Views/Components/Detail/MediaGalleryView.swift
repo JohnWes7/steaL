@@ -59,14 +59,14 @@ struct MediaGalleryView: View {
                     .frame(maxWidth: .infinity)
                     .aspectRatio(16 / 9, contentMode: .fit)
                     .overlay(alignment: .topLeading) {
+                        // 浮在视频上的控件用系统玻璃按钮，按下有回弹 / Controls floating over media use the system glass button
                         Button(action: stop) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.primaryText)
-                                .frame(width: 36, height: 36)
-                                .background(Color.appBackground.opacity(0.6), in: Circle())
+                                .frame(width: 24, height: 24)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.glass)
+                        .buttonBorderShape(.circle)
                         .accessibilityLabel("Close trailer")
                         .padding(12)
                     }
@@ -85,6 +85,8 @@ struct MediaGalleryView: View {
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .automatic : .never))
+                // 白点压在亮截图上看不见，给它垫一层系统背景 / White dots vanish on bright screenshots without the backing
+                .indexViewStyle(.page(backgroundDisplayMode: .always))
                 .frame(maxWidth: .infinity)
                 .aspectRatio(16 / 9, contentMode: .fit)
                 .onChange(of: page) { stop() }
@@ -156,16 +158,12 @@ struct MediaGalleryView: View {
         Button {
             play(movie)
         } label: {
-            Circle()
-                .fill(Color.appBackground.opacity(0.6))
-                .frame(width: 60, height: 60)
-                .overlay {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.primaryText)
-                }
+            Image(systemName: "play.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .frame(width: 44, height: 44)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
         .accessibilityLabel("Play trailer")
     }
 
