@@ -31,9 +31,6 @@ struct DealGridCardView: View {
 
     var body: some View {
         artwork
-            // 卡片内容都叠在封面与压暗渐变上，背景始终偏暗，所以固定用 dark 取色 /
-            // Everything sits on the artwork and its dark scrim, so the card always resolves dark colours
-            .environment(\.colorScheme, .dark)
     }
 
     // MARK: - 图片区 / Artwork
@@ -46,8 +43,11 @@ struct DealGridCardView: View {
             .aspectRatio(artworkAspectRatio, contentMode: .fit)
             .overlay { boxArt }
             .overlay { scrim }
-            .overlay(alignment: .top) { topBar }
-            .overlay(alignment: .bottom) { bottomOverlay }
+            // 叠加层都压在封面与渐变上，背景始终偏暗，所以固定用 dark 取色；封面占位不在其中，跟随系统外观 /
+            // The overlays always sit on the artwork and its dark scrim, so they resolve dark colours;
+            // the box-art placeholder is left out so it follows the system appearance
+            .overlay(alignment: .top) { topBar.environment(\.colorScheme, .dark) }
+            .overlay(alignment: .bottom) { bottomOverlay.environment(\.colorScheme, .dark) }
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
