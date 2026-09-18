@@ -119,7 +119,7 @@ struct GiveawayRowView: View {
     private var freeBadge: some View {
         Text("FREE")
             .font(.system(size: 10, weight: .heavy, design: .rounded))
-            .foregroundStyle(Color.appBackground.opacity(0.85))
+            .foregroundStyle(Color.onBrandGreen)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(Color.brandGreen, in: Capsule())
@@ -132,7 +132,7 @@ struct GiveawayRowView: View {
         if let expiryText {
             Text(expiryText)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isExpiringSoon ? Color.black.opacity(0.85) : Color.brandGreen)
+                .foregroundStyle(isExpiringSoon ? Color.onBrandGreen : Color.brandGreen)
                 .lineLimit(1)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)

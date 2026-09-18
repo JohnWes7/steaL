@@ -196,12 +196,12 @@ struct PriceSectionView: View {
 
                 offerPrice(offer, isBest: isBest)
 
-                // 出 App 的符号每行都挂；绿块上是深色，普通行用次要灰，12 个图标才不至于糊成一片 /
-                // Every row carries the "leaves the app" mark: dark on the slab, muted grey on the plain
+                // 出 App 的符号每行都挂；绿块上用 onBrandGreen，普通行用次要灰，12 个图标才不至于糊成一片 /
+                // Every row carries the "leaves the app" mark: onBrandGreen on the slab, muted grey on the plain
                 // rows, so twelve of them stay quiet
                 Image(systemName: "arrow.up.forward.square")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(isBest ? Color.appBackground : Color.secondaryText)
+                    .foregroundStyle(isBest ? Color.onBrandGreen : Color.secondaryText)
             }
             // 图标槽由符号自己占出来（12 间距 + 20 图标），两侧留白每行一致，价格才对成一列 /
             // The mark itself reserves the slot (12 spacing + 20 icon); matching trailing padding on every
@@ -239,7 +239,7 @@ struct PriceSectionView: View {
             HStack(spacing: 8) {
                 Text(offer.shop.name)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(isBest ? Color.appBackground : Color.primaryText)
+                    .foregroundStyle(isBest ? Color.onBrandGreen : Color.primaryText)
 
                 if isBest {
                     Text("BEST")
@@ -247,7 +247,7 @@ struct PriceSectionView: View {
                         .foregroundStyle(.brandGreen)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(Color.appBackground, in: Capsule())
+                        .background(Color.onBrandGreen, in: Capsule())
                 }
             }
 
@@ -255,13 +255,13 @@ struct PriceSectionView: View {
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(
                     isBest
-                        ? Color.appBackground.opacity(0.72)
+                        ? Color.onBrandGreen.opacity(0.72)
                         : (offer.cut > 0 ? Color.brandBlue : Color.secondaryText)
                 )
 
             Text(drmNames.isEmpty ? "DRM unavailable" : drmNames)
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(isBest ? Color.appBackground.opacity(0.72) : Color.secondaryText)
+                .foregroundStyle(isBest ? Color.onBrandGreen.opacity(0.72) : Color.secondaryText)
                 .lineLimit(1)
         }
     }
@@ -271,14 +271,14 @@ struct PriceSectionView: View {
         VStack(alignment: .trailing, spacing: 3) {
             Text(priceText(offer.price))
                 .font(.system(size: 19, weight: .bold, design: .monospaced))
-                .foregroundStyle(isBest ? Color.appBackground : Color.primaryText)
+                .foregroundStyle(isBest ? Color.onBrandGreen : Color.primaryText)
 
             if offer.cut > 0 {
                 Text(
                     offer.regular.amount.formatted(.currency(code: offer.regular.currency))
                 )
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(isBest ? Color.appBackground.opacity(0.72) : Color.secondaryText)
+                .foregroundStyle(isBest ? Color.onBrandGreen.opacity(0.72) : Color.secondaryText)
                 .strikethrough()
             }
         }
