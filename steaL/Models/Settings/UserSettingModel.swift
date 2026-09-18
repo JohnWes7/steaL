@@ -40,7 +40,7 @@ final class UserSettingModel {
     // MARK: - 初始化 / Init
 
     init(
-        theme: AppTheme = AppTheme.system,
+        theme: AppTheme = AppTheme.dark,
         region: AppRegion = AppRegion.australia,
         language: AppLanguage = AppLanguage.english,
         isPriceDropAlertsEnabled: Bool = true,
