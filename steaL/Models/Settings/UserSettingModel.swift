@@ -17,7 +17,7 @@ final class UserSettingModel {
     // MARK: - 显示 / Display
 
     /// 显示主题（system / light / dark）/ The display theme
-    var theme: AppTheme = AppTheme.system
+    var theme: AppTheme = AppTheme.dark
 
     // MARK: - 区域与货币 / Region & currency
 

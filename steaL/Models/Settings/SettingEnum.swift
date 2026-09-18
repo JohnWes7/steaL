@@ -7,6 +7,7 @@
 
 import Combine
 import Foundation
+import SwiftUI
 
 // MARK: - 枚举 / Enums
 
@@ -24,6 +25,15 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable {
         case .system: return "System"
         case .light: return "Light"
         case .dark: return "Dark"
+        }
+    }
+
+    /// 交给 `.preferredColorScheme` 的值；`nil` 表示跟随系统 / The value for `.preferredColorScheme`; `nil` follows the system
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
         }
     }
 }
