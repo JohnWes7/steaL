@@ -5,7 +5,6 @@
 //  Created by yijiang on 2026/9/15.
 //
 
-import AVKit
 import SwiftUI
 
 /// 详情页顶部的媒体分页：商店主图在前，随后是视频封面与截图；没有媒体时退回 16:9 占位 /
@@ -16,16 +15,14 @@ struct MediaGalleryView: View {
     /// 商店主图，放在第一页 / The store header image, shown on the first page
     let headerImageURL: String?
 
-    /// 视频，分页显示封面，点击后原位播放 / Movies shown as posters in the pager and played in place when tapped
+    /// 视频，分页显示封面，点击后在原页播放 / Movies shown as posters in the pager and played in their own page when tapped
     let movies: [SteamMovie]
 
     /// 截图，排在视频之后 / Screenshots, shown after the movies
     let screenshotURLs: [String]
 
-    /// 全页共用一个播放器 / One player shared by the whole gallery
-    @State private var player = AVPlayer()
-    /// 正在播的那条，`nil` = 所有页都停在封面 / The movie being played; `nil` means every page shows its poster
-    @State private var playingMovie: SteamMovie?
+    /// 预告片播放状态，全画廊共用一个播放器 / Trailer playback state; one player serves the whole gallery
+    @State private var trailer = TrailerPlayer()
     /// 当前页，划走时要靠它停播 / The current page, needed to stop playback when it is swiped away
     @State private var page = 0
 
@@ -54,49 +51,49 @@ struct MediaGalleryView: View {
                             .font(.system(size: 30, weight: .medium))
                             .foregroundStyle(.secondaryText)
                     }
-            } else if playingMovie != nil {
-                VideoPlayer(player: player)
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(16 / 9, contentMode: .fit)
-                    // 左上角是系统的投屏按钮，它下面那一列一直空到进度条 /
-                    // The system AirPlay button owns the top-leading corner; the column below it stays free
-                    .overlay(alignment: .topLeading) {
-                        // 浮在视频上的控件用系统玻璃按钮，按下有回弹 / Controls floating over media use the system glass button
-                        Button(action: stop) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .bold))
-                                .frame(width: 24, height: 24)
-                        }
-                        .buttonStyle(.glass)
-                        .buttonBorderShape(.circle)
-                        .accessibilityLabel("Close trailer")
-                        // 系统按钮边距 8 + 直径约 38 + 间隔 8 / System inset 8 + ~38 diameter + 8 gap
-                        .padding(.leading, 4)
-                        .padding(.top, 54)
-                    }
             } else {
-                TabView(selection: $page) {
-                    ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
-                        Group {
-                            switch item {
-                            case .movie(let movie):
-                                moviePage(movie)
-                            case .image(let urlString):
-                                mediaPage(URL(string: urlString))
-                            }
-                        }
-                        .tag(index)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .automatic : .never))
-                // 白点压在亮截图上看不见，给它垫一层系统背景 / White dots vanish on bright screenshots without the backing
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
-                .frame(maxWidth: .infinity)
-                .aspectRatio(16 / 9, contentMode: .fit)
-                .onChange(of: page) { stop() }
+                pager
             }
         }
-        .onDisappear { stop() }
+        // 弹出全屏也会触发 `onDisappear`，那时不能停播 / Presenting full screen also fires `onDisappear`; keep playing then
+        .onDisappear {
+            if !trailer.isFullScreen {
+                trailer.stop()
+            }
+        }
+        .fullScreenCover(isPresented: $trailer.isFullScreen) {
+            TrailerFullScreenView(player: trailer.player, title: trailer.movie?.name ?? "Trailer")
+        }
+    }
+
+    /// 分页区与下方的分页点；分页点不叠在画面上，所以不会挡视频 /
+    /// The pager and the dots below it; the dots sit outside the picture so they never cover a video
+    private var pager: some View {
+        VStack(spacing: 4) {
+            TabView(selection: $page) {
+                ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
+                    Group {
+                        switch item {
+                        case .movie(let movie):
+                            moviePage(movie)
+                        case .image(let urlString):
+                            mediaPage(URL(string: urlString))
+                        }
+                    }
+                    .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            // 进度条一按下就锁住翻页，横拖只走进度条 / Paging locks the moment the scrubber is pressed
+            .scrollDisabled(trailer.isScrubbing)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(16 / 9, contentMode: .fit)
+            .onChange(of: page) { trailer.stop() }
+
+            if pages.count > 1 {
+                GalleryPageControl(numberOfPages: pages.count, currentPage: $page)
+            }
+        }
     }
 
     /// 一页媒体；没地址直接按失败算，否则 `AsyncImage` 会一直转圈 /
@@ -151,16 +148,22 @@ struct MediaGalleryView: View {
             }
     }
 
-    /// 视频页：封面加播放按钮 / A movie page: a poster with a play button
+    /// 视频页：播放中是内嵌播放器，否则是封面加播放按钮 /
+    /// A movie page: the inline player while playing, otherwise a poster with a play button
+    @ViewBuilder
     private func moviePage(_ movie: SteamMovie) -> some View {
-        mediaPage(movie.thumbnail.flatMap { URL(string: $0) })
-            .overlay { playBadge(movie) }
+        if trailer.movie == movie {
+            TrailerPlayerView(trailer: trailer)
+        } else {
+            mediaPage(movie.thumbnail.flatMap { URL(string: $0) })
+                .overlay { playBadge(movie) }
+        }
     }
 
     /// 视频页上的播放按钮 / The play button on a movie page
     private func playBadge(_ movie: SteamMovie) -> some View {
         Button {
-            play(movie)
+            trailer.play(movie)
         } label: {
             Image(systemName: "play.fill")
                 .font(.system(size: 22, weight: .semibold))
@@ -169,22 +172,6 @@ struct MediaGalleryView: View {
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
         .accessibilityLabel("Play trailer")
-    }
-
-    /// 换 item 并起播 / Swaps the item and starts playback
-    private func play(_ movie: SteamMovie) {
-        guard let urlString = movie.preferredURL, let url = URL(string: urlString) else { return }
-
-        player.replaceCurrentItem(with: AVPlayerItem(url: url))
-        playingMovie = movie
-        player.play()
-    }
-
-    /// 停播并释放当前视频 / Stops playback and releases the current video
-    private func stop() {
-        player.pause()
-        player.replaceCurrentItem(with: nil)
-        playingMovie = nil
     }
 }
 
