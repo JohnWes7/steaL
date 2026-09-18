@@ -23,8 +23,9 @@ struct MediaGalleryView: View {
 
     /// 预告片播放状态，全画廊共用一个播放器 / Trailer playback state; one player serves the whole gallery
     @State private var trailer = TrailerPlayer()
-    /// 当前页，划走时要靠它停播 / The current page, needed to stop playback when it is swiped away
-    @State private var page = 0
+    /// 当前页（`scrollPosition` 的 id），`body` 不读它，翻页时只有分页点重绘 /
+    /// The current page (the `scrollPosition` id); `body` never reads it, so paging only redraws the dots
+    @State private var page: Int? = 0
 
     /// 一页媒体：视频封面或一张图 / One media page: either a movie poster or an image
     private enum GalleryPage {
@@ -70,30 +71,49 @@ struct MediaGalleryView: View {
     /// The pager and the dots below it; the dots sit outside the picture so they never cover a video
     private var pager: some View {
         VStack(spacing: 4) {
-            TabView(selection: $page) {
-                ForEach(Array(pages.enumerated()), id: \.offset) { index, item in
-                    Group {
-                        switch item {
-                        case .movie(let movie):
-                            moviePage(movie)
-                        case .image(let urlString):
-                            mediaPage(URL(string: urlString))
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(pages.enumerated()), id: \.offset) { _, item in
+                        Group {
+                            switch item {
+                            case .movie(let movie):
+                                moviePage(movie)
+                            case .image(let urlString):
+                                mediaPage(URL(string: urlString))
+                            }
                         }
+                        .containerRelativeFrame([.horizontal, .vertical])
                     }
-                    .tag(index)
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $page)
+            .scrollIndicators(.hidden)
+            // 停稳后再判断，滑到一半时不做副作用 / Decide once the pager settles, never halfway through a swipe
+            .onScrollPhaseChange { _, newPhase in
+                if newPhase == .idle {
+                    stopTrailerIfPagedAway()
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            // 进度条一按下就锁住翻页，横拖只走进度条 / Paging locks the moment the scrubber is pressed
-            .scrollDisabled(trailer.isScrubbing)
             .frame(maxWidth: .infinity)
             .aspectRatio(16 / 9, contentMode: .fit)
-            .onChange(of: page) { trailer.stop() }
 
             if pages.count > 1 {
                 GalleryPageControl(numberOfPages: pages.count, currentPage: $page)
             }
         }
+    }
+
+    /// 停稳的那页不是正在播的视频就停播；划一点又回原页不会停 /
+    /// Stops the trailer when the settled page is not the one playing; a small swipe back keeps it going
+    private func stopTrailerIfPagedAway() {
+        guard let playing = trailer.movie else { return }
+
+        if let page, pages.indices.contains(page), case .movie(let movie) = pages[page], movie == playing {
+            return
+        }
+        trailer.stop()
     }
 
     /// 一页媒体；没地址直接按失败算，否则 `AsyncImage` 会一直转圈 /

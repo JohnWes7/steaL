@@ -15,8 +15,8 @@ struct GalleryPageControl: UIViewRepresentable {
 
     /// 总页数 / Total page count
     let numberOfPages: Int
-    /// 当前页，与画廊的 `TabView` 双向绑定 / The current page, bound both ways with the gallery's `TabView`
-    @Binding var currentPage: Int
+    /// 当前页，与画廊 `ScrollView` 的 `scrollPosition` 双向绑定 / The current page, bound both ways with the gallery's `scrollPosition`
+    @Binding var currentPage: Int?
 
     func makeUIView(context: Context) -> UIPageControl {
         let control = UIPageControl()
@@ -34,8 +34,9 @@ struct GalleryPageControl: UIViewRepresentable {
     func updateUIView(_ control: UIPageControl, context: Context) {
         context.coordinator.currentPage = $currentPage
         control.numberOfPages = numberOfPages
-        if control.currentPage != currentPage {
-            control.currentPage = currentPage
+        let page = currentPage ?? 0
+        if control.currentPage != page {
+            control.currentPage = page
         }
     }
 
@@ -52,9 +53,9 @@ struct GalleryPageControl: UIViewRepresentable {
     /// 把 UIKit 的 `valueChanged` 转回 binding / Forwards UIKit's `valueChanged` into the binding
     final class Coordinator: NSObject {
 
-        var currentPage: Binding<Int>
+        var currentPage: Binding<Int?>
 
-        init(currentPage: Binding<Int>) {
+        init(currentPage: Binding<Int?>) {
             self.currentPage = currentPage
         }
 
@@ -67,12 +68,12 @@ struct GalleryPageControl: UIViewRepresentable {
 }
 
 #Preview("分页点 / Page dots") {
-    @Previewable @State var page = 2
+    @Previewable @State var page: Int? = 2
 
     VStack(spacing: 20) {
         GalleryPageControl(numberOfPages: 6, currentPage: $page)
         GalleryPageControl(numberOfPages: 24, currentPage: $page)
-        Text("Page \(page + 1)")
+        Text("Page \((page ?? 0) + 1)")
             .foregroundStyle(.primaryText)
     }
     .padding()
