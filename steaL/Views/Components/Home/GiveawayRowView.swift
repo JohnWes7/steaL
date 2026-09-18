@@ -119,7 +119,7 @@ struct GiveawayRowView: View {
     private var freeBadge: some View {
         Text("FREE")
             .font(.system(size: 10, weight: .heavy, design: .rounded))
-            .foregroundStyle(Color.black.opacity(0.85))
+            .foregroundStyle(Color.appBackground.opacity(0.85))
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(Color.brandGreen, in: Capsule())

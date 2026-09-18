@@ -150,6 +150,7 @@ struct DealCardView: View {
                     .font(.system(size: 12, weight: .heavy))
                     .tracking(0.6)
                     .foregroundStyle(.brandGreen)
+                    .environment(\.colorScheme, .dark)
             }
 
             Text(deal.title)

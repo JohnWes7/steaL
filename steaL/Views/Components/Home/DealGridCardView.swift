@@ -31,6 +31,9 @@ struct DealGridCardView: View {
 
     var body: some View {
         artwork
+            // 卡片内容都叠在封面与压暗渐变上，背景始终偏暗，所以固定用 dark 取色 /
+            // Everything sits on the artwork and its dark scrim, so the card always resolves dark colours
+            .environment(\.colorScheme, .dark)
     }
 
     // MARK: - 图片区 / Artwork
@@ -98,10 +101,10 @@ struct DealGridCardView: View {
     private var scrim: some View {
         LinearGradient(
             stops: [
-                .init(color: .black.opacity(0.45), location: 0),
+                .init(color: .black.opacity(0.3), location: 0),
                 .init(color: .black.opacity(0), location: 0.22),
                 .init(color: .black.opacity(0.10), location: 0.50),
-                .init(color: .black.opacity(0.90), location: 1),
+                .init(color: .black.opacity(0.75), location: 1),
             ],
             startPoint: .top,
             endPoint: .bottom
