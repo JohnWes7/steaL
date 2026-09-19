@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 白色价格标签，尖头朝左上；孔用 mask 挖空 -->
+  <defs>
+    <mask id="hole">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="-165" cy="0" r="46" fill="#000" transform="translate(512 512) rotate(45) scale(0.88)"/>
+    </mask>
+  </defs>
+  <g mask="url(#hole)">
+    <path d="M -300 0 L -140 -165 L 290 -165 L 290 165 L -140 165 Z"
+          fill="#FFFFFF" stroke="#FFFFFF" stroke-width="80" stroke-linejoin="round"
+          transform="translate(512 512) rotate(45) scale(0.88)"/>
+  </g>
+</svg>

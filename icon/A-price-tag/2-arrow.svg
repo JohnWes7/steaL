@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 竖直向下的箭头，放在标签主体中心 -->
+  <path d="M -34 -150 L 34 -150 L 34 10 L 112 10 L 0 140 L -112 10 L -34 10 Z"
+        fill="#248A3D" stroke="#248A3D" stroke-width="28" stroke-linejoin="round"
+        transform="translate(562 562)"/>
+</svg>
