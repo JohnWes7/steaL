@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- % 号：实心玻璃图层（两个圆环 + 一条圆头斜杠），不再嵌进标签的挖孔里，
+       而是作为独立的玻璃图层叠在标签上方 / Filled glass shape, stacked on top of the tag layer -->
+  <defs>
+    <mask id="percentHoles">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="-70" cy="-60" r="30" fill="#000" transform="translate(572 700) rotate(-10) scale(1.12)"/>
+      <circle cx="70" cy="60" r="30" fill="#000" transform="translate(572 700) rotate(-10) scale(1.12)"/>
+    </mask>
+  </defs>
+  <g mask="url(#percentHoles)">
+    <g fill="#FFFFFF" transform="translate(572 700) rotate(-10) scale(1.12)">
+      <circle cx="-70" cy="-60" r="64"/>
+      <circle cx="70" cy="60" r="64"/>
+      <rect x="-110" y="-28" width="220" height="56" rx="28" transform="rotate(40.601)"/>
+    </g>
+  </g>
+</svg>

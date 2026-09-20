@@ -7,7 +7,7 @@
 | --- | --- | --- | --- |
 | `A-price-tag/` | 价格标签 + 下箭头 | 渐变 #8DCF4A → #248A3D | `1-tag.svg`、`2-arrow.svg` |
 | `B-L-chart/` | steaL 的 L = 下跌到最低价的折线 | 渐变 #5A98FF → #1F55C8 | `1-line.svg`、`2-dot.svg` |
-| `C-steam-tag/` | 蒸汽 + 折扣标签 | 渐变 #2A3F5A → #121C28 | `1-steam.svg`、`2-tag.svg`、`3-percent.svg` |
+| `C-steam-tag/` | 蒸汽 + 折扣标签 | 渐变 #2A3F5A → #121C28 | `1-steam.svg`、`2-tag-glass.svg`、`3-percent-glass.svg` |
 
 - `preview.svg`：带背景和圆角的合成图，只用来看效果，**不要**拖进 Icon Composer。
 - 编号图层：透明底、方形画布，直接拖进 Icon Composer，每个文件一层。
@@ -29,18 +29,23 @@
 换一种：`cp C-steam-tag/steam-options/steam-E-soft.svg C-steam-tag/1-steam.svg`，
 或者在 Icon Composer 里直接拖对应的 `steam-*.svg` 当蒸汽层。
 
-## C 的 % 号：哑光版 vs 宝石版
+## C 的 % 号：两层独立玻璃叠放（现行方案）
 
-两套互斥的做法，选一套：
+之前试过的「挖孔 + 宝石嵌入」（`2-tag-cutout.svg` 挖空 + `3-percent-gem.svg` 嵌进洞里，
+两者共用一个 Liquid Glass 组）实测很丑：宝石嵌在标签表面的凹槽里，看起来像补丁而不是独立的物体。
 
-| 做法 | 图层 | 说明 |
+参考 Apple 自家图标（Home 的嵌套房子、Passwords 的三把钥匙）：它们都是**互相独立的实心玻璃图层直接
+堆叠**，靠各自的阴影/ 高光分出前后层次，而不是把一层刻进另一层里。现在照这个思路重做：
+
+| 图层 | 文件 | 说明 |
 | --- | --- | --- |
-| 哑光（原版） | `2-tag.svg` + `3-percent.svg` | % 是刻在标签上的深绿笔画 |
-| 加厚哑光 | `2-tag.svg` + `steam-options/percent-bold-{dark,white}.svg` | 同上，但笔画从 26pt 加到 42–50pt |
-| **宝石（A 方案）** | `2-tag-cutout.svg` + `3-percent-gem.svg` | 标签上把 % 挖空透出深色背景，% 由单独一层实心玻璃补上 |
+| 标签（后） | `2-tag-glass.svg` | 和旧版一样的标签外形，只留绳孔；纯白色，颜色由 `icon.json` 的 `fill` 上色 |
+| % 号（前） | `3-percent-glass.svg` | 两个实心圆环 + 一条圆头斜杠，**填色**而不是描边，独立一个 Liquid Glass 组 |
 
-宝石版的洞比宝石每边宽 7pt，留一圈深色缝，玻璃的边缘高光才衬得出来。
-颜色对比见 `steam-options/preview-cutout-{cyan,white,green}.svg`。
+两者是 `icon.json` 里**两个平级的 group**（不再共用一组），`groups` 数组顺序 `3-percent-glass` → `2-tag-glass`
+→ `1-steam`（前到后），% 号叠在标签正面、自己投一层阴影，视觉上是两片玻璃摞在一起，不是挖孔嵌入。
+旧的 `2-tag.svg` / `2-tag-cutout.svg` / `3-percent.svg` / `3-percent-gem.svg` 保留在目录里作为历史参考，
+`Icon-steam-tag.icon/Assets/` 里已经不再引用它们。
 
 ## 命令行渲染（不用开 Icon Composer）
 
@@ -83,8 +88,10 @@ Layer 可用 key：`image-name`、`fill`、`blend-mode`、`opacity`、`glass`、
 - **Shadow / Specular / Translucency / Lighting 在 Group 这一级**（`icon.json` 里这几个 key 挂在 group 上），
   图层这一级只有 Opacity / Blend Mode / Fill / Effects / Image / Layout。根节点只有背景 Fill。
 - 各区块右边的 `All ⌄` 表示这个设置应用到哪个外观（All / Default / Dark / Tinted）。
-- **一个图标里只让一个元素是玻璃**。宝石版里标签那层的 Effects 要关掉，否则两层互相抵消，宝石不突出。
-- 玻璃需要深色背景来衬。浅绿标签上直接放玻璃 % 效果很弱，这就是要把标签挖空的原因。
+- ~~一个图标里只让一个元素是玻璃~~：这条是旧结论，只在「挖孔嵌入」的做法下成立（同一块面积两层玻璃会
+  互相抵消）。**两个互不重叠、各自独立的形状**（现在的标签 + % 号）都开玻璃完全没问题，效果反而更像
+  Apple 自家图标的堆叠质感，参照上面「两层独立玻璃叠放」。
+- 玻璃需要深色背景来衬；现在标签本身也是玻璃了，靠的是标签自己的阴影把背景衬深，% 号才在标签上显出来。
 - **白色 Fill + specular + translucency 拉满 = 铬合金**，不是彩色玻璃。玻璃材质不自带颜色，
   颜色全来自 Fill；要彩色玻璃就指定饱和颜色，并把 translucency 降到 0.3～0.5
   （拉满时底下的背景整个透上来，颜色被冲淡）。
@@ -103,8 +110,8 @@ Color 选 **Default** 外观 → Fill 选 **Gradient** → 下面那格（渐变
 1. Xcode → Open Developer Tool → Icon Composer，新建图标。
 2. 在 Icon Composer 里把背景（Fill）设成上表的渐变；图层按编号从下到上拖进去。
    **左边面板越靠上 = 越靠前**（Group 之间同理），所以 C 的正确顺序自上而下是
-   `3-percent` → `2-tag` → `1-steam`。Group 是「共用一套玻璃 / 阴影」的单位：
-   `3-percent` 与 `2-tag` 放同一组（本来就是一个物体），`1-steam` 单独一组放在后面。
+   `3-percent-glass` → `2-tag-glass` → `1-steam`。三个都各自单独一组（不共用玻璃/阴影），
+   这样 % 号才能作为独立于标签的一片玻璃叠在上面。
 3. 分别调整 Default / Dark / Mono 外观（玻璃、阴影、深色配色由它生成）。
 4. 保存为 `AppIcon.icon`，拖进 Xcode 的 `steaL` 目录；删掉 `Assets.xcassets/AppIcon.appiconset`，
    确认 target 的 App Icon 设置仍是 `AppIcon`。
