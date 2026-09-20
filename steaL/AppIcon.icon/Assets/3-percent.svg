@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 标签上的 % 号，用图形画，不依赖字体 -->
+  <g transform="translate(560 700) rotate(-10)" fill="none" stroke="#14301C" stroke-width="26" stroke-linecap="round">
+    <line x1="60" y1="-70" x2="-60" y2="70"/>
+    <circle cx="-48" cy="-44" r="26"/>
+    <circle cx="48" cy="44" r="26"/>
+  </g>
+</svg>
