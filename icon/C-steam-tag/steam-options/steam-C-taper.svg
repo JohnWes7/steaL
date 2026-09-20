@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 上细下粗的蒸汽：每缕拆成三段，越往上笔画越细 -->
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" opacity="0.95">
+    <path d="M 404 500 C 452 455, 386 455, 434 410" stroke-width="48"/>
+    <path d="M 434 410 C 482 365, 326 365, 374 320" stroke-width="34"/>
+    <path d="M 374 320 C 422 275, 386 275, 434 230" stroke-width="22"/>
+    <path d="M 512 486 C 566 429, 492 429, 546 373" stroke-width="54"/>
+    <path d="M 546 373 C 600 316, 424 316, 478 259" stroke-width="38"/>
+    <path d="M 478 259 C 532 203, 492 203, 546 146" stroke-width="24"/>
+    <path d="M 620 500 C 668 455, 602 455, 650 410" stroke-width="48"/>
+    <path d="M 650 410 C 698 365, 542 365, 590 320" stroke-width="34"/>
+    <path d="M 590 320 C 638 275, 602 275, 650 230" stroke-width="22"/>
+  </g>
+</svg>

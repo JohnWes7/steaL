@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3F5A"/>
+      <stop offset="1" stop-color="#121C28"/>
+    </linearGradient>
+    <mask id="hole">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="-170" cy="0" r="30" fill="#000" transform="translate(512 700) rotate(-10)"/>
+    </mask>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <!-- 气泡式蒸汽：越往上越小越淡 -->
+  <g fill="#FFFFFF">
+    <circle cx="410" cy="486" r="34" opacity="0.95"/>
+    <circle cx="386" cy="396" r="26" opacity="0.8"/>
+    <circle cx="414" cy="318" r="18" opacity="0.62"/>
+    <circle cx="392" cy="258" r="11" opacity="0.45"/>
+    <circle cx="512" cy="472" r="42" opacity="0.95"/>
+    <circle cx="540" cy="372" r="31" opacity="0.8"/>
+    <circle cx="506" cy="282" r="21" opacity="0.62"/>
+    <circle cx="534" cy="212" r="13" opacity="0.45"/>
+    <circle cx="616" cy="486" r="34" opacity="0.95"/>
+    <circle cx="642" cy="396" r="26" opacity="0.8"/>
+    <circle cx="612" cy="318" r="18" opacity="0.62"/>
+    <circle cx="638" cy="258" r="11" opacity="0.45"/>
+  </g>
+  <g mask="url(#hole)">
+    <path d="M -270 0 L -150 -110 L 250 -110 L 250 110 L -150 110 Z"
+          fill="#8DCF4A" stroke="#8DCF4A" stroke-width="60" stroke-linejoin="round"
+          transform="translate(512 700) rotate(-10)"/>
+  </g>
+  <g transform="translate(560 700) rotate(-10)" fill="none" stroke="#14301C" stroke-width="26" stroke-linecap="round">
+    <line x1="60" y1="-70" x2="-60" y2="70"/>
+    <circle cx="-48" cy="-44" r="26"/>
+    <circle cx="48" cy="44" r="26"/>
+  </g>
+</svg>

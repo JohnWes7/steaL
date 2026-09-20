@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 断续的蒸汽：同样的曲线，笔画断开，更轻 -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="42" stroke-linecap="round"
+     stroke-dasharray="86 44" opacity="0.92">
+    <path d="M 404 500 C 452 452, 356 404, 404 344 C 452 284, 356 244, 404 196"/>
+    <path d="M 512 484 C 562 424, 462 374, 512 304 C 562 244, 462 204, 512 146"/>
+    <path d="M 620 500 C 668 452, 572 404, 620 344 C 668 284, 572 244, 620 196"/>
+  </g>
+</svg>

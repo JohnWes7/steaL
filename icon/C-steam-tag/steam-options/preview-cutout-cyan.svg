@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3F5A"/><stop offset="1" stop-color="#121C28"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <!-- 三缕蒸汽从标签上升起 -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round" opacity="0.9">
+    <path d="M 400 500 C 450 450, 350 400, 400 340 C 450 280, 350 240, 400 190"/>
+    <path d="M 512 480 C 562 420, 462 370, 512 300 C 562 240, 462 200, 512 140"/>
+    <path d="M 624 500 C 674 450, 574 400, 624 340 C 674 280, 574 240, 624 190"/>
+  </g>
+
+  <!-- 标签：绳孔与 % 都挖空，透出背景，% 由上面单独一层玻璃补上 -->
+  <defs>
+    <mask id="cut">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="-170" cy="0" r="30" fill="#000" transform="translate(512 700) rotate(-10)"/>
+  <g transform="translate(566 700) rotate(-10)" fill="none" stroke="#000"
+     stroke-width="48" stroke-linecap="round">
+    <line x1="66" y1="-84" x2="-66" y2="84" stroke-width="58"/>
+    <circle cx="-62" cy="-48" r="46"/>
+    <circle cx="62" cy="48" r="46"/>
+  </g>
+    </mask>
+  </defs>
+  <g mask="url(#cut)">
+    <path d="M -270 0 L -150 -110 L 250 -110 L 250 110 L -150 110 Z"
+          fill="#8DCF4A" stroke="#8DCF4A" stroke-width="60" stroke-linejoin="round"
+          transform="translate(512 700) rotate(-10)"/>
+  </g>
+  <!-- % 宝石层：单独一个 Group + Fill 指定颜色 + Effects 打开 -->
+  <g transform="translate(566 700) rotate(-10)" fill="none" stroke="#5AC8FA"
+     stroke-width="34" stroke-linecap="round">
+    <line x1="66" y1="-84" x2="-66" y2="84" stroke-width="44"/>
+    <circle cx="-62" cy="-48" r="46"/>
+    <circle cx="62" cy="48" r="46"/>
+  </g>
+</svg>

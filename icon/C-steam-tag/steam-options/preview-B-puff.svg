@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3F5A"/>
+      <stop offset="1" stop-color="#121C28"/>
+    </linearGradient>
+    <mask id="hole">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="-170" cy="0" r="30" fill="#000" transform="translate(512 700) rotate(-10)"/>
+    </mask>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <!-- 云朵状蒸汽：一团圆滚滚的白雾，外加两个飘走的小团 -->
+  <g fill="#FFFFFF" opacity="0.92">
+    <circle cx="512" cy="392" r="86"/>
+    <circle cx="416" cy="440" r="66"/>
+    <circle cx="608" cy="440" r="66"/>
+    <circle cx="470" cy="478" r="58"/>
+    <circle cx="556" cy="478" r="58"/>
+    <circle cx="592" cy="270" r="38"/>
+    <circle cx="648" cy="200" r="24"/>
+  </g>
+  <g mask="url(#hole)">
+    <path d="M -270 0 L -150 -110 L 250 -110 L 250 110 L -150 110 Z"
+          fill="#8DCF4A" stroke="#8DCF4A" stroke-width="60" stroke-linejoin="round"
+          transform="translate(512 700) rotate(-10)"/>
+  </g>
+  <g transform="translate(560 700) rotate(-10)" fill="none" stroke="#14301C" stroke-width="26" stroke-linecap="round">
+    <line x1="60" y1="-70" x2="-60" y2="70"/>
+    <circle cx="-48" cy="-44" r="26"/>
+    <circle cx="48" cy="44" r="26"/>
+  </g>
+</svg>

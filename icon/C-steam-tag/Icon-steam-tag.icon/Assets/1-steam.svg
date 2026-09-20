@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 三缕蒸汽从标签上升起 -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round" opacity="0.9">
+    <path d="M 400 500 C 450 450, 350 400, 400 340 C 450 280, 350 240, 400 190"/>
+    <path d="M 512 480 C 562 420, 462 370, 512 300 C 562 240, 462 200, 512 140"/>
+    <path d="M 624 500 C 674 450, 574 400, 624 340 C 674 280, 574 240, 624 190"/>
+  </g>
+</svg>

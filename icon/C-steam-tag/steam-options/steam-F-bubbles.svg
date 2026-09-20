@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 气泡式蒸汽：越往上越小越淡 -->
+  <g fill="#FFFFFF">
+    <circle cx="410" cy="486" r="34" opacity="0.95"/>
+    <circle cx="386" cy="396" r="26" opacity="0.8"/>
+    <circle cx="414" cy="318" r="18" opacity="0.62"/>
+    <circle cx="392" cy="258" r="11" opacity="0.45"/>
+    <circle cx="512" cy="472" r="42" opacity="0.95"/>
+    <circle cx="540" cy="372" r="31" opacity="0.8"/>
+    <circle cx="506" cy="282" r="21" opacity="0.62"/>
+    <circle cx="534" cy="212" r="13" opacity="0.45"/>
+    <circle cx="616" cy="486" r="34" opacity="0.95"/>
+    <circle cx="642" cy="396" r="26" opacity="0.8"/>
+    <circle cx="612" cy="318" r="18" opacity="0.62"/>
+    <circle cx="638" cy="258" r="11" opacity="0.45"/>
+  </g>
+</svg>

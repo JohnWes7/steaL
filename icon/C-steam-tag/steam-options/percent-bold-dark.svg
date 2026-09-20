@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- % 号：加厚到能撑起玻璃质感，两个圆环 + 一根斜杠 -->
+  <g transform="translate(566 700) rotate(-10) scale(1.0)" fill="none" stroke="#14301C"
+     stroke-width="42" stroke-linecap="round">
+    <line x1="69" y1="-86" x2="-69" y2="86" stroke-width="50"/>
+    <circle cx="-56" cy="-50" r="34"/>
+    <circle cx="56" cy="50" r="34"/>
+  </g>
+</svg>

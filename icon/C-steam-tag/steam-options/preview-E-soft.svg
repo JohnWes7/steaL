@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A3F5A"/>
+      <stop offset="1" stop-color="#121C28"/>
+    </linearGradient>
+    <mask id="hole">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="-170" cy="0" r="30" fill="#000" transform="translate(512 700) rotate(-10)"/>
+    </mask>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <!-- 更舒展的蒸汽：每缕只弯一次，高矮粗细各不相同 -->
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" opacity="0.92">
+    <path d="M 402 504 C 356 424, 452 380, 408 296" stroke-width="42"/>
+    <path d="M 512 492 C 570 400, 458 340, 516 228" stroke-width="52"/>
+    <path d="M 622 504 C 668 424, 572 380, 616 296" stroke-width="42"/>
+  </g>
+  <g mask="url(#hole)">
+    <path d="M -270 0 L -150 -110 L 250 -110 L 250 110 L -150 110 Z"
+          fill="#8DCF4A" stroke="#8DCF4A" stroke-width="60" stroke-linejoin="round"
+          transform="translate(512 700) rotate(-10)"/>
+  </g>
+  <g transform="translate(560 700) rotate(-10)" fill="none" stroke="#14301C" stroke-width="26" stroke-linecap="round">
+    <line x1="60" y1="-70" x2="-60" y2="70"/>
+    <circle cx="-48" cy="-44" r="26"/>
+    <circle cx="48" cy="44" r="26"/>
+  </g>
+</svg>
