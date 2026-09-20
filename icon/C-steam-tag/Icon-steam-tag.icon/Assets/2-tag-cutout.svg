@@ -1,20 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- 标签：绳孔与 % 都挖空，透出背景，% 由上面单独一层玻璃补上 -->
+  <!-- 标签：绳孔与 % 一起挖空 -->
   <defs>
     <mask id="cut">
       <rect width="1024" height="1024" fill="#fff"/>
-      <circle cx="-170" cy="0" r="30" fill="#000" transform="translate(512 700) rotate(-10)"/>
-  <g transform="translate(566 700) rotate(-10)" fill="none" stroke="#000"
-     stroke-width="56" stroke-linecap="round">
-    <line x1="69" y1="-86" x2="-69" y2="86" stroke-width="64"/>
-    <circle cx="-56" cy="-50" r="34"/>
-    <circle cx="56" cy="50" r="34"/>
+      <circle cx="-170" cy="0" r="30" fill="#000" transform="translate(512 700) rotate(-10) scale(1.12)"/>
+  <g transform="translate(572 700) rotate(-10) scale(1.12)" fill="none" stroke="#000"
+     stroke-width="40" stroke-linecap="round">
+    <line x1="56" y1="-96" x2="-56" y2="96" stroke-width="50"/>
+    <circle cx="-66" cy="-58" r="36"/>
+    <circle cx="66" cy="58" r="36"/>
   </g>
     </mask>
   </defs>
   <g mask="url(#cut)">
     <path d="M -270 0 L -150 -110 L 250 -110 L 250 110 L -150 110 Z"
           fill="#8DCF4A" stroke="#8DCF4A" stroke-width="60" stroke-linejoin="round"
-          transform="translate(512 700) rotate(-10)"/>
+          transform="translate(512 700) rotate(-10) scale(1.12)"/>
   </g>
 </svg>

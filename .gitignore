@@ -20,6 +20,7 @@ CLAUDE.md
 .github/copilot-instructions.md
 .agents/
 .claude/
+.mcp.json
 
 # Swift Package Manager / 构建产物
 .build/

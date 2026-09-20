@@ -42,6 +42,39 @@
 宝石版的洞比宝石每边宽 7pt，留一圈深色缝，玻璃的边缘高光才衬得出来。
 颜色对比见 `steam-options/preview-cutout-{cyan,white,green}.svg`。
 
+## 命令行渲染（不用开 Icon Composer）
+
+`icon-composer-mcp` 这个 CLI 调 Apple 的 `ictool` 出图，改完 SVG / icon.json 立刻能看结果：
+
+```sh
+npm install -g icon-composer-mcp          # 依赖 Xcode 自带的 ictool
+icon-composer doctor                      # 检查环境
+icon-composer render icon/C-steam-tag/Icon-steam-tag.icon out.png
+icon-composer render ... out-dark.png --rendition Dark      # 深色外观
+icon-composer render ... out-small.png --width 180 --height 180
+icon-composer inspect icon/C-steam-tag/Icon-steam-tag.icon  # 看当前参数
+```
+
+项目根目录的 `.mcp.json` 把它也注册成了 MCP server（已 gitignore）。
+
+## icon.json 的完整 schema
+
+`giginet/apple-icon-composer-skill` 这个 marketplace clone 到本地后，schema 在：
+
+```
+~/.claude/plugins/marketplaces/icon-composer/plugins/icon-composer/skills/compose-app-icon/scripts/icon-schema.json
+```
+
+Group 可用 key：`lighting`（individual / combined）、`specular`、`blur`、`shadow`、`translucency`、
+`blend-mode`、`opacity`、`hidden`、`position`。
+Layer 可用 key：`image-name`、`fill`、`blend-mode`、`opacity`、`glass`、`hidden`、`position`。
+
+**Icon Composer 2.0+ 才有的、本机 1.6 用不了的**：`refractivity`（折射）、`blur-material`、
+`specular-highlight-placement`。前两者实测被 1.6 的 `ictool` 直接忽略（渲染结果字节级相同）；
+而且嵌套写法要求在文档顶层的 `features` 里声明 `refractivity`，1.6 遇到不认识的 feature 会
+拒绝打开整个文档，所以不要写。本机 Icon Composer 版本：
+`defaults read "/Applications/Xcode.app/Contents/Applications/Icon Composer.app/Contents/Info.plist" CFBundleShortVersionString`
+
 ## Icon Composer 踩坑
 
 - **Liquid Glass → Effects 默认是关的**，不开就没有任何光泽，Fill 调什么都没用。

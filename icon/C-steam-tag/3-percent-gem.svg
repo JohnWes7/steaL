@@ -1,9 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- % 宝石层：单独一个 Group + Fill 指定颜色 + Effects 打开 -->
-  <g transform="translate(566 700) rotate(-10)" fill="none" stroke="#FFFFFF"
-     stroke-width="34" stroke-linecap="round">
-    <line x1="66" y1="-84" x2="-66" y2="84" stroke-width="44"/>
-    <circle cx="-62" cy="-48" r="46"/>
-    <circle cx="62" cy="48" r="46"/>
+  <g transform="translate(572 700) rotate(-10) scale(1.12)" fill="none" stroke="#FFFFFF"
+     stroke-width="26" stroke-linecap="round">
+    <line x1="56" y1="-96" x2="-56" y2="96" stroke-width="36"/>
+    <circle cx="-66" cy="-58" r="36"/>
+    <circle cx="66" cy="58" r="36"/>
   </g>
 </svg>
