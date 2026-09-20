@@ -47,10 +47,18 @@
 - **Liquid Glass → Effects 默认是关的**，不开就没有任何光泽，Fill 调什么都没用。
 - **Blend Mode 必须是 Normal**。Multiply 会把这层和下面的颜色相乘，结果只会更暗，高光直接没了。
 - **Fill 不能留 Automatic**。Automatic = 用 SVG 自带颜色，不会被当成可染色的玻璃材质；要手动指定颜色或渐变。
-- **Shadow / Specular 在根节点上**（图层列表最上面那一行 `Icon-xxx`），不是每个图层各有一份。
+- **Shadow / Specular / Translucency / Lighting 在 Group 这一级**（`icon.json` 里这几个 key 挂在 group 上），
+  图层这一级只有 Opacity / Blend Mode / Fill / Effects / Image / Layout。根节点只有背景 Fill。
 - 各区块右边的 `All ⌄` 表示这个设置应用到哪个外观（All / Default / Dark / Tinted）。
 - **一个图标里只让一个元素是玻璃**。宝石版里标签那层的 Effects 要关掉，否则两层互相抵消，宝石不突出。
 - 玻璃需要深色背景来衬。浅绿标签上直接放玻璃 % 效果很弱，这就是要把标签挖空的原因。
+- **白色 Fill + specular + translucency 拉满 = 铬合金**，不是彩色玻璃。玻璃材质不自带颜色，
+  颜色全来自 Fill；要彩色玻璃就指定饱和颜色，并把 translucency 降到 0.3～0.5
+  （拉满时底下的背景整个透上来，颜色被冲淡）。
+- **细节尺寸要留够余量**：玻璃会给形状加厚，% 圆环中间的洞原来只有 26pt，加厚后直接糊死。
+  现在改成半径 46 / 笔画 34（洞 58pt）。
+- **`.icon` 是文件包，Assets/ 里是 SVG 的副本**。改仓库里的源 SVG 不会同步进去，
+  要么在 Icon Composer 的 Image 下拉里重新指一次，要么直接 `cp` 覆盖 `Icon-xxx.icon/Assets/` 下的同名文件。
 
 ## 背景怎么设（Icon Composer）
 
