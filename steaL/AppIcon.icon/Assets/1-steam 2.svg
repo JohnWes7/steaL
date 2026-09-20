@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <g transform="translate(0 -70)" fill="none" stroke="#FFFFFF"
-     stroke-linecap="round" opacity="0.92">
-    <path d="M 402 504 C 356 424, 452 380, 408 296" stroke-width="42"/>
-    <path d="M 512 492 C 570 400, 458 340, 516 228" stroke-width="52"/>
-    <path d="M 622 504 C 668 424, 572 380, 616 296" stroke-width="42"/>
-  </g>
-</svg>
