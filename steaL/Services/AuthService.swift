@@ -8,7 +8,6 @@
 // 引入必要的系统与第三方框架
 import Foundation  // 基础功能，例如字符串处理、集合等
 import FirebaseAuth  // 用于处理用户注册、登录、登出等身份认证功能
-import FirebaseFirestore  // 用于将用户资料写入云端 Firestore 数据库
 import Observation  // 提供 @Observable 宏，属性变化时自动通知读取它的 SwiftUI 视图
 
 // @MainActor：标记整个类只能运行在主线程（主执行器）上，
@@ -30,18 +29,15 @@ final class AuthService {
     private(set) var isCheckingAuthentication = true
 
     // 私有属性：Firebase 的 Auth 实例，用于执行登录、注册等认证操作。
-    // 下面三个都不驱动 UI，用 @ObservationIgnored 排除在追踪之外。
+    // 下面两个都不驱动 UI，用 @ObservationIgnored 排除在追踪之外。
     @ObservationIgnored private let auth: Auth
-    // 私有属性：Firebase 的 Firestore 实例，用于读写云数据库。
-    @ObservationIgnored private let database: Firestore
     // 保存身份认证状态变化的监听器句柄，用于后续移除监听。
     @ObservationIgnored private var authListener: AuthStateDidChangeListenerHandle?
 
     // 初始化方法。参数提供默认值，因此可以在不传参的情况下直接使用 AuthService()。
-    // 也方便在测试时注入模拟的 Auth / Firestore 实例。
-    init(auth: Auth = .auth(), database: Firestore = .firestore()) {
+    // 也方便在测试时注入模拟的 Auth 实例。
+    init(auth: Auth = .auth()) {
         self.auth = auth
-        self.database = database
         // 注册一个监听器，监听用户登录状态的变化。
         // [weak self]：弱引用 self，避免闭包持有导致循环引用（内存泄漏）。
         authListener = auth.addStateDidChangeListener { [weak self] _, user in
@@ -96,24 +92,8 @@ final class AuthService {
         // 设置用户资料中的显示名称。
         request.displayName = cleanedName
         // 提交修改，将显示名称保存到 Firebase Auth 的用户资料中。
+        // 显示名与邮箱都存在 Auth 里，不另写 Firestore 的 users 文档，避免两份数据要同步。
         try await request.commitChanges()
-
-        // 构建一个 UserProfile 模型对象，用于写入 Firestore。
-        let profile = UserProfile(
-            id: result.user.uid, displayName: cleanedName, email: cleanedEmail)
-        do {
-            // 将用户资料写入 Firestore 的 users 集合，文档 ID 使用用户的 uid。
-            try await database.collection("users")
-                .document(profile.id)
-                .setData(profile.creationData)
-        } catch {
-            // 如果写入 Firestore 失败，则回滚：删除刚创建的 Auth 用户，避免留下“孤儿账号”。
-            // try? 表示忽略删除操作本身的错误（尽力而为）。
-            try? await result.user.delete()
-            // 将原始错误继续向上抛出，由调用方处理。
-            throw error
-        }
-
     }
 
     func signOut() throws {
