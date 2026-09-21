@@ -7,9 +7,27 @@
 
 import SwiftData
 import SwiftUI
+import FirebaseCore
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+
+        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
+            // Initialize Firebase
+            FirebaseApp.configure()
+        }
+        return true
+    }
+}
 
 @main
 struct steaLApp: App {
+    // register app delegate for Firebase setup
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
     /// 全 App 共用的 SwiftData 容器 / The SwiftData container shared by the whole app
     private let container: ModelContainer
 
