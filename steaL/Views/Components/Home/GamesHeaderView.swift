@@ -56,8 +56,9 @@ struct GamesHeaderView: View {
                 .font(.system(size: 21, weight: .semibold))
                 .foregroundStyle(.primaryText)
                 .frame(width: 56, height: 56)
-                .background(Color.surfaceElevated)
-                .clipShape(Circle())
+                // .background(Color.surfaceElevated)
+                // .clipShape(Circle())
+                .glassEffect(.regular.interactive(), in: .circle)
                 .overlay(alignment: .topTrailing) {
                     Circle()
                         .fill(Color.brandBlue)

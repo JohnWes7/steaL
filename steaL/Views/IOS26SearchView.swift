@@ -78,11 +78,16 @@ struct IOS26SearchView: View {
     private var searchContent: some View {
         switch searchViewModel.state {
         case .idle:
-            searchMessage(
-                symbol: "magnifyingglass",
-                title: "Search the Steam store",
-                message: "Find games, expansions, and bundles."
-            )
+            ContentUnavailableView {
+                Label {
+                    Text("Search the Steam store")
+                } icon: {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.brandGreen)
+                }
+            } description: {
+                Text("Find games, expansions, and bundles.")
+            }
 
         case .loading:
             VStack(spacing: 14) {
@@ -96,7 +101,16 @@ struct IOS26SearchView: View {
 
         case .loaded(let items):
             if items.isEmpty {
-                ContentUnavailableView.search(text: trimmedQuery)
+                ContentUnavailableView {
+                    Label {
+                        Text("No Results for “\(trimmedQuery)”")
+                    } icon: {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.brandGreen)
+                    }
+                } description: {
+                    Text("Check the spelling or try a new search.")
+                }
             } else {
                 List(items) { item in
                     NavigationLink(value: GameDetailRoute(
@@ -116,11 +130,16 @@ struct IOS26SearchView: View {
             }
 
         case .failed(let error):
-            ContentUnavailableView(
-                error.title,
-                systemImage: error.symbolName,
-                description: Text(error.message)
-            )
+            ContentUnavailableView {
+                Label {
+                    Text(error.title)
+                } icon: {
+                    Image(systemName: error.symbolName)
+                        .foregroundStyle(.brandGreen)
+                }
+            } description: {
+                Text(error.message)
+            }
         }
     }
 
@@ -166,24 +185,6 @@ struct IOS26SearchView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.secondaryText)
         }
-    }
-
-    private func searchMessage(symbol: String, title: String, message: String) -> some View {
-        VStack(spacing: 10) {
-            Image(systemName: symbol)
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(.brandGreen)
-
-            Text(title)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.primaryText)
-
-            Text(message)
-                .font(.system(size: 14))
-                .foregroundStyle(.secondaryText)
-        }
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 28)
     }
 }
 
