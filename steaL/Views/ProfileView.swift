@@ -5,12 +5,18 @@
 //  Created by yijiang on 2026/9/16.
 //
 
+import FirebaseCore
 import SwiftData
 import SwiftUI
 
 struct ProfileView: View {
 
     private var profileViewModel = ProfileViewModel()
+
+    @Environment(AuthService.self) private var authService
+
+    /// 登出失败的文案，非 nil 时弹 alert / Sign-out failure message; shows the alert when non-nil
+    @State private var errorMassage: String?
 
     /// 用户设置单例行，偏好分组读它的真实值 / Singleton user-settings row; the preferences group reads its real values
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
@@ -115,11 +121,16 @@ struct ProfileView: View {
                 }
 
                 Section {
-                    HStack(spacing: 12) {
-                        IconTileView(icon: "rectangle.portrait.and.arrow.right", tint: .red.opacity(0.75))
+                    // 只有登录后才有东西可登出 / Only signed-in users have anything to sign out of
+                    if case .signedIn = authService.state {
+                        Button(action: signOut) {
+                            HStack(spacing: 12) {
+                                IconTileView(icon: "rectangle.portrait.and.arrow.right", tint: .red.opacity(0.75))
 
-                        Text("Sign Out")
-                            .foregroundStyle(.red)
+                                Text("Sign Out")
+                                    .foregroundStyle(.red)
+                            }
+                        }
                     }
                 } footer: {
                     Text("steaL · FIT3178 Project")
@@ -140,6 +151,28 @@ struct ProfileView: View {
                 PageHeaderView(title: "Profile")
             }
             .toolbar(.hidden, for: .navigationBar)
+            .alert(
+                "Sign Out Failed",
+                isPresented: Binding(
+                    get: { errorMassage != nil },
+                    set: { if !$0 { errorMassage = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMassage ?? "")
+            }
+        }
+    }
+
+    // MARK: - 登出 / Sign out
+
+    /// 成功后 `AuthService.state` 由监听器变成 `.signedOut` / On success the listener moves `AuthService.state` to `.signedOut`
+    private func signOut() {
+        do {
+            try authService.signOut()
+        } catch {
+            errorMassage = error.localizedDescription
         }
     }
 }
@@ -152,10 +185,13 @@ struct ProfileView: View {
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
     )
     let _ = container.mainContext.insert(UserSettingModel())
+    // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
+    let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
 
     // 复刻 `MainTabView`：`toolbar` 只在 `NavigationStack` 里生效 / Mirrors `MainTabView`; the modifier needs a `NavigationStack`
     NavigationStack {
         ProfileView()
     }
     .modelContainer(container)
+    .environment(AuthService())
 }
