@@ -28,9 +28,11 @@ struct SignInSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var mode: Mode = .signIn
+
     @State private var displayName = ""
     @State private var email = ""
     @State private var password = ""
+    
     @FocusState private var focusedField: Field?
     /// 请求进行中 / A request is in flight
     @State private var isSubmitting = false
@@ -127,6 +129,7 @@ struct SignInSheet: View {
                     .submitLabel(.next)
                     .onSubmit { focusedField = .email }
             }
+
             TextField("Email", text: $email)
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
@@ -135,6 +138,7 @@ struct SignInSheet: View {
                 .focused($focusedField, equals: .email)
                 .submitLabel(.next)
                 .onSubmit { focusedField = .password }
+
             // 注册用 `.newPassword`，系统才会给强密码建议 / `.newPassword` lets the system suggest a strong password
             SecureField("Password", text: $password)
                 .textContentType(mode == .signIn ? .password : .newPassword)
@@ -142,6 +146,7 @@ struct SignInSheet: View {
                 .submitLabel(mode == .signIn ? .go : .join)
                 // 键盘上的 Go 直接提交，手指不用离开键盘 / Go on the keyboard submits, so the thumb never leaves it
                 .onSubmit { if canSubmit { submit() } }
+                
         } footer: {
             if mode == .createAccount {
                 Text("Password must be at least 6 characters.")
@@ -154,18 +159,27 @@ struct SignInSheet: View {
     private var submitSection: some View {
         Section {
             Button(action: submit) {
-                ZStack {
-                    // 两个都占位，切换时按钮不跳高度 / Both keep their space so the button height stays put
-                    Text(mode.rawValue).opacity(isSubmitting ? 0 : 1)
-                    ProgressView().opacity(isSubmitting ? 1 : 0)
+                HStack(spacing: 8) {
+                    Text(mode.rawValue)
+                    if isSubmitting {
+                        // 单独设 `.regular`：继承按钮的 `.large` 会比文字高，把按钮撑高 /
+                        // Own `.regular` size: inheriting the button's `.large` makes it taller than the text and stretches the button
+                        ProgressView()
+                            .controlSize(.regular)
+                            .tint(.onBrandGreen)
+                    }
                 }
                 .font(.headline)
-                .foregroundStyle(.onBrandGreen)
+                // `.onBrandGreen` 只配绿底；禁用时是灰底，要换回灰字，否则深浅色下都看不清 /
+                // `.onBrandGreen` only suits the green fill; the disabled fill is grey, so fall back to grey text
+                .foregroundStyle(canSubmit ? Color.onBrandGreen : Color.secondary)
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
             .controlSize(.large)
-            .disabled(!canSubmit || isSubmitting)
+            // 提交中不禁用，保持绿色显示转圈；重复点击由 `submit()` 挡掉 /
+            // Stays enabled while submitting so the green button shows the spinner; `submit()` ignores repeat taps
+            .disabled(!canSubmit)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
         }
@@ -174,6 +188,7 @@ struct SignInSheet: View {
     // MARK: - 提交 / Submit
 
     private func submit() {
+        guard !isSubmitting else { return }
         focusedField = nil
         isSubmitting = true
         Task {
