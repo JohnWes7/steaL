@@ -17,6 +17,8 @@ struct ProfileView: View {
 
     /// 登出失败的文案，非 nil 时弹 alert / Sign-out failure message; shows the alert when non-nil
     @State private var errorMassage: String?
+    /// 是否弹出登出确认 / Whether the sign-out confirmation is shown
+    @State private var isConfirmingSignOut = false
 
     /// 用户设置单例行，偏好分组读它的真实值 / Singleton user-settings row; the preferences group reads its real values
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
@@ -46,7 +48,7 @@ struct ProfileView: View {
 
                 Section("Preferences") {
                     HStack(spacing: 12) {
-                        IconTileView(icon: "globe.asia.australia.fill", tint: .brandGreen)
+                        IconTileView(icon: "globe.asia.australia.fill", tint: .brandGreen) // 和label的区别
 
                         Picker("Region & Currency", selection: $settings.region) {
                             ForEach(AppRegion.allCases) { option in
@@ -123,13 +125,22 @@ struct ProfileView: View {
                 Section {
                     // 只有登录后才有东西可登出 / Only signed-in users have anything to sign out of
                     if case .signedIn = authService.state {
-                        Button(action: signOut) {
+                        // `.destructive` 让文字自动变红 / `.destructive` turns the title red on its own
+                        Button(role: .destructive) {
+                            isConfirmingSignOut = true
+                        } label: {
                             HStack(spacing: 12) {
                                 IconTileView(icon: "rectangle.portrait.and.arrow.right", tint: .red.opacity(0.75))
 
                                 Text("Sign Out")
-                                    .foregroundStyle(.red)
                             }
+                            // 撑满整行、空白也可点，和其他行一样整行响应 / Fill the row and make the blank area tappable, like the other rows
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        // 先确认再登出，点下去时这一行还在，能看到按下反馈 / Confirm first, so the row stays long enough to show its highlight
+                        .confirmationDialog("Sign out of steaL?", isPresented: $isConfirmingSignOut, titleVisibility: .visible) {
+                            Button("Sign Out", role: .destructive, action: signOut)
                         }
                     }
                 } footer: {
@@ -144,9 +155,9 @@ struct ProfileView: View {
             }
             .listStyle(.insetGrouped)
             .tint(.brandGreen)
+            // 隐藏 List 自带的系统灰底，才能露出下面的 appBackground / Hide List's default grouped background so appBackground shows through
             .scrollContentBackground(.hidden)
             .background(Color.appBackground)
-            // 顶栏与主页同款：玻璃背景来自 `safeAreaBar`，内边距在 `PageHeaderView` 里 / Same top bar as home; blur from `safeAreaBar`, padding in the header
             .safeAreaBar(edge: .top, spacing: 0) {
                 PageHeaderView(title: "Profile")
             }
