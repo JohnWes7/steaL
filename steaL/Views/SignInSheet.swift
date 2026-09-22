@@ -175,7 +175,7 @@ struct SignInSheet: View {
                 .foregroundStyle(canSubmit ? Color.onBrandGreen : Color.secondary)
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.borderedProminent)
             .controlSize(.large)
             // 提交中不禁用，保持绿色显示转圈；重复点击由 `submit()` 挡掉 /
             // Stays enabled while submitting so the green button shows the spinner; `submit()` ignores repeat taps
@@ -192,6 +192,8 @@ struct SignInSheet: View {
         focusedField = nil
         isSubmitting = true
         Task {
+            // 写在 Task 里：写在 `submit()` 里会在请求发出前就复位 / Inside the Task: in `submit()` it would reset before the request even starts
+            defer { isSubmitting = false }
             do {
                 switch mode {
                 case .signIn:
@@ -204,7 +206,6 @@ struct SignInSheet: View {
             } catch {
                 errorMessage = error.localizedDescription
             }
-            isSubmitting = false
         }
     }
 }

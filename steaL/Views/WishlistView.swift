@@ -42,6 +42,7 @@ struct WishlistView: View {
             } actions: {
                 Button("Sign In") { isShowingSignIn = true }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
             }
         case .signedIn:
             // 列表还没接 Firestore，先放空状态占位 / Not wired to Firestore yet, so show the empty state for now
