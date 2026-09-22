@@ -122,9 +122,10 @@ struct ProfileView: View {
                     }
                 }
 
-                Section {
-                    // 只有登录后才有东西可登出 / Only signed-in users have anything to sign out of
-                    if case .signedIn = authService.state {
+                // 只有登录后才有东西可登出；整个 Section 一起隐藏，不留空分区 /
+                // Only signed-in users have anything to sign out of; hide the whole section so no empty gap is left
+                if case .signedIn = authService.state {
+                    Section {
                         // `.destructive` 让文字自动变红 / `.destructive` turns the title red on its own
                         Button(role: .destructive) {
                             isConfirmingSignOut = true
@@ -143,13 +144,18 @@ struct ProfileView: View {
                             Button("Sign Out", role: .destructive, action: signOut)
                         }
                     }
+                }
+
+                // 页脚单独一个空 Section：Sign Out 隐藏时，它不会跟着空 Section 离上面很远 /
+                // Footer lives in its own empty section, so hiding Sign Out doesn't leave it floating far below
+                Section {
                 } footer: {
                     Text("steaL · FIT3178 Project")
                         .font(.system(size: 12, weight: .medium, design: .default))
                         .foregroundStyle(.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 16)
                 }
+                .listSectionSpacing(12)
 
 
             }
