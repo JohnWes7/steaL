@@ -62,6 +62,18 @@ icon-composer inspect icon/C-steam-tag/Icon-steam-tag.icon  # 看当前参数
 
 项目根目录的 `.mcp.json` 把它也注册成了 MCP server（已 gitignore）。
 
+### App 内显示的图标副本（`AppIconImage`）
+
+登录 sheet 顶部显示的是图标的静态 PNG：`steaL/Assets.xcassets/AppIconImage.imageset/AppIconImage.png`
+（代码里是 `Image(.appIcon)`，Xcode 生成符号时去掉了名字末尾的 "Image"）。App Icon 本身在代码里读不到，
+Liquid Glass 也只有系统能实时渲染，所以只能放一张快照。`render` 出来的图已经带圆角遮罩和透明角，不用再裁。
+只用默认外观一张，不做深色版。**改了 `.icon` 之后要重新导出**，否则 App 里和主屏幕上的图标会不一样：
+
+```sh
+icon-composer render icon/C-steam-tag/Icon-steam-tag.icon /tmp/icon.png
+sips -Z 192 /tmp/icon.png --out steaL/Assets.xcassets/AppIconImage.imageset/AppIconImage.png   # 64pt @3x
+```
+
 ## icon.json 的完整 schema
 
 `giginet/apple-icon-composer-skill` 这个 marketplace clone 到本地后，schema 在：

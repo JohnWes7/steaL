@@ -62,6 +62,11 @@ struct SignInSheet: View {
                 fieldsSection
                 submitSection
             }
+            // 分区间距收紧，键盘弹起时提交按钮尽量不被挡 / Tighter section spacing keeps the submit button above the keyboard where possible
+            .listSectionSpacing(.compact)
+            .scrollDismissesKeyboard(.interactively)
+            // 打开就能直接输入，省一次点按 / Ready to type on open, saving a tap
+            .onAppear { focusedField = .email }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     // iOS 26 的 `.close` 角色显示成系统 xmark 按钮 / The `.close` role renders the system xmark button on iOS 26
@@ -92,14 +97,14 @@ struct SignInSheet: View {
     private var header: some View {
         Section {
             VStack(spacing: 10) {
-                Image(systemName: "heart.circle.fill")
-                    .font(.system(size: 52))
-                    .foregroundStyle(.brandGreen)
+                // App Icon 的静态导出，圆角已在图里；改了 `.icon` 要重新导出 / Static export of the app icon, corners baked in; re-export after changing the `.icon`
+                Image(.appIcon)
+                    .resizable()
+                    .frame(width: 64, height: 64)
 
                 Text(mode == .signIn ? "Sign In to steaL" : "Create Your Account")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.title.bold())
                     .foregroundStyle(.primaryText)
-                    .contentTransition(.opacity)
 
                 Text("Keep a wishlist of games and see it on all your devices.")
                     .font(.subheadline)
