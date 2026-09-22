@@ -36,6 +36,7 @@ struct MainTabView: View {
 
             Tab("Wishlist", systemImage: "heart", value: AppTab.wishlist) {
                 NavigationStack {
+                    WishlistView()
                 }
             }
 

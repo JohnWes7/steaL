@@ -24,6 +24,7 @@ struct RootView: View {
 }
 
 
+// Option + Command + Return
 #Preview {
     let container = try! ModelContainer(
         for: UserSettingModel.self,
@@ -35,4 +36,3 @@ struct RootView: View {
     RootView()
         .modelContainer(container)
 }
-

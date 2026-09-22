@@ -135,14 +135,9 @@ struct ProfileView: View {
             .tint(.brandGreen)
             .scrollContentBackground(.hidden)
             .background(Color.appBackground)
-            // 顶栏与主页同款：玻璃背景 + 内边距写在调用点 / Same top bar as home; the blur comes from here, padding at the call site
+            // 顶栏与主页同款：玻璃背景来自 `safeAreaBar`，内边距在 `PageHeaderView` 里 / Same top bar as home; blur from `safeAreaBar`, padding in the header
             .safeAreaBar(edge: .top, spacing: 0) {
-                ProfileHeaderView()
-                    .padding(.horizontal, 14)
-                    .padding(.top, 2)
-                    .padding(.bottom, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-//                    .background(.bar)
+                PageHeaderView(title: "Profile")
             }
             .toolbar(.hidden, for: .navigationBar)
         }

@@ -7,14 +7,18 @@
 
 import SwiftUI
 
-/// 主页顶部栏内容：品牌标题 + 通知入口；背景与内边距写在调用点 /
-/// Top bar content: brand title and notification entry; padding lives at the call site
+/// 主页顶部栏内容：品牌标题 + 通知入口；内边距自带，页面只管放进 `safeAreaBar` /
+/// Top bar content: brand title and notification entry; owns its padding, pages only place it in `safeAreaBar`
 struct GamesHeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
         }
+        .padding(.horizontal, 14)
+        .padding(.top, 2)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// 品牌标题区：左侧标语与 steaL 字样，右侧通知入口 / Brand header: tagline and steaL wordmark on the left, notification entry on the right
@@ -67,9 +71,5 @@ struct GamesHeaderView: View {
 
 #Preview {
     GamesHeaderView()
-        .padding(.horizontal, 14)
-        .padding(.top, 2)
-        .padding(.bottom, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(.bar)
 }

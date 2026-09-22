@@ -71,14 +71,9 @@ struct GamesView: View {
                 .padding(.top, 20)
             }
         }
-        // `safeAreaBar` 提供玻璃背景与边缘模糊，但不替内容加内边距，所以这里自己写 / `safeAreaBar` supplies the blur, not the padding
+        // `safeAreaBar` 提供玻璃背景与边缘模糊；内边距在 `GamesHeaderView` 里 / `safeAreaBar` supplies the blur; padding lives in the header
         .safeAreaBar(edge: .top, spacing: 0) {
             GamesHeaderView()
-                .padding(.horizontal, 14)
-                .padding(.top, 2)
-                .padding(.bottom, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // .background(.bar)
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
