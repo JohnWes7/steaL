@@ -88,6 +88,10 @@ final class AuthService {
 
         // 显示名与邮箱都存在 Auth 里，不另写 Firestore 的 users 文档，避免两份数据要同步。
         try await request.commitChanges()
+
+        // `User` 是 class，显示名是原地改的，Observation 看不到；重新赋一次 `state` 让页面读到新名字 /
+        // `User` is a class and the name changes in place, which Observation can't see; reassign `state` so views pick up the new name
+        state = .signedIn(result.user)
     }
 
     func signOut() throws {

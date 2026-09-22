@@ -202,9 +202,8 @@ struct ProfileView: View {
                 .padding(.vertical, 24)
         case .signedOut:
             ProfileIdentityCardView(user: nil) { isShowingSignIn = true }
-        case .signedIn:
-            // 名字 / 邮箱还是占位，下一步换成 Auth 的数据 / Still placeholder data; Auth's name and email come next
-            ProfileIdentityCardView(user: .mock) { isShowingSignIn = true }
+        case .signedIn(let user):
+            ProfileIdentityCardView(user: ProfileUser(user: user)) { isShowingSignIn = true }
         }
     }
 

@@ -33,8 +33,8 @@ struct ProfileIdentityCardView: View {
 
             Divider()
 
-            if let user {
-                statsRow(for: user)
+            if user != nil {
+                statsRow
             } else {
                 signInButton
             }
@@ -77,41 +77,45 @@ struct ProfileIdentityCardView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// 登录后是渐变填充的首字母；未登录是同一道渐变只描边的空位 /
-    /// Signed in, a monogram filled with the gradient; signed out, an empty slot stroked with the same gradient
-    @ViewBuilder
+    /// 渐变描边的空心圆环，登录前后同一个；里面登录后是首字母，未登录是人形图标 /
+    /// A hollow ring stroked with the gradient, the same before and after sign-in; a monogram inside when signed in, a person glyph when signed out
     private var avatar: some View {
+        avatarContent
+            .frame(width: 64, height: 64)
+            .overlay {
+                Circle()
+                    .strokeBorder(brandGradient, lineWidth: 2)
+            }
+    }
+
+    /// 圆环里的内容 / What sits inside the ring
+    @ViewBuilder
+    private var avatarContent: some View {
         if let user {
             Text(user.initial)
                 .font(.system(size: 26, weight: .bold, design: .default))
-                .foregroundStyle(.white)
-                .frame(width: 64, height: 64)
-                .background(brandGradient, in: Circle())
+                .foregroundStyle(.primaryText)
         } else {
             Image(systemName: "person.fill")
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(.secondaryText)
-                .frame(width: 64, height: 64)
-                .overlay {
-                    Circle()
-                        .strokeBorder(brandGradient, lineWidth: 2)
-                }
                 .accessibilityHidden(true)
         }
     }
 
     // MARK: - 统计 / Stats
 
-    /// 两项统计并排，中间一条竖线分隔 / The two stats side by side, split by a vertical rule
-    private func statsRow(for user: ProfileUser) -> some View {
+    /// 两项统计并排，中间一条竖线分隔；还没有数据源，先写死 0（Tracking 等 wishlist 接好）/
+    /// The two stats side by side, split by a vertical rule; no data source yet, so both are 0 until the wishlist lands
+    private var statsRow: some View {
         HStack(spacing: 0) {
-            stat(value: user.trackingCount, label: "Tracking", tint: .brandGreen)
+            stat(value: 0, label: "Tracking", tint: .brandGreen)
 
             Divider()
                 .frame(height: 34)
                 .padding(.horizontal, 16)
 
-            stat(value: user.alertsSentCount, label: "Alerts sent", tint: .brandBlue)
+            stat(value: 0, label: "Alerts sent", tint: .brandBlue)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
