@@ -19,6 +19,11 @@ struct SignInSheet: View {
         var id: Self { self }
     }
 
+    /// 可聚焦的输入框 / Focusable fields
+    private enum Field: Hashable {
+        case displayName, email, password
+    }
+
     @Environment(AuthService.self) private var authService
     @Environment(\.dismiss) private var dismiss
 
@@ -26,6 +31,7 @@ struct SignInSheet: View {
     @State private var displayName = ""
     @State private var email = ""
     @State private var password = ""
+    @FocusState private var focusedField: Field?
     /// 请求进行中 / A request is in flight
     @State private var isSubmitting = false
     /// 提交失败的文案，非 nil 时弹 alert / Failure message; shows the alert when non-nil
@@ -41,25 +47,30 @@ struct SignInSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                header
+
                 Section {
-                    Picker("Mode", selection: $mode) {
+                    Picker("Mode", selection: $mode.animation()) {
                         ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
-                } footer: {
-                    // HIG：先说明登录能换来什么 / HIG: explain what signing in is for before asking
-                    Text("Sign in to keep a wishlist of games and see it on all your devices.")
                 }
 
                 fieldsSection
+                submitSection
             }
-            .navigationTitle(mode.rawValue)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { toolbarContent }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    // iOS 26 的 `.close` 角色显示成系统 xmark 按钮 / The `.close` role renders the system xmark button on iOS 26
+                    Button(role: .close) { dismiss() }
+                        .disabled(isSubmitting)
+                }
+            }
         }
+        .tint(.brandGreen)
         // 请求没回来前不许下拉关掉 / Don't allow swipe-to-dismiss while a request is in flight
         .interactiveDismissDisabled(isSubmitting)
         .alert(
@@ -75,6 +86,31 @@ struct SignInSheet: View {
         }
     }
 
+    // MARK: - 头部 / Header
+
+    /// HIG：先说明登录能换来什么 / HIG: explain what signing in is for before asking
+    private var header: some View {
+        Section {
+            VStack(spacing: 10) {
+                Image(systemName: "heart.circle.fill")
+                    .font(.system(size: 52))
+                    .foregroundStyle(.brandGreen)
+
+                Text(mode == .signIn ? "Sign In to steaL" : "Create Your Account")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(.primaryText)
+                    .contentTransition(.opacity)
+
+                Text("Keep a wishlist of games and see it on all your devices.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondaryText)
+            }
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .listRowBackground(Color.clear)
+        }
+    }
+
     // MARK: - 表单 / Form
 
     private var fieldsSection: some View {
@@ -82,15 +118,25 @@ struct SignInSheet: View {
             if mode == .createAccount {
                 TextField("Display Name", text: $displayName)
                     .textContentType(.name)
+                    .focused($focusedField, equals: .displayName)
+                    .submitLabel(.next)
+                    .onSubmit { focusedField = .email }
             }
             TextField("Email", text: $email)
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .focused($focusedField, equals: .email)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .password }
             // 注册用 `.newPassword`，系统才会给强密码建议 / `.newPassword` lets the system suggest a strong password
             SecureField("Password", text: $password)
                 .textContentType(mode == .signIn ? .password : .newPassword)
+                .focused($focusedField, equals: .password)
+                .submitLabel(mode == .signIn ? .go : .join)
+                // 键盘上的 Go 直接提交，手指不用离开键盘 / Go on the keyboard submits, so the thumb never leaves it
+                .onSubmit { if canSubmit { submit() } }
         } footer: {
             if mode == .createAccount {
                 Text("Password must be at least 6 characters.")
@@ -99,25 +145,31 @@ struct SignInSheet: View {
         .disabled(isSubmitting)
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) {
-            Button("Cancel") { dismiss() }
-                .disabled(isSubmitting)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-            if isSubmitting {
-                ProgressView()
-            } else {
-                Button(mode.rawValue) { submit() }
-                    .disabled(!canSubmit)
+    /// 提交按钮紧跟在密码下面，填完往下一按就走 / The submit button sits right under the password, so filling in flows straight down to it
+    private var submitSection: some View {
+        Section {
+            Button(action: submit) {
+                ZStack {
+                    // 两个都占位，切换时按钮不跳高度 / Both keep their space so the button height stays put
+                    Text(mode.rawValue).opacity(isSubmitting ? 0 : 1)
+                    ProgressView().opacity(isSubmitting ? 1 : 0)
+                }
+                .font(.headline)
+                .foregroundStyle(.onBrandGreen)
+                .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .disabled(!canSubmit || isSubmitting)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
         }
     }
 
     // MARK: - 提交 / Submit
 
     private func submit() {
+        focusedField = nil
         isSubmitting = true
         Task {
             do {
@@ -140,6 +192,9 @@ struct SignInSheet: View {
 #Preview {
     // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
     let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
-    SignInSheet()
-        .environment(AuthService())
+    Color.clear
+        .sheet(isPresented: .constant(true)) {
+            SignInSheet()
+                .environment(AuthService())
+        }
 }
