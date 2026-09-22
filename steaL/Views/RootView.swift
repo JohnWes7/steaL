@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import FirebaseCore
 
 struct RootView: View {
 
@@ -14,18 +15,25 @@ struct RootView: View {
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
 
+    /// 全 App 共用的登录状态 / The sign-in state shared by the whole app
+    @State private var authService = AuthService()
+
     var body: some View {
-        // 之后加入登陆界面 判断需要登陆了之后才进入主界面
         MainTabView()
-            // 加在根上会作用于整个窗口（所有 tab 与 sheet）；`nil` 交还给系统 /
-            // Applied at the root so it covers the whole window (every tab and sheet); `nil` hands control back to the system
+            // nil 代表跟随系统 / nil means follow system
             .preferredColorScheme(settings.first?.theme.colorScheme)
+            .environment(authService)
     }
 }
 
 
 // Option + Command + Return
 #Preview {
+    // 预览不走 `AppDelegate`，这里直接连真实 Firebase，否则 `AuthService()` 调 `Auth.auth()` 会崩；
+    // 重复 `configure()` 也会崩，所以先判断 /
+    // Previews skip `AppDelegate`, so connect to the real Firebase here or `AuthService()` crashes in `Auth.auth()`;
+    // a second `configure()` also crashes, hence the check
+    let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
     let container = try! ModelContainer(
         for: UserSettingModel.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
