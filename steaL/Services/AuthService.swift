@@ -14,10 +14,12 @@ import Observation
 @Observable
 final class AuthService {
 
+    /// 显示名称长度上限 / Display name length limit
     private static let displayNameLimit = 20
+    /// 密码长度下限 / Password length minimum
     private static let passwordMinimum = 6
 
-    // state：当前登录状态
+    /// state：当前登录状态
     private(set) var state: AuthState = .checking
 
     /// 当前用户
@@ -25,8 +27,9 @@ final class AuthService {
         if case .signedIn(let user) = state { user } else { nil }
     }
 
+    /// Firebase Auth 实例 / Firebase Auth instance
     @ObservationIgnored private let auth: Auth
-    // 保存身份认证状态变化的监听器句柄，用于后续移除监听。
+    /// 监听器句柄 / Listener handle, must be held or it will be released and no callbacks will be received
     @ObservationIgnored private var authListener: AuthStateDidChangeListenerHandle?
 
     init(auth: Auth = .auth()) {
@@ -47,6 +50,7 @@ final class AuthService {
     // 登录方法。使用 async/throws 异步执行，出错时向上抛出异常。
     func signIn(email: String, password: String) async throws {
         let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        
         // 校验：邮箱或密码任一为空。按钮在 UI 上已禁用，这里只是兜底。
         guard !cleanEmail.isEmpty, !password.isEmpty else {
             throw AuthError.missingFields
@@ -58,7 +62,6 @@ final class AuthService {
 
     // 注册（创建账号）方法。异步执行，出错时抛出异常。
     func createAccount(email: String, password: String, displayName: String) async throws {
-        // 对邮箱和显示名称做同样的去空格处理。
         let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -81,9 +84,8 @@ final class AuthService {
         let result = try await auth.createUser(withEmail: cleanedEmail, password: password)
         // 创建用于修改用户个人资料的请求对象。
         let request = result.user.createProfileChangeRequest()
-        // 设置用户资料中的显示名称。
         request.displayName = cleanedName
-        // 提交修改，将显示名称保存到 Firebase Auth 的用户资料中。
+
         // 显示名与邮箱都存在 Auth 里，不另写 Firestore 的 users 文档，避免两份数据要同步。
         try await request.commitChanges()
     }
