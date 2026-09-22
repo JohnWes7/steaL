@@ -19,6 +19,8 @@ struct ProfileView: View {
     @State private var errorMassage: String?
     /// 是否弹出登出确认 / Whether the sign-out confirmation is shown
     @State private var isConfirmingSignOut = false
+    /// 是否弹出登录 sheet / Whether the sign-in sheet is shown
+    @State private var isShowingSignIn = false
 
     /// 用户设置单例行，偏好分组读它的真实值 / Singleton user-settings row; the preferences group reads its real values
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
@@ -41,7 +43,7 @@ struct ProfileView: View {
             @Bindable var settings = storedSettings
 
             List {
-                ProfileIdentityCardView(user: .mock)
+                identityCard
                     .listRowInsets(EdgeInsets())        // 去掉 List 给行的边距
                     .listRowBackground(Color.clear)     // 去掉行底色，只留卡片自己的
                     .listRowSeparator(.hidden)          // 顶层行还会画一条分隔线，一起关掉
@@ -122,7 +124,7 @@ struct ProfileView: View {
                     }
                 }
 
-                // 只有登录后才有东西可登出；整个 Section 一起隐藏，不留空分区 /
+                // 只有登录后才有东西可登出
                 // Only signed-in users have anything to sign out of; hide the whole section so no empty gap is left
                 if case .signedIn = authService.state {
                     Section {
@@ -159,6 +161,7 @@ struct ProfileView: View {
 
 
             }
+            // is default
             .listStyle(.insetGrouped)
             .tint(.brandGreen)
             // 隐藏 List 自带的系统灰底，才能露出下面的 appBackground / Hide List's default grouped background so appBackground shows through
@@ -168,6 +171,9 @@ struct ProfileView: View {
                 PageHeaderView(title: "Profile")
             }
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $isShowingSignIn) {
+                SignInSheet()
+            }
             .alert(
                 "Sign Out Failed",
                 isPresented: Binding(
@@ -179,6 +185,26 @@ struct ProfileView: View {
             } message: {
                 Text(errorMassage ?? "")
             }
+        }
+    }
+
+    // MARK: - 身份卡 / Identity card
+
+    /// 按登录状态切换身份卡 / The identity card for the current sign-in state
+    @ViewBuilder
+    private var identityCard: some View {
+        switch authService.state {
+        case .checking:
+            // 只在启动瞬间出现；不先显示 Guest 卡，免得已登录用户闪一下 /
+            // Only at launch; not the Guest card, so signed-in users don't see it flash
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+        case .signedOut:
+            ProfileIdentityCardView(user: nil) { isShowingSignIn = true }
+        case .signedIn:
+            // 名字 / 邮箱还是占位，下一步换成 Auth 的数据 / Still placeholder data; Auth's name and email come next
+            ProfileIdentityCardView(user: .mock) { isShowingSignIn = true }
         }
     }
 
