@@ -121,11 +121,9 @@ final class GamesViewModel {
     /// Giveaways 区块当前状态 / Current state of the giveaways section
     private(set) var giveawaysState: GiveawaysLoadState = .loading
 
-    /// 当前请求使用的区域，由界面从设置读出后传入 / Region used by requests; the view reads it from settings and passes it in
-    private(set) var region: AppRegion = .australia
-
-    /// 请求体，country 跟随当前区域 / Request body; country follows the current region
-    private var requestBody: [String: Any] {
+    /// 请求体，country 跟随传入的区域 / Request body; country follows the region passed in
+    /// - Parameter region: 商店区域，由界面从设置读出后传入 / The store region, read from settings by the view
+    private func requestBody(region: AppRegion) -> [String: Any] {
         [
             "country": region.apiRegionCode,
             "offset": 0,
@@ -141,19 +139,27 @@ final class GamesViewModel {
 
     /// 界面传入区域后加载两个区块 / Loads both sections with the region handed in by the view
     func load(region: AppRegion) async {
-        self.region = region
-
-        async let deals: Void = fetchDeals()
+        async let deals: Void = fetchDeals(region: region)
         async let giveaways: Void = fetchGiveaways()
-        _ = await (deals, giveaways) 
+        _ = await (deals, giveaways)
+    }
+
+    /// 下拉刷新：旧内容留到新数据回来，appID 也一起重查 / Pull to refresh: keeps the old content until new data lands, re-resolving appIDs too
+    /// - Parameter region: 商店区域 / The store region
+    func refresh(region: AppRegion) async {
+        async let deals: Void = fetchDeals(region: region, showsLoading: false)
+        async let giveaways: Void = fetchGiveaways(showsLoading: false)
+        _ = await (deals, giveaways)
     }
 
     /// 拉取优惠列表 / Fetches the deal list
-    func fetchDeals() async {
-        dealState = .loading
+    /// - Parameter region: 商店区域 / The store region
+    /// - Parameter showsLoading: 是否先切到加载态；下拉刷新时系统已有转圈，不切 / Whether to switch to loading first; pull to refresh already shows a spinner
+    func fetchDeals(region: AppRegion, showsLoading: Bool = true) async {
+        if showsLoading { dealState = .loading }
 
         do {
-            let data = try await ITADAPI.fetchDeals(body: requestBody)
+            let data = try await ITADAPI.fetchDeals(body: requestBody(region: region))
             // 先发布状态让卡片立刻渲染，appID 仍是 `.pending` / Publish first so the cards render; the appID is still `.pending`
             dealState = .loaded(data.list.map { HomeDealItem(deal: $0) })
 
@@ -175,8 +181,9 @@ final class GamesViewModel {
     }
 
     /// 重试 deals，只影响第一个区块 / Retries deals; only the first section is affected
-    func retryDeals() async {
-        await fetchDeals()
+    /// - Parameter region: 商店区域 / The store region
+    func retryDeals(region: AppRegion) async {
+        await fetchDeals(region: region)
     }
 
     // MARK: - Steam appID 预取 / Prefetching Steam appIDs
@@ -252,8 +259,9 @@ final class GamesViewModel {
     }
 
     /// 拉取限时免费领取列表 / Fetches the giveaways list
-    func fetchGiveaways() async {
-        giveawaysState = .loading
+    /// - Parameter showsLoading: 是否先切到加载态；下拉刷新时不切 / Whether to switch to loading first; not during pull to refresh
+    func fetchGiveaways(showsLoading: Bool = true) async {
+        if showsLoading { giveawaysState = .loading }
 
         do {
             let giveaways = try await ITADAPI.fetchGiveaways()

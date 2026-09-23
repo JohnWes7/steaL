@@ -40,12 +40,6 @@ struct GamesView: View {
         settings.first?.region ?? .australia
     }
 
-    /// 首帧加载一次，之后只由区域变化触发重载 / Loads once, then only a region change triggers a reload
-    private func reload() {
-        loadTask?.cancel()
-        loadTask = Task { await gamesViewModel.load(region: region) }
-    }
-
     /// 页面骨架：背景 + 两个各自管理状态的区块 + 顶部固定 header /
     /// Screen skeleton: background, two self-managed sections and the pinned header
     var body: some View {
@@ -77,6 +71,11 @@ struct GamesView: View {
                 .padding(.horizontal, 14)
                 .padding(.bottom, 16)
                 .padding(.top, 20)
+            }
+            // 系统下拉刷新，也是 appID 请求失败后的重试入口 / System pull to refresh; also how a failed appID lookup gets retried
+            .refreshable {
+                loadTask?.cancel()
+                await gamesViewModel.refresh(region: region)
             }
         }
         // `safeAreaBar` 提供玻璃背景与边缘模糊；内边距在 `GamesHeaderView` 里 / `safeAreaBar` supplies the blur; padding lives in the header
@@ -114,6 +113,12 @@ struct GamesView: View {
         .sheet(isPresented: $isShowingSignIn) {
             SignInSheet()
         }
+    }
+
+    /// 首帧加载一次，之后只由区域变化触发重载 / Loads once, then only a region change triggers a reload
+    private func reload() {
+        loadTask?.cancel()
+        loadTask = Task { await gamesViewModel.load(region: region) }
     }
 
     // MARK: - 收藏 / Favourites
@@ -170,7 +175,7 @@ struct GamesView: View {
 
     /// 重试 deals，只影响第一个区块 / Retries deals; only the first section is affected
     private func retryDeals() {
-        Task { await gamesViewModel.retryDeals() }
+        Task { await gamesViewModel.retryDeals(region: region) }
     }
 
     /// 重试 giveaways，只影响第二个区块 / Retries giveaways; only the second section is affected
