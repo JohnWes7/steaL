@@ -75,7 +75,9 @@ struct GamesView: View {
             // 系统下拉刷新，也是 appID 请求失败后的重试入口 / System pull to refresh; also how a failed appID lookup gets retried
             .refreshable {
                 loadTask?.cancel()
-                await gamesViewModel.refresh(region: region)
+                // 刷新中途写 `dealState` 会重绘并取消 refreshable 自己的 Task，appID 就停在 `.pending`；包一层独立 Task 不受影响 /
+                // Mid-refresh `dealState` writes redraw and cancel refreshable's own task, stranding appIDs in `.pending`; a detached-from-view Task survives
+                await Task { await gamesViewModel.refresh(region: region) }.value
             }
         }
         // `safeAreaBar` 提供玻璃背景与边缘模糊；内边距在 `GamesHeaderView` 里 / `safeAreaBar` supplies the blur; padding lives in the header
