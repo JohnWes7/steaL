@@ -7,46 +7,53 @@
 
 import SwiftUI
 
-/// Wishlist 的一行：圆角矩形封面 + 名称 + 加入日期，放在 `NavigationLink` 里用 /
-/// One wishlist row: rounded-rectangle artwork, name and date added; meant to sit inside a `NavigationLink`
+/// Wishlist 的一行：完整显示的封面 + 名称 + 价格，放在 `NavigationLink` 里用 /
+/// One wishlist row: uncropped artwork, name and price; meant to sit inside a `NavigationLink`
 struct WishlistRowView: View {
 
     /// 要显示的收藏快照 / The saved snapshot to show
     let item: WishlistItem
 
+    /// 现价；还没接价格 API，页面先传占位价 / Current price; the page passes a placeholder until the price API is wired up
+    let price: ITADPrice
+
+    /// 原价，高于现价就算在打折 / Regular price; higher than `price` means the game is on sale
+    let regular: ITADPrice
+
     /// 封面尺寸，按 Steam header 的 460 × 215 比例 / Artwork size, in Steam's 460 × 215 header ratio
     private let artworkSize = CGSize(width: 128, height: 60)
 
-    /// 封面圆角，和原来价签形的角一致 / Artwork corner radius, matching the corners of the earlier tag shape
+    /// 封面圆角 / Artwork corner radius
     private let artworkCornerRadius: CGFloat = 8
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(alignment: .top, spacing: 12) {
             artwork
 
-            VStack(alignment: .leading, spacing: 4) {
+            // 名称贴封面顶边、价格贴底边，和封面一样高 / Name hugs the artwork's top edge and price its bottom, matching its height
+            VStack(alignment: .leading, spacing: 0) {
                 Text(item.name)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(.primaryText)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
 
-                Text(addedText)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondaryText)
+                Spacer(minLength: 4)
+
+                priceLine
             }
+            .frame(height: artworkSize.height)
 
             // 推页箭头由外层 `NavigationLink` 自动加，这里不画 / The outer `NavigationLink` adds the disclosure chevron, so none here
-            Spacer(minLength: 8)
+            Spacer(minLength: 0)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
     }
 
     // MARK: - 封面 / Artwork
 
-    /// 裁成圆角矩形的封面；价签形（`PriceTagShape`）暂时不用，代码留着备选 /
-    /// Artwork clipped to a rounded rectangle; the tag shape (`PriceTagShape`) is unused for now but kept as an option
+    /// 按比例完整显示，不裁切；比例不同的旧图会在两侧留出占位底色 /
+    /// Shown whole at its own ratio, never cropped; older art in another ratio leaves placeholder bars at the sides
     private var artwork: some View {
         Color.imagePlaceholder
             .overlay {
@@ -54,7 +61,7 @@ struct WishlistRowView: View {
                     if let image = phase.image {
                         image
                             .resizable()
-                            .scaledToFill()
+                            .scaledToFit()
                     } else {
                         Image(systemName: phase.error == nil ? "photo" : "photo.badge.exclamationmark")
                             .font(.system(size: 18, weight: .semibold))
@@ -72,22 +79,37 @@ struct WishlistRowView: View {
             .accessibilityHidden(true)
     }
 
-    // MARK: - 加入日期 / Date added
+    // MARK: - 价格 / Price
 
-    /// 今天 / 昨天用词，更早用日期；不用相对时长，免得出现「23 hours ago」这种跨天的说法 /
-    /// Words for today and yesterday, a date before that; not a relative duration, which reads oddly across midnight
-    private var addedText: String {
-        // 服务器还没确认写入时是 nil，其实就是刚刚 / nil until the server confirms the write, which means just now
-        guard let addedAt = item.addedAt else { return "Added today" }
-        let calendar = Calendar.current
-        if calendar.isDateInToday(addedAt) { return "Added today" }
-        if calendar.isDateInYesterday(addedAt) { return "Added yesterday" }
+    /// 打折时绿色现价 + 灰色划线原价，不打折只显示原价 / On sale: green price plus grey struck-through regular; otherwise just the regular price
+    @ViewBuilder
+    private var priceLine: some View {
+        let isOnSale = regular.amountInt > price.amountInt
 
-        let isThisYear = calendar.isDate(addedAt, equalTo: .now, toGranularity: .year)
-        let style: Date.FormatStyle = isThisYear
-            ? .dateTime.month(.abbreviated).day()
-            : .dateTime.year().month(.abbreviated).day()
-        return "Added \(addedAt.formatted(style))"
+        if isOnSale {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                priceText(price)
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.brandGreen)
+
+                priceText(regular)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondaryText)
+                    .strikethrough()
+            }
+        } else {
+            priceText(regular)
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .foregroundStyle(.primaryText)
+        }
+    }
+
+    /// 金额为 0 显示 `Free`，和首页一致 / Zero reads as `Free`, as on the home page
+    private func priceText(_ value: ITADPrice) -> Text {
+        if value.amountInt == 0 {
+            return Text("Free")
+        }
+        return Text(value.amount, format: .currency(code: value.currency))
     }
 }
 
@@ -96,7 +118,7 @@ struct WishlistRowView: View {
     NavigationStack {
         List(WishlistItem.previewSamples) { item in
             NavigationLink(value: item.appID) {
-                WishlistRowView(item: item)
+                WishlistRowView(item: item, price: item.mockPrice, regular: item.mockRegular)
             }
             .listRowBackground(Color.clear)
         }

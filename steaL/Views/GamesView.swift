@@ -145,7 +145,8 @@ struct GamesView: View {
             let wishlistItem = WishlistItem(
                 appID: appID,
                 name: item.deal.title,
-                headerImageURL: item.deal.wideArtworkURL?.absoluteString,
+                // 要和详情页存的 Steam header 同比例，Wishlist 行才能完整显示 / Same ratio as the Steam header the detail page saves, so wishlist rows show it whole
+                headerImageURL: item.deal.headerRatioArtworkURL?.absoluteString,
                 itadID: item.deal.id
             )
             // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /

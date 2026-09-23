@@ -172,6 +172,18 @@ extension ITADDeal {
         ])
     }
 
+    /// Steam header 比例（460 × 215）的横幅，供 Wishlist 行这类小封面使用；`banner600` 是 600 × 344，比例不同只能放最后 /
+    /// Banner in Steam's 460 × 215 header ratio for small covers such as wishlist rows; `banner600` is 600 × 344, so it comes last
+    var headerRatioArtworkURL: URL? {
+        assets.firstURL(from: [
+            assets.banner400,
+            assets.banner300,
+            assets.banner600,
+            assets.banner145,
+            assets.boxart,
+        ])
+    }
+
     /// 竖版封面，供网格卡这类竖向卡片使用：优先 boxart，缺失时才回落到横幅 /
     /// Portrait artwork for vertical cards such as the grid: box art first, banners only as a fallback
     var portraitArtworkURL: URL? {

@@ -86,7 +86,8 @@ struct WishlistView: View {
                 // 收藏一定带 appID，点了必定能进，不需要首页那种先判断再跳的 Button /
                 // Every saved item has an appID, so the row always navigates; no need for the home page's check-then-push Button
                 NavigationLink(value: GameDetailRoute(appID: item.appID, uuid: item.itadID, title: item.name)) {
-                    WishlistRowView(item: item)
+                    // 价格 API 还没接，先用占位价 / Placeholder prices until the price API is wired up
+                    WishlistRowView(item: item, price: item.mockPrice, regular: item.mockRegular)
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
