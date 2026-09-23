@@ -16,9 +16,6 @@ struct WishlistView: View {
     /// 是否弹出登录 sheet / Whether the sign-in sheet is shown
     @State private var isShowingSignIn = false
 
-    /// 点中的游戏，非 nil 就推详情页 / The tapped game; pushes the detail page once non-nil
-    @State private var selectedRoute: GameDetailRoute?
-
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -27,7 +24,8 @@ struct WishlistView: View {
                 PageHeaderView(title: "Wishlist")
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(item: $selectedRoute) { route in
+            // 挂在 List 外面：文档要求不要放进 List 这类懒加载容器 / Kept outside the List, as the docs say not to place it in lazy containers
+            .navigationDestination(for: GameDetailRoute.self) { route in
                 GameDetailView(route: route)
             }
             .sheet(isPresented: $isShowingSignIn) {
@@ -85,9 +83,9 @@ struct WishlistView: View {
     private var list: some View {
         List {
             ForEach(wishlistService.items) { item in
-                Button {
-                    selectedRoute = GameDetailRoute(appID: item.appID, uuid: item.itadID, title: item.name)
-                } label: {
+                // 收藏一定带 appID，点了必定能进，不需要首页那种先判断再跳的 Button /
+                // Every saved item has an appID, so the row always navigates; no need for the home page's check-then-push Button
+                NavigationLink(value: GameDetailRoute(appID: item.appID, uuid: item.itadID, title: item.name)) {
                     WishlistRowView(item: item)
                 }
                 .listRowBackground(Color.clear)

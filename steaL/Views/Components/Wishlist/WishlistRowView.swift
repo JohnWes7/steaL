@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// Wishlist 的一行：价签形封面 + 名称 + 加入日期 + 推页箭头 /
-/// One wishlist row: tag-shaped artwork, name, date added and a push chevron
+/// Wishlist 的一行：价签形封面 + 名称 + 加入日期，放在 `NavigationLink` 里用 /
+/// One wishlist row: tag-shaped artwork, name and date added; meant to sit inside a `NavigationLink`
 struct WishlistRowView: View {
 
     /// 要显示的收藏快照 / The saved snapshot to show
@@ -33,12 +33,8 @@ struct WishlistRowView: View {
                     .foregroundStyle(.secondaryText)
             }
 
+            // 推页箭头由外层 `NavigationLink` 自动加，这里不画 / The outer `NavigationLink` adds the disclosure chevron, so none here
             Spacer(minLength: 8)
-
-            // HIG：能推入下一层的行用 disclosure indicator / HIG: rows that drill in show a disclosure indicator
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 6)
         .contentShape(Rectangle())
@@ -92,11 +88,16 @@ struct WishlistRowView: View {
 }
 
 #Preview {
-    List(WishlistItem.previewSamples) { item in
-        WishlistRowView(item: item)
+    // 包进 `NavigationLink` 才看得到系统加的箭头 / Wrapped in `NavigationLink` so the system chevron shows
+    NavigationStack {
+        List(WishlistItem.previewSamples) { item in
+            NavigationLink(value: item.appID) {
+                WishlistRowView(item: item)
+            }
             .listRowBackground(Color.clear)
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.appBackground)
     }
-    .listStyle(.plain)
-    .scrollContentBackground(.hidden)
-    .background(Color.appBackground)
 }
