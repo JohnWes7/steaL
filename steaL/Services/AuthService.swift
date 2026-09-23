@@ -22,10 +22,13 @@ final class AuthService {
     /// state：当前登录状态
     private(set) var state: AuthState = .checking
 
-    /// 当前用户
+    /// 当前用户 / current user
     var user: FirebaseAuth.User? {
         if case .signedIn(let user) = state { user } else { nil }
     }
+
+    /// 当前账号的 uid / The current account's uid
+    var uid: String? { user?.uid }
 
     /// Firebase Auth 实例 / Firebase Auth instance
     @ObservationIgnored private let auth: Auth
