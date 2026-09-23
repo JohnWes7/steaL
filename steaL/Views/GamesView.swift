@@ -5,6 +5,7 @@
 //  Created by yijiang on 2026/9/8.
 //
 
+import FirebaseCore
 import SwiftData
 import SwiftUI
 
@@ -12,6 +13,10 @@ struct GamesView: View {
     /// 用户设置单例行，只读区域等偏好 / Singleton user-settings row; read for the region and other preferences
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
+    /// 登录状态，收藏要用 uid / Sign-in state; favouriting needs the uid
+    @Environment(AuthService.self) private var authService
+    /// 全 App 共用的 wishlist / The wishlist shared by the whole app
+    @Environment(WishlistService.self) private var wishlistService
     /// 列表数据源，负责请求与状态 / Data source for the list; owns fetching and state
     @State private var gamesViewModel = GamesViewModel()
     /// 当前加载任务；区域变化时取消上一个 / The in-flight load task; cancelled when the region changes
@@ -26,6 +31,9 @@ struct GamesView: View {
 
     /// 进不了详情页时的提示文案，`non-nil` 即弹出 / Warning text; a `non-nil` value raises the alert
     @State private var warning: String?
+
+    /// 未登录点心形时弹登录 sheet / Shows the sign-in sheet when a signed-out user taps a heart
+    @State private var isShowingSignIn = false
 
     /// 当前区域，设置就绪前回退澳洲 / Current region; falls back to Australia before settings load
     private var region: AppRegion {
@@ -51,8 +59,8 @@ struct GamesView: View {
                     Section {
                         DealsSectionView(
                             state: gamesViewModel.dealState,
-                            isFavorite: gamesViewModel.isFavorite,
-                            onToggleFavorite: gamesViewModel.toggleFavorite,
+                            isFavorite: isFavorite,
+                            onToggleFavorite: toggleFavorite,
                             onSelect: handleTap,
                             retry: retryDeals
                         )
@@ -103,6 +111,40 @@ struct GamesView: View {
         .navigationDestination(item: $homeDetailItem, destination: { route in
             GameDetailView(route: route)
         })
+        .sheet(isPresented: $isShowingSignIn) {
+            SignInSheet()
+        }
+    }
+
+    // MARK: - 收藏 / Favourites
+
+    /// 是否已在 wishlist；没有 appID 的条目不可能收藏 / Whether it is on the wishlist; entries without an appID never are
+    private func isFavorite(_ item: HomeDealItem) -> Bool {
+        guard let appID = item.appID else { return false }
+        return wishlistService.contains(appID: appID)
+    }
+
+    /// 切换收藏；未登录先弹登录 sheet / Toggles the favourite; signed-out users get the sign-in sheet first
+    private func toggleFavorite(_ item: HomeDealItem) {
+        guard let appID = item.appID else { return }
+        guard let uid = authService.uid else {
+            isShowingSignIn = true
+            return
+        }
+
+        if wishlistService.contains(appID: appID) {
+            wishlistService.remove(appID: appID, uid: uid)
+        } else {
+            let wishlistItem = WishlistItem(
+                appID: appID,
+                name: item.deal.title,
+                headerImageURL: item.deal.wideArtworkURL?.absoluteString,
+                itadID: item.deal.id
+            )
+            // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /
+            // Only encoding errors can throw, which this fixed model never hits; server rejections are rolled back by the listener
+            try? wishlistService.add(wishlistItem, uid: uid)
+        }
     }
 
     // MARK: - 进详情页 / Opening the detail page
@@ -178,9 +220,13 @@ struct GamesView: View {
 }
 
 #Preview {
+    // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
+    let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
     // 复刻 `MainTabView`：`navigationDestination` 只在 `NavigationStack` 里生效 / Mirrors `MainTabView`; the modifier needs a `NavigationStack`
     NavigationStack {
         GamesView()
     }
     .modelContainer(for: UserSettingModel.self, inMemory: true)
+    .environment(AuthService())
+    .environment(WishlistService())
 }

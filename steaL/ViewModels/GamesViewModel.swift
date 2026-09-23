@@ -277,13 +277,4 @@ final class GamesViewModel {
     func retryGiveaways() async {
         await fetchGiveaways()
     }
-
-    /// 切换单个游戏的收藏状态 / Toggles the favourite state of a single game
-    func toggleFavorite(_ id: String) {
-
-    }
-    
-    func isFavorite(_ id: String) -> Bool {
-        return false
-    }
 }

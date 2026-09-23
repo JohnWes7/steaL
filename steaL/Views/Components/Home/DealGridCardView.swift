@@ -18,6 +18,9 @@ struct DealGridCardView: View {
     /// 是否已收藏 / Whether the user has favourited this game
     let isFavorite: Bool
 
+    /// 能否收藏，没有 Steam appID 时变暗禁用 / Whether it can be favourited; dimmed and disabled without a Steam appID
+    let isFavoriteEnabled: Bool
+
     /// 点击收藏时的回调，状态同样由父视图持有 /
     /// Called when the favourite is tapped; state lives in the parent as well
     let onToggleFavorite: () -> Void
@@ -140,10 +143,13 @@ struct DealGridCardView: View {
         Button(action: onToggleFavorite) {
             Image(systemName: isFavorite ? "heart.fill" : "heart")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(isFavorite ? Color.brandBlue : Color.white)
+                .foregroundStyle(isFavorite ? Color.pink : Color.white)
                 .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
         }
         .buttonStyle(.plain)
+        // 变暗而不是隐藏（HIG：不可用的项目保持可见）/ Dimmed rather than hidden (HIG: keep unavailable items visible)
+        .disabled(!isFavoriteEnabled)
+        .opacity(isFavoriteEnabled ? 1 : 0.4)
         .accessibilityLabel(isFavorite ? "Remove from favourites" : "Add to favourites")
     }
 
@@ -226,8 +232,8 @@ struct DealGridCardView: View {
             ],
             spacing: 12
         ) {
-            DealGridCardView(deal: .previewSample, isFavorite: false, onToggleFavorite: {})
-            DealGridCardView(deal: .previewSample, isFavorite: true, onToggleFavorite: {})
+            DealGridCardView(deal: .previewSample, isFavorite: false, isFavoriteEnabled: true, onToggleFavorite: {})
+            DealGridCardView(deal: .previewSample, isFavorite: true, isFavoriteEnabled: true, onToggleFavorite: {})
         }
         .padding(14)
     }

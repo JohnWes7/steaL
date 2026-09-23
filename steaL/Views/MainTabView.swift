@@ -5,6 +5,8 @@
 //  Created by yijiang on 2026/9/8.
 //
 
+import FirebaseCore
+import SwiftData
 import SwiftUI
 
 struct MainTabView: View {
@@ -54,5 +56,10 @@ struct MainTabView: View {
 }
 
 #Preview {
+    // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
+    let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
     MainTabView()
+        .modelContainer(for: UserSettingModel.self, inMemory: true)
+        .environment(AuthService())
+        .environment(WishlistService())
 }

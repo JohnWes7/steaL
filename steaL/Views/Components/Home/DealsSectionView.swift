@@ -15,10 +15,10 @@ struct DealsSectionView: View {
     let state: GamesViewModel.DealLoadState
 
     /// 收藏判定，收藏状态由页面持有 / Favourite lookup; the page owns that state
-    let isFavorite: (String) -> Bool
+    let isFavorite: (HomeDealItem) -> Bool
 
     /// 切换收藏 / Toggles the favourite
-    let onToggleFavorite: (String) -> Void
+    let onToggleFavorite: (HomeDealItem) -> Void
 
     /// 点击某一条，去哪里由页面决定 / Reports a tap; the page decides where it goes
     let onSelect: (HomeDealItem) -> Void
@@ -77,9 +77,10 @@ struct DealsSectionView: View {
             } label: {
                 DealCardView(
                     deal: firstItem.deal,
-                    isFavorite: isFavorite(firstItem.id),
+                    isFavorite: isFavorite(firstItem),
+                    isFavoriteEnabled: firstItem.appID != nil,
                     onToggleFavorite: {
-                        onToggleFavorite(firstItem.id)
+                        onToggleFavorite(firstItem)
                     }
                 )
             }
@@ -94,9 +95,10 @@ struct DealsSectionView: View {
                 } label: {
                     DealGridCardView(
                         deal: item.deal,
-                        isFavorite: isFavorite(item.id),
+                        isFavorite: isFavorite(item),
+                        isFavoriteEnabled: item.appID != nil,
                         onToggleFavorite: {
-                            onToggleFavorite(item.id)
+                            onToggleFavorite(item)
                         }
                     )
                 }
