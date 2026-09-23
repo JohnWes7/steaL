@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// Wishlist 的一行：价签形封面 + 名称 + 加入日期，放在 `NavigationLink` 里用 /
-/// One wishlist row: tag-shaped artwork, name and date added; meant to sit inside a `NavigationLink`
+/// Wishlist 的一行：圆角矩形封面 + 名称 + 加入日期，放在 `NavigationLink` 里用 /
+/// One wishlist row: rounded-rectangle artwork, name and date added; meant to sit inside a `NavigationLink`
 struct WishlistRowView: View {
 
     /// 要显示的收藏快照 / The saved snapshot to show
@@ -16,6 +16,9 @@ struct WishlistRowView: View {
 
     /// 封面尺寸，按 Steam header 的 460 × 215 比例 / Artwork size, in Steam's 460 × 215 header ratio
     private let artworkSize = CGSize(width: 128, height: 60)
+
+    /// 封面圆角，和原来价签形的角一致 / Artwork corner radius, matching the corners of the earlier tag shape
+    private let artworkCornerRadius: CGFloat = 8
 
     var body: some View {
         HStack(spacing: 14) {
@@ -42,7 +45,8 @@ struct WishlistRowView: View {
 
     // MARK: - 封面 / Artwork
 
-    /// 裁成价签形的封面，绳孔透出页面底色 / Artwork clipped to a price tag; the page background shows through the hole
+    /// 裁成圆角矩形的封面；价签形（`PriceTagShape`）暂时不用，代码留着备选 /
+    /// Artwork clipped to a rounded rectangle; the tag shape (`PriceTagShape`) is unused for now but kept as an option
     private var artwork: some View {
         Color.imagePlaceholder
             .overlay {
@@ -59,10 +63,10 @@ struct WishlistRowView: View {
                 }
             }
             .frame(width: artworkSize.width, height: artworkSize.height)
-            .clipShape(PriceTagShape(), style: FillStyle(eoFill: true))
+            .clipShape(RoundedRectangle(cornerRadius: artworkCornerRadius, style: .continuous))
             // 细描边让深色封面在深色底上也有边界 / A hairline keeps dark artwork distinct on a dark background
             .overlay {
-                PriceTagShape()
+                RoundedRectangle(cornerRadius: artworkCornerRadius, style: .continuous)
                     .stroke(Color.primaryText.opacity(0.12), lineWidth: 0.5)
             }
             .accessibilityHidden(true)
