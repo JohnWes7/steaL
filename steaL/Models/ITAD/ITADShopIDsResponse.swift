@@ -35,24 +35,24 @@ struct ITADShopIDsResponse: Decodable, Hashable, Sendable {
 
 extension ITADShopIDsResponse {
 
-    /// 某个 ITAD 游戏对应的 Steam appID；UUID 不在响应里、值是 `null` 或只有 `sub/` 都返回 `nil` /
-    /// The Steam appID for one ITAD game; `nil` when the UUID is absent, the value is `null`, or only
-    /// `sub/` entries exist
-    func appID(for uuid: String) -> Int? {
-        // `entries[uuid]` 是 `[String]??`，两层都要摊平 / `entries[uuid]` is `[String]??`; flatten both
-        guard let shopIDs = entries[uuid].flatMap({ $0 }) else { return nil }
-
+    /// 某个 ITAD 游戏对应的全部 Steam appID 候选，保持响应顺序；UUID 不在响应里、值是 `null` 或只有 `sub/` 都返回 `[]` /
+    /// Every Steam appID candidate for one ITAD game, in response order; `[]` when the UUID is absent,
+    /// the value is `null`, or only `sub/` entries exist
+    ///
+    /// 可能不止一个，而且第一个不一定能用：Monster Hunter: World 给了 `app/601100`、`app/743980`、`app/582010`，
+    /// 只有最后一个在 Steam 上还存在（2026-09-23 实测）/ There can be several, and the first may be dead
+    func appIDs(for uuid: String) -> [Int] {
         // `app/` 的位置**不固定**（2026-09-16 抓包里是 index 2），必须按前缀查 / `app/` is not always first; match by prefix
-        guard let appEntry = shopIDs.first(where: { $0.hasPrefix(ITADShopID.appPrefix) }) else {
-            return nil
+        shopIDs(for: uuid).compactMap { shopID in
+            guard shopID.hasPrefix(ITADShopID.appPrefix) else { return nil }
+            return Int(shopID.dropFirst(ITADShopID.appPrefix.count))
         }
-
-        return Int(appEntry.dropFirst(ITADShopID.appPrefix.count))
     }
 
-    /// 某个 ITAD 游戏在 Steam 上的全部商店 ID，`app/` 与 `sub/` 都在；目前只用于排查映射问题 /
-    /// Every Steam shop ID for one ITAD game, both `app/` and `sub/` entries; a debugging helper
+    /// 某个 ITAD 游戏在 Steam 上的全部商店 ID，`app/` 与 `sub/` 都在 /
+    /// Every Steam shop ID for one ITAD game, both `app/` and `sub/` entries
     func shopIDs(for uuid: String) -> [String] {
+        // `entries[uuid]` 是 `[String]??`，两层都要摊平 / `entries[uuid]` is `[String]??`; flatten both
         entries[uuid].flatMap({ $0 }) ?? []
     }
 

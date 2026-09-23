@@ -139,6 +139,54 @@ class SteamAPI {
 
         return details
     }
+
+    /// 一次请求批量检查 appID 在 Steam 上存不存在、有没有价格，用来在 ITAD 给的多个候选里挑对的那个 /
+    /// Checks in one request whether appIDs exist on Steam and have a price; used to pick the right one among ITAD's candidates
+    ///
+    /// `appids` 只有配 `filters=price_overview` 才能一次传多个，否则 Steam 直接报错 /
+    /// `appids` accepts several values only together with `filters=price_overview`
+    ///
+    /// - Parameter appIDs: 要检查的 Steam App ID / the Steam application IDs to check
+    /// - Parameter region: 区域，锁区游戏在该区返回 `success == false` / the region; region-locked games fail there
+    static func fetchAvailability(
+        of appIDs: [Int],
+        region: AppRegion = .australia
+    ) async throws -> SteamAppAvailabilityResponse {
+        guard !appIDs.isEmpty else { return SteamAppAvailabilityResponse(entries: [:]) }
+
+        var urlComponents = URLComponents(string: "https://store.steampowered.com/api/appdetails")!
+        urlComponents.queryItems = [
+            URLQueryItem(name: "appids", value: appIDs.map(String.init).joined(separator: ",")),
+            URLQueryItem(name: "cc", value: region.apiRegionCode),
+            URLQueryItem(name: "filters", value: "price_overview"),
+        ]
+        guard let url = urlComponents.url else { throw URLError(.badURL) }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        #if DEBUG
+        logRequest(request)
+        #endif
+
+        let (data, resp) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = resp as? HTTPURLResponse else {
+            throw SteamAPIError.invalidResponse
+        }
+
+        #if DEBUG
+        logResponse(httpResponse, data: data)
+        #endif
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw SteamAPIError.requestFailed(
+                statusCode: httpResponse.statusCode,
+                body: String(data: data, encoding: .utf8)
+            )
+        }
+
+        return try JSONDecoder().decode(SteamAppAvailabilityResponse.self, from: data)
+    }
 }
 
 enum SteamAPIError: Error, LocalizedError {
