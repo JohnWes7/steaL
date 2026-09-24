@@ -335,9 +335,6 @@ extension SteamAppDetails {
     /// 是否是试玩版条目 / Whether the entry is a demo
     var isDemo: Bool { type?.caseInsensitiveCompare("demo") == .orderedSame }
 
-    /// 是否免费，F2P 与 Demo 都算 / `true` for both free-to-play titles and demos
-    var isFreeOrDemo: Bool { isFree == true || isDemo }
-
     /// 是否还没发售 / Whether the game has not been released yet
     var isComingSoon: Bool { releaseDate?.comingSoon == true }
 
@@ -345,13 +342,11 @@ extension SteamAppDetails {
     enum GameKind {
         /// 试玩版，不单独售卖 / A demo, never sold on its own
         case demo
-        /// 限时免费（含免费保留），原价还在 / Free for a limited time; the regular price is still there
-        case freeToKeep
         /// 永久免费（F2P），从来没有卖过 / Permanently free; it has never been sold
         case freeForever
         /// 还没发售；开了预购的有 `price_overview` / Not released yet; a pre-order has a `price_overview`
         case unreleased
-        /// 正常售卖 / Sold normally
+        /// 正常售卖，含限时免费（100% 折扣，原价还在）/ Sold normally, including a 100%-off giveaway
         case paid
 
         /// 要不要显示历史低价：永久免费的低价是它免费之前的价 /
@@ -359,19 +354,21 @@ extension SteamAppDetails {
         var showsPriceHistory: Bool {
             switch self {
             case .freeForever: false
-            case .demo, .freeToKeep, .unreleased, .paid: true
+            case .demo, .unreleased, .paid: true
             }
         }
     }
 
     /// 游戏类型；三个条件并不互斥（试玩版与限时免费都是 `is_free == true`），顺序即优先级 /
     /// The kind of game; the flags are not mutually exclusive, so their order is the priority
-    ///
-    /// 两种免费用 `price_overview` 区分（永久免费是 `null`）/ The two free kinds differ by `price_overview`
     var gameKind: GameKind {
         if isDemo { return .demo }
         if isComingSoon { return .unreleased }
-        if isFree == true { return priceOverview == nil ? .freeForever : .freeToKeep }
+
+        // 永久免费没有 `price_overview`；限时免费有原价，按付费处理 / A giveaway keeps its price, so it counts as paid
+        let isFreeForever = isFree == true && priceOverview == nil
+        if isFreeForever { return .freeForever }
+
         return .paid
     }
 

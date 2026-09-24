@@ -154,8 +154,8 @@ final class GameDetailViewModel {
 
             // 未发售也照查：开了预购就有价（Persona 4 Revival），没开由 `from` 藏起来 /
             // Unreleased is loaded too: a pre-order has prices, and `from` hides the rest.
-            // 免费也和付费一样要查：限时免费有原价，永久免费在别处未必免费 / Free is loaded like paid
-            case .unreleased, .freeToKeep, .freeForever, .paid:
+            // 永久免费也要查：在别的商店未必免费 / Free-to-play is loaded too; other stores may still sell it
+            case .unreleased, .freeForever, .paid:
                 pricesState = .loading
                 infoState = .loading
             }
