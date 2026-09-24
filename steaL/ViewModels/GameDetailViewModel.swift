@@ -52,10 +52,21 @@ final class GameDetailViewModel {
         case unavailable
 
         /// 把一次比价的结果落成状态 / Resolves one prices result into a state
-        static func from(_ prices: ITADPriceGame?, showsHistory: Bool) -> PricesState {
-            guard let prices, !prices.isEmpty else { return .unavailable }
+        static func from(_ prices: ITADPriceGame?, kind: SteamAppDetails.GameKind) -> PricesState {
+            guard let prices, !prices.isEmpty else {
+                // 未发售没价是还没开预购，不算「没有数据」/ No prices before release just means no pre-order yet
+                if kind == .unreleased {
+                    return .hidden
+                }
 
-            return showsHistory ? .loaded(prices) : .loadedWithoutHistory(prices)
+                return .unavailable
+            }
+
+            if kind.showsPriceHistory {
+                return .loaded(prices)
+            }
+
+            return .loadedWithoutHistory(prices)
         }
     }
 
@@ -139,21 +150,17 @@ final class GameDetailViewModel {
                 infoState = .hidden
                 return
 
-            // 未发售只补 ITAD 信息，没有可比的价 / An unreleased title only needs the ITAD info
-            case .unreleased:
-                pricesState = .hidden
-                await retryInfo()
-                return
-
+            // 未发售也照查：开了预购就有价（Persona 4 Revival），没开由 `from` 藏起来 /
+            // Unreleased is loaded too: a pre-order has prices, and `from` hides the rest.
             // 免费也和付费一样要查：限时免费有原价，永久免费在别处未必免费 / Free is loaded like paid
-            case .freeToKeep, .freeForever, .paid:
+            case .unreleased, .freeToKeep, .freeForever, .paid:
                 pricesState = .loading
                 infoState = .loading
             }
 
             // 两个 ITAD 区块共用一次 UUID 查找，已有就跳过 / Both ITAD sections share one UUID lookup
             guard let uuid = await resolveUUID() else {
-                pricesState = .unavailable
+                pricesState = .from(nil, kind: details.gameKind)
                 infoState = .unavailable
                 return
             }
@@ -161,7 +168,7 @@ final class GameDetailViewModel {
             async let prices = fetchPricesIfPossible(uuid: uuid, region: region)
             async let info = fetchInfoIfPossible(uuid: uuid)
 
-            pricesState = .from(await prices, showsHistory: details.gameKind.showsPriceHistory)
+            pricesState = .from(await prices, kind: details.gameKind)
             infoState = (await info).map(InfoState.loaded) ?? .unavailable
 
         } catch {
@@ -185,18 +192,16 @@ final class GameDetailViewModel {
 
         guard !Task.isCancelled else { return }
         guard let uuid = await resolveUUID() else {
-            pricesState = .unavailable
+            pricesState = .from(nil, kind: details.gameKind)
             return
         }
 
         let prices = await fetchPricesIfPossible(uuid: uuid, region: region)
         guard !Task.isCancelled else { return }
-        pricesState = .from(prices, showsHistory: details.gameKind.showsPriceHistory)
+        pricesState = .from(prices, kind: details.gameKind)
     }
 
     /// 查一次 ITAD 游戏信息，必要时先按 appID 查 UUID / Fetches the ITAD game info, resolving the UUID when needed
-    ///
-    /// 它也是未发售详情页的首次加载入口 / It is also the first-load entry for unreleased titles
     func retryInfo() async {
         infoState = .loading
 

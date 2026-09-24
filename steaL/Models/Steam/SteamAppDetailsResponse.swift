@@ -349,7 +349,7 @@ extension SteamAppDetails {
         case freeToKeep
         /// 永久免费（F2P），从来没有卖过 / Permanently free; it has never been sold
         case freeForever
-        /// 还没发售 / Not released yet
+        /// 还没发售；开了预购的有 `price_overview` / Not released yet; a pre-order has a `price_overview`
         case unreleased
         /// 正常售卖 / Sold normally
         case paid
