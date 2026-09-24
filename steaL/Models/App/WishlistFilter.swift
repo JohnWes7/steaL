@@ -7,12 +7,13 @@
 
 import Foundation
 
-/// Wishlist 顶部分段控件的筛选项；打折 / 史低由每行的价格算出，不存 Firestore /
-/// The wishlist's segmented filter; on-sale and all-time-low come from each row's price, not from Firestore
+/// Wishlist 顶部分段控件的筛选项；打折 / 史低由每行的价格算出，未发售读 Firestore 的 `isComingSoon` 并向 Steam 核对 /
+/// The wishlist's segmented filter; on-sale and all-time-low come from each row's price, upcoming from Firestore's `isComingSoon` checked against Steam
 enum WishlistFilter: String, CaseIterable, Identifiable {
     case all
     case onSale
     case allTimeLow
+    case upcoming
 
     var id: String { rawValue }
 
@@ -22,6 +23,7 @@ enum WishlistFilter: String, CaseIterable, Identifiable {
         case .all: return "All"
         case .onSale: return "On Sale"
         case .allTimeLow: return "Lowest"
+        case .upcoming: return "Upcoming"
         }
     }
 
@@ -31,6 +33,7 @@ enum WishlistFilter: String, CaseIterable, Identifiable {
         case .all: return "All"
         case .onSale: return "On Sale"
         case .allTimeLow: return "All-Time Low"
+        case .upcoming: return "Upcoming"
         }
     }
 }

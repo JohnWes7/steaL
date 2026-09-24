@@ -231,7 +231,10 @@ struct GameDetailView: View {
                 name: gameDetailViewModel.title,
                 headerImageURL: details.headerImage,
                 // UUID 可能还在查，nil 也能存 / The UUID may still be resolving; nil is fine to store
-                itadID: gameDetailViewModel.uuid
+                itadID: gameDetailViewModel.uuid,
+                // 不用 `gameKind == .unreleased`：未发售的 demo 算 `.demo`，不算 `.unreleased`；Wishlist 核对也用 `isComingSoon` /
+                // Not `gameKind == .unreleased`: an unreleased demo counts as `.demo`, not `.unreleased`; the wishlist check uses `isComingSoon` too
+                isComingSoon: details.isComingSoon
             )
             // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /
             // Only encoding errors can throw, which this fixed model never hits; server rejections are rolled back by the listener

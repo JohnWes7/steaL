@@ -7,8 +7,11 @@
 
 import Foundation
 
-/// Wishlist 页的价格：收藏本身由 `WishlistService` 推送，这里只按 appID 管每行的价格 /
-/// Prices for the wishlist page: the saved items come from `WishlistService`, this only tracks each row's price by appID
+/// Wishlist 页的价格与发售状态：收藏本身由 `WishlistService` 推送，这里按 appID 管每行的价格和 Steam 核对结果 /
+/// Prices and release status for the wishlist page: the saved items come from `WishlistService`, this tracks each row's price and Steam check by appID
+///
+/// 发售状态核对后与 Firestore 不同的值由方法返回，`WishlistView` 交给 `WishlistService` 回写（VM 不持有 Service）/
+/// Release statuses that differ from Firestore are returned, and `WishlistView` writes them back through `WishlistService` (the VM holds no service)
 ///
 /// 价格只存在内存里，不过期：新增收藏、换区域、下拉刷新时才查 /
 /// Prices live in memory and never expire; they're fetched for new items, a region change or pull to refresh
@@ -39,21 +42,21 @@ final class WishlistViewModel {
     }
 
     /// 每行的价格，按 appID；没有的行按 `.loading` 处理 / Each row's price by appID; a missing row reads as `.loading`
-    private(set) var prices: [Int: PriceState] = [:]
+    private(set) var priceStates: [Int: PriceState] = [:]
 
     /// 上次加载用的区域，变了就清空价格（币种不同）/ The region of the last load; a change clears the prices (different currency)
     private var loadedRegion: AppRegion?
 
     /// 本次运行 lookup 到的 UUID，按 appID；和区域无关，换区域不清 /
     /// UUIDs looked up during this run, by appID; region-independent, so a region change keeps them
-    private var lookedUpUUIDs: [Int: String] = [:]
+    private var lookedUpUUIDsCache: [Int: String] = [:]
 
     /// `prices/v3` 一次最多 200 个 UUID / `prices/v3` takes at most 200 UUIDs per request
     private static let batchLimit = 200
 
     /// 某一行现在的价格状态 / A row's current price state
     func priceState(for item: WishlistItem) -> PriceState {
-        let state = prices[item.appID]
+        let state = priceStates[item.appID]
         return state ?? .loading
     }
 
@@ -66,10 +69,17 @@ final class WishlistViewModel {
         items.filter { item in matches(item, filter: filter) }
     }
 
-    /// 还有没有行在等价格；筛选结果为空时用来区分「还在查」和「真的没有」/
-    /// Whether any row is still waiting for its price; tells "still loading" from "none" when a filter comes up empty
-    func hasPendingPrices(in items: [WishlistItem]) -> Bool {
-        items.contains { item in priceState(for: item).isLoading }
+    /// 这个筛选要的数据还有没有行在等；筛选结果为空时用来区分「还在查」和「真的没有」/
+    /// Whether any row is still waiting for the data this filter needs; tells "still loading" from "none" when a filter comes up empty
+    func hasPendingResults(in items: [WishlistItem], for filter: WishlistFilter) -> Bool {
+        switch filter {
+        case .all:
+            return false
+        case .onSale, .allTimeLow:
+            return items.contains { item in priceState(for: item).isLoading }
+        case .upcoming:
+            return items.contains { item in isReleasePending(item) }
+        }
     }
 
     /// 一行是否符合筛选；价格没查到（加载中、没价格、失败）的行只在 All 里出现 /
@@ -86,6 +96,8 @@ final class WishlistViewModel {
             guard let deal else { return false }
             // ITAD 的 H / N 标记，和首页「ALL-TIME LOW」标签同一个判断 / ITAD's H / N flag, the same test as the home page's "ALL-TIME LOW" tag
             return deal.isHistoricalLow
+        case .upcoming:
+            return isComingSoon(item)
         }
     }
 
@@ -97,6 +109,122 @@ final class WishlistViewModel {
         return deal
     }
 
+    // MARK: - 发售状态 / Release status
+
+    /// 向 Steam 核对一行发售状态的结果 / The outcome of checking one row's release status with Steam
+    enum ReleaseCheck {
+        case comingSoon
+        case released
+        /// 请求失败或 Steam 查不到，沿用 Firestore 存的值 / The request failed or Steam has no entry; the stored value stands
+        case failed
+
+        /// 核对出的结果，失败为 nil / The checked result; nil on failure
+        var isComingSoon: Bool? {
+            switch self {
+            case .comingSoon: return true
+            case .released: return false
+            case .failed: return nil
+            }
+        }
+    }
+
+    /// 本次运行核对过的发售状态，按 appID；存 `true` 的行每次运行核对一次，发售了才能发现 /
+    /// Release statuses checked during this run, by appID; rows stored as `true` are checked once per run so a release gets noticed
+    private(set) var releaseChecksState: [Int: ReleaseCheck] = [:]
+
+    /// 一行是否未发售：先看本次核对的结果，没有就用 Firestore 存的值，都没有当作已发售 /
+    /// Whether a row is unreleased: this run's check first, then the stored value, and released when neither is known
+    func isComingSoon(_ item: WishlistItem) -> Bool {
+        let check = releaseChecksState[item.appID]
+        if let checked = check?.isComingSoon {
+            return checked
+        }
+        let stored = item.isComingSoon
+        return stored ?? false
+    }
+
+    /// 还不知道是否未发售（存的是 nil 且还没核对完）/ Release status still unknown (stored as nil and not checked yet)
+    private func isReleasePending(_ item: WishlistItem) -> Bool {
+        if releaseChecksState[item.appID] != nil {
+            return false
+        }
+        return item.isComingSoon == nil
+    }
+
+    /// 进页面或收藏变化时调用：核对存的是 `true` 或 nil、本次还没核对过的行 /
+    /// Called on appear or when the wishlist changes: checks rows stored as `true` or nil that haven't been checked this run
+    /// - Returns: 和 Firestore 不同、要回写的值，按 appID / Values that differ from Firestore and should be written back, by appID
+    func checkReleases(for items: [WishlistItem], region: AppRegion) async -> [Int: Bool] {
+        // 检查之前有没有查过
+        let uncheckedItems = items.filter { item in releaseChecksState[item.appID] == nil }
+        let itemsToCheck = uncheckedItems.filter { item in item.isComingSoon != false }
+        return await fetchReleaseChecks(for: itemsToCheck, region: region)
+    }
+
+    /// 下拉刷新：重新核对所有存的不是 `false` 的行 / Pull to refresh: rechecks every row not stored as `false`
+    /// - Returns: 和 Firestore 不同、要回写的值，按 appID / Values that differ from Firestore and should be written back, by appID
+    func refreshReleases(for items: [WishlistItem], region: AppRegion) async -> [Int: Bool] {
+        let itemsToCheck = items.filter { item in item.isComingSoon != false }
+        return await fetchReleaseChecks(for: itemsToCheck, region: region)
+    }
+
+    /// 并行请求 Steam 详情，整批写回 `releaseChecksState`，返回要回写 Firestore 的差异 /
+    /// Fetches Steam details in parallel, writes `releaseChecksState` once and returns the differences to write back to Firestore
+    ///
+    /// Steam `appdetails` 多个 appid 只支持 `filters=price_overview`，没法批量查发售状态 /
+    /// Steam's `appdetails` only takes several appids with `filters=price_overview`, so release status can't be batched
+    private func fetchReleaseChecks(for items: [WishlistItem], region: AppRegion) async -> [Int: Bool] {
+        guard !items.isEmpty else { return [:] }
+
+        let appIDs = items.map(\.appID)
+        let results = await withTaskGroup(of: (Int, ReleaseCheck).self) { group in
+            for appID in appIDs {
+                group.addTask {
+                    let check = await Self.checkRelease(appID: appID, region: region)
+                    return (appID, check)
+                }
+            }
+
+            var results: [Int: ReleaseCheck] = [:]
+            for await (appID, check) in group {
+                results[appID] = check
+            }
+            return results
+        }
+        guard !Task.isCancelled else { return [:] }
+
+        var updatedChecks = releaseChecksState
+        var corrections: [Int: Bool] = [:]
+        for item in items {
+            guard let check = results[item.appID] else { continue }
+            updatedChecks[item.appID] = check
+
+            // 失败不回写，Firestore 保持原值 / A failure writes nothing; Firestore keeps its value
+            guard let checked = check.isComingSoon else { continue }
+            if checked != item.isComingSoon {
+                corrections[item.appID] = checked
+            }
+        }
+        releaseChecksState = updatedChecks
+        return corrections
+    }
+
+    /// 向 Steam 核对一个游戏是否未发售 / Checks with Steam whether one game is unreleased
+    private static func checkRelease(appID: Int, region: AppRegion) async -> ReleaseCheck {
+        do {
+            let details = try await SteamAPI.fetchAppDetails(appID: appID, region: region)
+            if details.isComingSoon {
+                return .comingSoon
+            }
+            return .released
+        } catch {
+            if !Task.isCancelled {
+                print("[WishlistViewModel] release check failed / failed: \(error)")
+            }
+            return .failed
+        }
+    }
+
     // MARK: - 加载 / Loading
 
     /// 进页面或收藏变化时调用：只查还没有状态的行，删一条不会重查其他行 /
@@ -105,15 +233,15 @@ final class WishlistViewModel {
     /// - Parameter region: 商店区域 / The store region
     func loadPrices(for items: [WishlistItem], region: AppRegion) async {
         if loadedRegion != region {
-            prices = [:]
+            priceStates = [:]
             loadedRegion = region
         }
 
         // 丢掉已移除的行，重新加回来时会再查一次 / Drop removed rows so a re-added game is fetched again
         let currentAppIDs = Set(items.map(\.appID))
-        prices = prices.filter { entry in currentAppIDs.contains(entry.key) }
+        priceStates = priceStates.filter { entry in currentAppIDs.contains(entry.key) }
 
-        let newItems = items.filter { item in prices[item.appID] == nil }
+        let newItems = items.filter { item in priceStates[item.appID] == nil }
         await fetchPrices(for: newItems, region: region)
     }
 
@@ -124,7 +252,7 @@ final class WishlistViewModel {
         await fetchPrices(for: items, region: region)
     }
 
-    /// 解析 UUID、批量查价，最后整批写回 `prices` / Resolves UUIDs, fetches prices in a batch, then writes `prices` once
+    /// 解析 UUID、批量查价，最后整批写回 `priceStates` / Resolves UUIDs, fetches prices in a batch, then writes `priceStates` once
     private func fetchPrices(for items: [WishlistItem], region: AppRegion) async {
         guard !items.isEmpty else { return }
 
@@ -132,7 +260,7 @@ final class WishlistViewModel {
         var uuidByAppID: [Int: String] = [:]
         var appIDsToLookUp: [Int] = []
         for item in items {
-            let cachedUUID = lookedUpUUIDs[item.appID]
+            let cachedUUID = lookedUpUUIDsCache[item.appID]
             let knownUUID = item.itadID ?? cachedUUID
             if let knownUUID {
                 uuidByAppID[item.appID] = knownUUID
@@ -149,7 +277,7 @@ final class WishlistViewModel {
         for (appID, result) in lookupResults {
             switch result {
             case .found(let uuid):
-                lookedUpUUIDs[appID] = uuid // into cache
+                lookedUpUUIDsCache[appID] = uuid // into cache
                 uuidByAppID[appID] = uuid
             case .notFound:
                 statesFromLookup[appID] = .noPrice
@@ -163,14 +291,14 @@ final class WishlistViewModel {
         guard isCurrent(region) else { return }
 
         // 4. 整批写回，只触发一次重绘 / Write back in one go so the view redraws once
-        var updatedPrices = prices
+        var updatedPrices = priceStates
         for (appID, state) in statesFromLookup {
             updatedPrices[appID] = state
         }
         for (appID, state) in statesFromPrices {
             updatedPrices[appID] = state
         }
-        prices = updatedPrices
+        priceStates = updatedPrices
     }
 
     /// 结果还该不该写：Task 被取消（切 tab、列表变化）或区域已换就丢掉 /

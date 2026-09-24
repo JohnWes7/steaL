@@ -162,11 +162,17 @@ struct WishlistView: View {
         .task(id: priceRequest) {
             await viewModel.loadPrices(for: wishlistService.items, region: region)
         }
+        // 和查价同一个触发条件；VM 只核对本次还没核对过、存的不是 false 的行 /
+        // Same trigger as prices; the VM only checks rows not checked this run and not stored as false
+        .task(id: priceRequest) {
+            let corrections = await viewModel.checkReleases(for: wishlistService.items, region: region)
+            saveReleaseStatus(corrections)
+        }
         // 系统下拉刷新，也是价格请求失败后的重试入口 / System pull to refresh; also how a failed price gets retried
         .refreshable {
             // 刷新中途写 `prices` 会重绘并取消 refreshable 自己的 Task；包一层独立 Task 不受影响（同 `GamesView`）/
             // Mid-refresh `prices` writes redraw and cancel refreshable's own task; a separate Task survives (as in `GamesView`)
-            await Task { await viewModel.refresh(items: wishlistService.items, region: region) }.value
+            await Task { await refresh() }.value
         }
     }
 
@@ -198,10 +204,10 @@ struct WishlistView: View {
         .padding(.bottom, 8)
     }
 
-    /// 筛选结果为空：价格还在查就转圈，查完了才说没有 / An empty filter: a spinner while prices load, the empty message only once they're in
+    /// 筛选结果为空：这个筛选要的数据还在查就转圈，查完了才说没有 / An empty filter: a spinner while its data loads, the empty message only once it's in
     @ViewBuilder
     private var filterEmptyState: some View {
-        if viewModel.hasPendingPrices(in: wishlistService.items) {
+        if viewModel.hasPendingResults(in: wishlistService.items, for: filter) {
             ProgressView()
         } else {
             switch filter {
@@ -220,7 +226,33 @@ struct WishlistView: View {
                     systemImage: "chart.line.downtrend.xyaxis",
                     description: Text("None of your saved games are at their lowest price ever.")
                 )
+            case .upcoming:
+                ContentUnavailableView(
+                    "No Upcoming Games",
+                    systemImage: "calendar",
+                    description: Text("All of your saved games are already out.")
+                )
             }
+        }
+    }
+
+    // MARK: - 刷新与回写 / Refreshing and writing back
+
+    /// 下拉刷新：价格与发售状态并行重查 / Pull to refresh: prices and release status are refetched in parallel
+    private func refresh() async {
+        let items = wishlistService.items
+        async let pricesRefreshed: Void = viewModel.refresh(items: items, region: region)
+        async let releaseCorrections = viewModel.refreshReleases(for: items, region: region)
+        await pricesRefreshed
+        let corrections = await releaseCorrections
+        saveReleaseStatus(corrections)
+    }
+
+    /// 把 Steam 核对后和 Firestore 不同的发售状态写回 / Writes back release statuses that Steam says differ from Firestore
+    private func saveReleaseStatus(_ corrections: [Int: Bool]) {
+        guard let uid = authService.uid else { return }
+        for (appID, isComingSoon) in corrections {
+            wishlistService.updateComingSoon(isComingSoon, appID: appID, uid: uid)
         }
     }
 
