@@ -9,7 +9,9 @@ import SwiftUI
 
 /// Profile 身份卡：品牌渐变发丝线、头像、姓名邮箱与底部区域；登录前后是同一张卡，只换头像、文字与底部 /
 /// Profile identity card: brand gradient hairline, avatar, name and email, and a bottom area;
-/// one card before and after sign-in, swapping only the avatar, text and bottom area
+/// one card before and after sign-in, swapping only the avatar, text and bottom area.
+/// 放在 `List` 的一个 `Section` 里当一行用，底色与圆角由 List 画，和其他分组一致 /
+/// Meant as the single row of a `List` `Section`; the List draws its background and corners, matching the other groups
 struct ProfileIdentityCardView: View {
 
     /// 要展示的用户，`nil` 表示未登录 / The user shown; `nil` means signed out
@@ -17,6 +19,9 @@ struct ProfileIdentityCardView: View {
 
     /// 点 Sign In，由页面弹出登录 sheet；只在未登录时用到 / Tapping Sign In; the page presents the sign-in sheet. Only used when signed out
     let signIn: () -> Void
+
+    /// 头像圆环的直径，随 Dynamic Type 放大 / The avatar ring's diameter, scaled with Dynamic Type
+    @ScaledMetric(relativeTo: .title) private var avatarSize: CGFloat = 64
 
     /// 发丝线与头像共用的品牌渐变，全页唯一的装饰元素 /
     /// The brand gradient shared by the hairline and the avatar; the page's single decorative gesture
@@ -26,9 +31,6 @@ struct ProfileIdentityCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            brandGradient
-                .frame(height: 2)
-
             identityRow
 
             Divider()
@@ -39,8 +41,18 @@ struct ProfileIdentityCardView: View {
                 signInButton
             }
         }
-        .background(Color.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(rowBackground)
+    }
+
+    /// 系统分组行的底色，顶上叠品牌发丝线；发丝线放在行背景里才会被 List 的圆角裁掉 /
+    /// The system grouped-row color with the brand hairline on top; the hairline lives in the row background so the List's corners clip it
+    private var rowBackground: some View {
+        Color(.secondarySystemGroupedBackground)
+            .overlay(alignment: .top) {
+                brandGradient
+                    .frame(height: 2)
+            }
     }
 
     // MARK: - 身份行 / Identity
@@ -53,18 +65,18 @@ struct ProfileIdentityCardView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(user?.displayName ?? "Guest")
-                    .font(.system(size: 20, weight: .bold, design: .default))
+                    .font(.system(.title3, weight: .bold))
                     .foregroundStyle(.primaryText)
                     .lineLimit(1)
 
                 if let user {
                     Text(user.email)
-                        .font(.system(size: 14, weight: .regular, design: .default))
+                        .font(.subheadline)
                         .foregroundStyle(.secondaryText)
                         .lineLimit(1)
                 } else {
                     Text("Sign in to keep a wishlist on all your devices.")
-                        .font(.system(size: 14, weight: .regular, design: .default))
+                        .font(.subheadline)
                         .foregroundStyle(.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -81,7 +93,7 @@ struct ProfileIdentityCardView: View {
     /// A hollow ring stroked with the gradient, the same before and after sign-in; a monogram inside when signed in, a person glyph when signed out
     private var avatar: some View {
         avatarContent
-            .frame(width: 64, height: 64)
+            .frame(width: avatarSize, height: avatarSize)
             .overlay {
                 Circle()
                     .strokeBorder(brandGradient, lineWidth: 2)
@@ -93,11 +105,11 @@ struct ProfileIdentityCardView: View {
     private var avatarContent: some View {
         if let user {
             Text(user.initial)
-                .font(.system(size: 26, weight: .bold, design: .default))
+                .font(.system(.title, weight: .bold))
                 .foregroundStyle(.primaryText)
         } else {
             Image(systemName: "person.fill")
-                .font(.system(size: 26, weight: .semibold))
+                .font(.system(.title, weight: .semibold))
                 .foregroundStyle(.secondaryText)
                 .accessibilityHidden(true)
         }
@@ -126,11 +138,11 @@ struct ProfileIdentityCardView: View {
     private func stat(value: Int, label: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value.formatted())
-                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                .font(.system(.title3, design: .rounded, weight: .heavy))
                 .foregroundStyle(tint)
 
             Text(label)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(.caption, design: .rounded, weight: .medium))
                 .foregroundStyle(.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -157,15 +169,21 @@ struct ProfileIdentityCardView: View {
 }
 
 #Preview("Signed In") {
-    ProfileIdentityCardView(user: .mock, signIn: {})
-        .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.appBackground)
+    List {
+        Section {
+            ProfileIdentityCardView(user: .mock, signIn: {})
+        }
+    }
+    .scrollContentBackground(.hidden)
+    .background(Color.appBackground)
 }
 
 #Preview("Signed Out") {
-    ProfileIdentityCardView(user: nil, signIn: {})
-        .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.appBackground)
+    List {
+        Section {
+            ProfileIdentityCardView(user: nil, signIn: {})
+        }
+    }
+    .scrollContentBackground(.hidden)
+    .background(Color.appBackground)
 }

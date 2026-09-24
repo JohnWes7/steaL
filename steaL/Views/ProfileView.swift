@@ -43,10 +43,10 @@ struct ProfileView: View {
             @Bindable var settings = storedSettings
 
             List {
-                identityCard
-                    .listRowInsets(EdgeInsets())        // 去掉 List 给行的边距
-                    .listRowBackground(Color.clear)     // 去掉行底色，只留卡片自己的
-                    .listRowSeparator(.hidden)          // 顶层行还会画一条分隔线，一起关掉
+                // same as apple setting
+                Section {
+                    identityCard
+                }
 
                 Section("Preferences") {
                     HStack(spacing: 12) {
