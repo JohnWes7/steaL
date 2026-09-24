@@ -75,6 +75,37 @@ struct WishlistRowView: View {
                     .stroke(Color.primaryText.opacity(0.12), lineWidth: 0.5)
             }
             .accessibilityHidden(true)
+            // 放在 `accessibilityHidden` 之后，VoiceOver 仍能读到折扣 / Added after `accessibilityHidden` so VoiceOver still reads the discount
+            .overlay(alignment: .topLeading) {
+                discountBadge
+            }
+    }
+
+    /// 打折时的折扣百分比，其余情况是 `nil` / The discount percentage when on sale, otherwise `nil`
+    private var discountCut: Int? {
+        guard case .loaded(let deal) = price else { return nil }
+        if deal.cut <= 0 {
+            return nil
+        }
+        return deal.cut
+    }
+
+    /// 折扣徽标，颜色同首页卡片；直接用 API 的 `cut`，不本地重算 /
+    /// Discount badge in the home cards' colour; uses the API's `cut` as-is rather than recomputing it
+    @ViewBuilder
+    private var discountBadge: some View {
+        if let discountCut {
+            Text("-\(discountCut)%")
+                .font(.system(.caption2, design: .rounded, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.brandBlue, in: Capsule())
+                .padding(4)
+                // 封面固定 60pt 高，徽标放太大会盖住整张图 / The artwork is a fixed 60pt tall, so an oversized badge would cover it
+                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+                .accessibilityLabel("\(discountCut)% off")
+        }
     }
 
     // MARK: - 价格 / Price
