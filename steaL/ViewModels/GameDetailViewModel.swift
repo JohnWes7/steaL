@@ -36,9 +36,10 @@ final class GameDetailViewModel {
         case failed(LoadError)
     }
 
-    /// 比价区块自己的状态：慢一块不该把整页拖成加载态，查不到与请求失败都归 `.unavailable` /
-    /// The price section's own state: one slow section must not hold the page loading, and a miss
-    /// and a failure both become `.unavailable`
+    /// 比价区块自己的状态：慢一块不该把整页拖成加载态；请求失败一律 `.unavailable`（给 Retry），
+    /// 查不到看游戏类型 /
+    /// The price section's own state: one slow section must not hold the page loading; a failure is
+    /// always `.unavailable` (with a retry), while a miss depends on the kind of game
     enum PricesState: Equatable {
         /// ViewModel 判定这个类型不该有比价 / The view model decided this kind has no prices
         case hidden
@@ -51,7 +52,8 @@ final class GameDetailViewModel {
         /// 问过了，没有可显示的价格 / Asked, and there is nothing to show
         case unavailable
 
-        /// 把一次比价的结果落成状态 / Resolves one prices result into a state
+        /// 把请求成功拿到的比价落成状态，`nil` 是查不到；请求失败不走这里 /
+        /// Resolves a successful prices result into a state, `nil` being a miss; failures never get here
         static func from(_ prices: ITADPriceGame?, kind: SteamAppDetails.GameKind) -> PricesState {
             guard let prices, !prices.isEmpty else {
                 // 未发售没价是还没开预购，不算「没有数据」/ No prices before release just means no pre-order yet
@@ -159,16 +161,27 @@ final class GameDetailViewModel {
             }
 
             // 两个 ITAD 区块共用一次 UUID 查找，已有就跳过 / Both ITAD sections share one UUID lookup
-            guard let uuid = await resolveUUID() else {
+            let resolvedUUID: String?
+            do {
+                resolvedUUID = try await resolveUUID()
+            } catch {
+                // 请求失败，两块都给 Retry / The lookup failed, so both sections offer a retry
+                pricesState = .unavailable
+                infoState = .unavailable
+                return
+            }
+
+            // ITAD 没收录这款游戏 / ITAD does not list this game
+            guard let resolvedUUID else {
                 pricesState = .from(nil, kind: details.gameKind)
                 infoState = .unavailable
                 return
             }
 
-            async let prices = fetchPricesIfPossible(uuid: uuid, region: region)
-            async let info = fetchInfoIfPossible(uuid: uuid)
+            async let prices = fetchPricesState(uuid: resolvedUUID, region: region, kind: details.gameKind)
+            async let info = fetchInfoIfPossible(uuid: resolvedUUID)
 
-            pricesState = .from(await prices, kind: details.gameKind)
+            pricesState = await prices
             infoState = (await info).map(InfoState.loaded) ?? .unavailable
 
         } catch {
@@ -191,14 +204,23 @@ final class GameDetailViewModel {
         pricesState = .loading
 
         guard !Task.isCancelled else { return }
-        guard let uuid = await resolveUUID() else {
+
+        let resolvedUUID: String?
+        do {
+            resolvedUUID = try await resolveUUID()
+        } catch {
+            pricesState = .unavailable
+            return
+        }
+
+        guard let resolvedUUID else {
             pricesState = .from(nil, kind: details.gameKind)
             return
         }
 
-        let prices = await fetchPricesIfPossible(uuid: uuid, region: region)
+        let newState = await fetchPricesState(uuid: resolvedUUID, region: region, kind: details.gameKind)
         guard !Task.isCancelled else { return }
-        pricesState = .from(prices, kind: details.gameKind)
+        pricesState = newState
     }
 
     /// 查一次 ITAD 游戏信息，必要时先按 appID 查 UUID / Fetches the ITAD game info, resolving the UUID when needed
@@ -206,31 +228,40 @@ final class GameDetailViewModel {
         infoState = .loading
 
         guard !Task.isCancelled else { return }
-        guard let uuid = await resolveUUID() else {
+
+        // 信息区块里，没收录和请求失败都是 `.unavailable` / For the info, a miss and a failure look the same
+        let resolvedUUID = try? await resolveUUID()
+        guard let resolvedUUID else {
             infoState = .unavailable
             return
         }
 
-        let info = await fetchInfoIfPossible(uuid: uuid)
+        let info = await fetchInfoIfPossible(uuid: resolvedUUID)
         guard !Task.isCancelled else { return }
         infoState = info.map(InfoState.loaded) ?? .unavailable
     }
 
-    /// 拿到这个游戏在各商店的价格，没有就返回 `nil` / Fetches the prices, `nil` when there are none
+    /// 查一次比价并落成状态：查不到交给 `PricesState.from`，请求失败一律 `.unavailable` /
+    /// Fetches the prices as a state: a miss goes through `PricesState.from`, a failure is `.unavailable`
     ///
     /// 响应是**稀疏数组**，只能按 `id` 取；查不到不是错误 /
     /// The response is a **sparse array**, found by `id`; a missing entry is not an error
-    private func fetchPricesIfPossible(uuid: String, region: AppRegion) async -> ITADPriceGame? {
+    private func fetchPricesState(
+        uuid: String,
+        region: AppRegion,
+        kind: SteamAppDetails.GameKind
+    ) async -> PricesState {
         do {
             let response = try await ITADAPI.fetchPrices(uuids: [uuid], region: region)
-            return response.entry(for: uuid)
+            let prices = response.entry(for: uuid)
+            return .from(prices, kind: kind)
 
         } catch {
             // 取消是正常的（页面离开），其余失败只记日志 / Cancellation is normal; the rest is just logged
             if !(error is CancellationError) {
                 print("[GameDetailViewModel] prices failed / failed: \(error)")
             }
-            return nil
+            return .unavailable
         }
     }
 
@@ -247,26 +278,29 @@ final class GameDetailViewModel {
     }
 
     /// 优先使用路由 UUID，否则按 Steam appID 查一次 / Uses the route UUID, or looks it up once by Steam appID
-    private func resolveUUID() async -> String? {
+    ///
+    /// - Returns: ITAD 没收录时是 `nil` / `nil` when ITAD does not list the game
+    /// - Throws: 请求失败时抛出，调用方据此给 Retry / rethrows a failed request so the caller can offer a retry
+    private func resolveUUID() async throws -> String? {
         if let uuid {
             return uuid
         }
 
+        let response: ITADGameLookupResponse
         do {
-            let response = try await ITADAPI.lookupUUID(appID: appID)
-            guard !Task.isCancelled else { return nil }
-
-            guard response.found, let resolvedUUID = response.game?.id else {
-                return nil
-            }
-
-            self.uuid = resolvedUUID
-            return resolvedUUID
+            response = try await ITADAPI.lookupUUID(appID: appID)
         } catch {
             if !(error is CancellationError) {
                 print("[GameDetailViewModel] UUID lookup failed / failed: \(error)")
             }
+            throw error
+        }
+
+        guard response.found, let resolvedUUID = response.game?.id else {
             return nil
         }
+
+        self.uuid = resolvedUUID
+        return resolvedUUID
     }
 }
