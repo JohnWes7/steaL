@@ -82,13 +82,26 @@ final class WishlistService {
         collection(for: uid).document(String(appID)).delete()
     }
 
-    /// 只改「是否未发售」这一个字段；文档已被删掉时不会重新建出来 /
-    /// Updates only the unreleased flag; a document that was removed meanwhile is not recreated
-    /// - Parameter isComingSoon: Steam 核对后的结果 / The result checked against Steam
+    // `updateData` 只改给出的字段；文档已被删掉时会失败而不是重新建出来（`setData(merge:)` 会建）/
+    // `updateData` touches only the given fields and fails on a removed document instead of recreating it (as `setData(merge:)` would)
+    /// 写入 Steam 核对后的发售状态，并记下核对时间 / Writes the release status checked with Steam, along with when it was checked
+    /// - Parameter isComingSoon: 核对结果 / The checked result
     /// - Parameter appID: Steam App ID
     /// - Parameter uid: 当前账号 / The current account
-    func updateComingSoon(_ isComingSoon: Bool, appID: Int, uid: String) {
-        collection(for: uid).document(String(appID)).updateData(["isComingSoon": isComingSoon])
+    func updateReleaseStatus(isComingSoon: Bool, appID: Int, uid: String) {
+        let fields: [String: Any] = [
+            "isComingSoon": isComingSoon,
+            "releaseCheckedAt": Date.now,
+        ]
+        collection(for: uid).document(String(appID)).updateData(fields)
+    }
+
+    /// 写入 lookup 到的 ITAD UUID，之后查价不用再 lookup / Writes a looked-up ITAD UUID so later price loads skip the lookup
+    /// - Parameter itadID: ITAD 游戏 UUID / ITAD game UUID
+    /// - Parameter appID: Steam App ID
+    /// - Parameter uid: 当前账号 / The current account
+    func updateITADID(_ itadID: String, appID: Int, uid: String) {
+        collection(for: uid).document(String(appID)).updateData(["itadID": itadID])
     }
 
     // MARK: - 私有 / Private

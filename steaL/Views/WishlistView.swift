@@ -160,13 +160,14 @@ struct WishlistView: View {
         .animation(.default, value: visibleAppIDs)
         // 切 tab 回来也会重跑，但 VM 只查还没有状态的行 / Reruns when returning to the tab, but the VM only fetches rows without a state
         .task(id: priceRequest) {
-            await viewModel.loadPrices(for: wishlistService.items, region: region)
+            let foundUUIDs = await viewModel.loadPrices(for: wishlistService.items, region: region)
+            saveITADIDs(foundUUIDs)
         }
-        // 和查价同一个触发条件；VM 只核对本次还没核对过、存的不是 false 的行 /
-        // Same trigger as prices; the VM only checks rows not checked this run and not stored as false
+        // 和查价同一个触发条件；VM 只核对存的不是 false、一天内没核对过的行 /
+        // Same trigger as prices; the VM only checks rows not stored as false and not checked within a day
         .task(id: priceRequest) {
-            let corrections = await viewModel.checkReleases(for: wishlistService.items, region: region)
-            saveReleaseStatus(corrections)
+            let statuses = await viewModel.checkReleases(for: wishlistService.items, region: region)
+            saveReleaseStatuses(statuses)
         }
         // 系统下拉刷新，也是价格请求失败后的重试入口 / System pull to refresh; also how a failed price gets retried
         .refreshable {
@@ -241,18 +242,27 @@ struct WishlistView: View {
     /// 下拉刷新：价格与发售状态并行重查 / Pull to refresh: prices and release status are refetched in parallel
     private func refresh() async {
         let items = wishlistService.items
-        async let pricesRefreshed: Void = viewModel.refresh(items: items, region: region)
-        async let releaseCorrections = viewModel.refreshReleases(for: items, region: region)
-        await pricesRefreshed
-        let corrections = await releaseCorrections
-        saveReleaseStatus(corrections)
+        async let pricesRefreshed = viewModel.refresh(items: items, region: region)
+        async let releasesRefreshed = viewModel.refreshReleases(for: items, region: region)
+        let foundUUIDs = await pricesRefreshed
+        let statuses = await releasesRefreshed
+        saveITADIDs(foundUUIDs)
+        saveReleaseStatuses(statuses)
     }
 
-    /// 把 Steam 核对后和 Firestore 不同的发售状态写回 / Writes back release statuses that Steam says differ from Firestore
-    private func saveReleaseStatus(_ corrections: [Int: Bool]) {
+    /// 把 Steam 核对的发售状态连同核对时间写回 Firestore / Writes the release statuses checked with Steam back to Firestore, with the check time
+    private func saveReleaseStatuses(_ statuses: [Int: Bool]) {
         guard let uid = authService.uid else { return }
-        for (appID, isComingSoon) in corrections {
-            wishlistService.updateComingSoon(isComingSoon, appID: appID, uid: uid)
+        for (appID, isComingSoon) in statuses {
+            wishlistService.updateReleaseStatus(isComingSoon: isComingSoon, appID: appID, uid: uid)
+        }
+    }
+
+    /// 把 lookup 到的 ITAD UUID 写回 Firestore / Writes looked-up ITAD UUIDs back to Firestore
+    private func saveITADIDs(_ uuids: [Int: String]) {
+        guard let uid = authService.uid else { return }
+        for (appID, uuid) in uuids {
+            wishlistService.updateITADID(uuid, appID: appID, uid: uid)
         }
     }
 

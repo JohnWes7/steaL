@@ -21,12 +21,16 @@ struct WishlistItem: Codable, Identifiable {
     /// 列表行封面，免得逐个请求 `appdetails` / The row's cover, so rows don't each fetch `appdetails`
     let headerImageURL: String?
 
-    /// ITAD 游戏 UUID，之后查价格省一次 `lookup/v1` / ITAD game UUID; saves a `lookup/v1` when fetching prices later
+    /// ITAD 游戏 UUID，之后查价格省一次 `lookup/v1`；收藏时没有的由 Wishlist 页 lookup 后回写 / ITAD game UUID; saves a `lookup/v1` when fetching prices; the wishlist page looks up and writes back a missing one
     let itadID: String?
 
     /// 是否未发售（Steam `release_date.coming_soon`）；nil = 收藏时不知道，`WishlistViewModel` 核对后回写 /
     /// Whether the game is unreleased (Steam `release_date.coming_soon`); nil = unknown when saved, checked and written back via `WishlistViewModel`
     let isComingSoon: Bool?
+
+    /// 上次向 Steam 核对发售状态的时间；nil = 没核对过，Wishlist 页一天内不重复核对 /
+    /// When the release status was last checked with Steam; nil = never; the wishlist page rechecks at most once a day
+    let releaseCheckedAt: Date?
 
     // 服务器还没确认的本地快照里是 nil / nil in the local snapshot until the server confirms the write
     // `ServerTimestamp` 没有无参 init，去掉 `= nil` 成员初始化器就必须传它 / `ServerTimestamp` has no plain init, so without `= nil` the memberwise init requires it

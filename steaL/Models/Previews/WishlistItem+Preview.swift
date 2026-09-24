@@ -20,6 +20,7 @@ extension WishlistItem {
             headerImageURL: "https://cdn.akamai.steamstatic.com/steam/apps/1245620/header.jpg",
             itadID: nil,
             isComingSoon: false,
+            releaseCheckedAt: nil,
             addedAt: .now
         ),
         WishlistItem(
@@ -28,6 +29,7 @@ extension WishlistItem {
             headerImageURL: "https://cdn.akamai.steamstatic.com/steam/apps/1145360/header.jpg",
             itadID: nil,
             isComingSoon: false,
+            releaseCheckedAt: nil,
             addedAt: .now.addingTimeInterval(-86_400)
         ),
         WishlistItem(
@@ -36,6 +38,7 @@ extension WishlistItem {
             headerImageURL: "https://cdn.akamai.steamstatic.com/steam/apps/413150/header.jpg",
             itadID: nil,
             isComingSoon: false,
+            releaseCheckedAt: nil,
             addedAt: .now.addingTimeInterval(-86_400 * 12)
         ),
         WishlistItem(
@@ -44,6 +47,7 @@ extension WishlistItem {
             headerImageURL: "https://cdn.akamai.steamstatic.com/steam/apps/1086940/header.jpg",
             itadID: nil,
             isComingSoon: false,
+            releaseCheckedAt: nil,
             addedAt: .now.addingTimeInterval(-86_400 * 400)
         ),
         WishlistItem(
@@ -52,6 +56,7 @@ extension WishlistItem {
             headerImageURL: nil,
             itadID: nil,
             isComingSoon: true,
+            releaseCheckedAt: nil,
             addedAt: nil
         ),
     ]
