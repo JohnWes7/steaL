@@ -24,6 +24,12 @@ struct WishlistView: View {
     /// 是否弹出登录 sheet / Whether the sign-in sheet is shown
     @State private var isShowingSignIn = false
 
+    /// 顶部选中的筛选项 / The selected filter
+    @State private var filter: WishlistFilter = .all
+
+    /// accessibility 字号时分段控件放不下，换成菜单 / At accessibility sizes the segmented control won't fit, so it becomes a menu
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     /// 当前区域，设置就绪前回退澳洲 / Current region; falls back to Australia before settings load
     private var region: AppRegion {
         settings.first?.region ?? .australia
@@ -35,12 +41,23 @@ struct WishlistView: View {
         return WishlistPriceRequest(appIDs: appIDs, region: region)
     }
 
+    /// 有收藏时才显示筛选 / The filter only shows once there is something to filter
+    private var showsFilter: Bool {
+        guard case .loaded = wishlistService.state else { return false }
+        return !wishlistService.items.isEmpty
+    }
+
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.appBackground)
             .safeAreaBar(edge: .top, spacing: 0) {
-                PageHeaderView(title: "Wishlist")
+                VStack(spacing: 0) {
+                    PageHeaderView(title: "Wishlist")
+                    if showsFilter {
+                        filterPicker
+                    }
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             // 挂在 List 外面：文档要求不要放进 List 这类懒加载容器 / Kept outside the List, as the docs say not to place it in lazy containers
@@ -99,9 +116,15 @@ struct WishlistView: View {
     }
 
     /// 收藏列表：点行进详情，左滑或长按移除 / The wishlist: tap to open, swipe or long-press to remove
+    ///
+    /// 筛选结果为空时 `List` 仍然留着，空状态盖在上面：查价的 `.task` 和下拉刷新都挂在它上面 /
+    /// The `List` stays even when a filter is empty, with the empty state laid over it, since the price `.task` and pull to refresh live on it
     private var list: some View {
-        List {
-            ForEach(wishlistService.items) { item in
+        let visibleItems = viewModel.items(wishlistService.items, matching: filter)
+        let visibleAppIDs = visibleItems.map(\.appID)
+
+        return List {
+            ForEach(visibleItems) { item in
                 // 收藏一定带 appID，点了必定能进，不需要首页那种先判断再跳的 Button /
                 // Every saved item has an appID, so the row always navigates; no need for the home page's check-then-push Button
                 NavigationLink(value: GameDetailRoute(appID: item.appID, uuid: item.itadID, title: item.name)) {
@@ -127,9 +150,14 @@ struct WishlistView: View {
         .listStyle(.plain)
         // 露出下面的 appBackground / Let appBackground show through
         .scrollContentBackground(.hidden)
-        // 数据由监听器推送，不在 withAnimation 里；长按移除和别处的增删也要有动画 /
-        // The listener pushes changes outside withAnimation, so context-menu removals and outside edits still animate
-        .animation(.default, value: wishlistService.items.map(\.appID))
+        .overlay {
+            if visibleItems.isEmpty {
+                filterEmptyState
+            }
+        }
+        // 数据由监听器推送，不在 withAnimation 里；长按移除、别处的增删和切换筛选都要有动画 /
+        // The listener pushes changes outside withAnimation, so context-menu removals, outside edits and filter switches still animate
+        .animation(.default, value: visibleAppIDs)
         // 切 tab 回来也会重跑，但 VM 只查还没有状态的行 / Reruns when returning to the tab, but the VM only fetches rows without a state
         .task(id: priceRequest) {
             await viewModel.loadPrices(for: wishlistService.items, region: region)
@@ -139,6 +167,60 @@ struct WishlistView: View {
             // 刷新中途写 `prices` 会重绘并取消 refreshable 自己的 Task；包一层独立 Task 不受影响（同 `GamesView`）/
             // Mid-refresh `prices` writes redraw and cancel refreshable's own task; a separate Task survives (as in `GamesView`)
             await Task { await viewModel.refresh(items: wishlistService.items, region: region) }.value
+        }
+    }
+
+    // MARK: - 筛选 / Filtering
+
+    /// 顶部筛选：平时是分段控件，accessibility 字号时换成菜单 / The filter: segmented normally, a menu at accessibility sizes
+    private var filterPicker: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                Picker("Filter", selection: $filter) {
+                    ForEach(WishlistFilter.allCases) { option in
+                        Text(option.fullName).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Picker("Filter", selection: $filter) {
+                    ForEach(WishlistFilter.allCases) { option in
+                        Text(option.title)
+                            .accessibilityLabel(option.fullName)
+                            .tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.bottom, 8)
+    }
+
+    /// 筛选结果为空：价格还在查就转圈，查完了才说没有 / An empty filter: a spinner while prices load, the empty message only once they're in
+    @ViewBuilder
+    private var filterEmptyState: some View {
+        if viewModel.hasPendingPrices(in: wishlistService.items) {
+            ProgressView()
+        } else {
+            switch filter {
+            case .all:
+                // 有收藏才会显示列表，All 不会为空 / The list only shows when there are items, so All is never empty
+                EmptyView()
+            case .onSale:
+                ContentUnavailableView(
+                    "No Games on Sale",
+                    systemImage: "tag",
+                    description: Text("None of your saved games are discounted right now.")
+                )
+            case .allTimeLow:
+                ContentUnavailableView(
+                    "No All-Time Lows",
+                    systemImage: "chart.line.downtrend.xyaxis",
+                    description: Text("None of your saved games are at their lowest price ever.")
+                )
+            }
         }
     }
 

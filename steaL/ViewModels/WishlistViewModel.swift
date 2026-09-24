@@ -28,6 +28,14 @@ final class WishlistViewModel {
         case noPrice
         /// lookup 或价格请求失败，下拉刷新重试 / The lookup or price request failed; pull to refresh retries
         case failed
+
+        /// 是否还在等结果 / Whether the result is still pending
+        var isLoading: Bool {
+            if case .loading = self {
+                return true
+            }
+            return false
+        }
     }
 
     /// 每行的价格，按 appID；没有的行按 `.loading` 处理 / Each row's price by appID; a missing row reads as `.loading`
@@ -47,6 +55,46 @@ final class WishlistViewModel {
     func priceState(for item: WishlistItem) -> PriceState {
         let state = prices[item.appID]
         return state ?? .loading
+    }
+
+    // MARK: - 筛选 / Filtering
+
+    /// 按筛选项挑出要显示的行，顺序不变 / The rows to show for a filter, in their original order
+    /// - Parameter items: 当前的收藏 / The current wishlist
+    /// - Parameter filter: 顶部选中的筛选项 / The selected filter
+    func items(_ items: [WishlistItem], matching filter: WishlistFilter) -> [WishlistItem] {
+        items.filter { item in matches(item, filter: filter) }
+    }
+
+    /// 还有没有行在等价格；筛选结果为空时用来区分「还在查」和「真的没有」/
+    /// Whether any row is still waiting for its price; tells "still loading" from "none" when a filter comes up empty
+    func hasPendingPrices(in items: [WishlistItem]) -> Bool {
+        items.contains { item in priceState(for: item).isLoading }
+    }
+
+    /// 一行是否符合筛选；价格没查到（加载中、没价格、失败）的行只在 All 里出现 /
+    /// Whether a row passes a filter; rows without a loaded price only show under All
+    private func matches(_ item: WishlistItem, filter: WishlistFilter) -> Bool {
+        let deal = loadedDeal(for: item)
+        switch filter {
+        case .all:
+            return true
+        case .onSale:
+            guard let deal else { return false }
+            return deal.cut > 0
+        case .allTimeLow:
+            guard let deal else { return false }
+            // ITAD 的 H / N 标记，和首页「ALL-TIME LOW」标签同一个判断 / ITAD's H / N flag, the same test as the home page's "ALL-TIME LOW" tag
+            return deal.isHistoricalLow
+        }
+    }
+
+    /// 已查到的 deal，其余状态为 nil / The loaded deal; nil for every other state
+    private func loadedDeal(for item: WishlistItem) -> ITADPriceDeal? {
+        guard case .loaded(let deal) = priceState(for: item) else {
+            return nil
+        }
+        return deal
     }
 
     // MARK: - 加载 / Loading
