@@ -25,6 +25,7 @@ struct GamesHeaderView: View {
     @ViewBuilder
     private var header: some View {
         HStack(alignment: .bottom) {
+            // 常驻顶栏的品牌字标 / 标题故意固定字号，不随 Dynamic Type 放大（HIG「Prioritize important content」）
             VStack(alignment: .leading, spacing: 0) {
                 Text("STEAM PRICE TRACKER")
                     .font(.system(size: 13, weight: .bold, design: .default))

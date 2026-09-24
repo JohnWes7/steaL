@@ -15,6 +15,7 @@ struct PageHeaderView: View {
     let title: String
 
     var body: some View {
+        // 常驻顶栏的品牌字标 / 标题故意固定字号，不随 Dynamic Type 放大（HIG「Prioritize important content」）
         VStack(alignment: .leading, spacing: 0) {
             Text("STEAL")
                 .font(.system(size: 13, weight: .bold, design: .default))
