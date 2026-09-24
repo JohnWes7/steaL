@@ -190,11 +190,12 @@ struct IOS26SearchView: View {
 }
 
 #Preview {
-    // 预览不走 `AppDelegate`，直接连真实 Firebase；点进详情页要读 `WishlistService` /
-    // Previews skip `AppDelegate`, so connect to the real Firebase; the detail page reads `WishlistService`
+    // 预览不走 `AppDelegate`，直接连真实 Firebase；点进详情页要读 `AuthService` / `WishlistService` /
+    // Previews skip `AppDelegate`, so connect to the real Firebase; the detail page reads `AuthService` / `WishlistService`
     let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
     NavigationStack {
         IOS26SearchView()
     }
+    .environment(AuthService())
     .environment(WishlistService())
 }

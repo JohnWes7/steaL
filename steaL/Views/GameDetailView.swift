@@ -18,6 +18,9 @@ struct GameDetailView: View {
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
 
+    /// 登录状态，收藏要用 uid / Sign-in state; favouriting needs the uid
+    @Environment(AuthService.self) private var authService
+
     /// 当前账号的 wishlist，用来判断心形是否已收藏 / The current account's wishlist, for the heart's filled state
     @Environment(WishlistService.self) private var wishlistService
 
@@ -25,6 +28,9 @@ struct GameDetailView: View {
     @State private var isSteamDetailExpanded = false
     @State private var offerFilter: OfferFilter = .steam
     @State private var isShowingAllOffers = false
+
+    /// 未登录点心形时弹出登录 sheet / Shows the sign-in sheet when a signed-out user taps the heart
+    @State private var isShowingSignIn = false
 
     /// 完整游戏的路由，非空即推入 / The full game's route; a push happens once it is non-nil
     @State private var fullGameRoute: GameDetailRoute?
@@ -69,6 +75,9 @@ struct GameDetailView: View {
         // 详情页自己注册跳转目标，从被推入的页面再推一页不靠外层栈 / Register our own destination; the enclosing stack needs no `for:`
         .navigationDestination(item: $fullGameRoute) { route in
             GameDetailView(route: route)
+        }
+        .sheet(isPresented: $isShowingSignIn) {
+            SignInSheet()
         }
     }
 
@@ -165,7 +174,7 @@ struct GameDetailView: View {
         .toolbar {
             if showsWishlistButton(details) {
                 ToolbarItem(placement: .topBarTrailing) {
-                    wishlistButton
+                    wishlistButton(details)
                 }
             }
         }
@@ -189,9 +198,9 @@ struct GameDetailView: View {
     }
 
     /// 导航栏的收藏按钮 / The favourite button in the navigation bar
-    private var wishlistButton: some View {
+    private func wishlistButton(_ details: SteamAppDetails) -> some View {
         Button {
-            // 先只看显示效果，切换收藏之后再接 / Display only for now; toggling gets wired up next
+            toggleFavorite(details)
         } label: {
             Label(
                 isFavorite ? "Remove from favourites" : "Add to favourites",
@@ -201,6 +210,33 @@ struct GameDetailView: View {
         // 已收藏用粉色，与首页心形一致；未收藏跟随系统默认 / Pink when saved, matching the home hearts; system default otherwise
         .tint(isFavorite ? Color.pink : nil)
         .contentTransition(.symbolEffect(.replace))
+    }
+
+    /// 切换收藏；未登录先弹登录 sheet，登录后不自动收藏 /
+    /// Toggles the favourite; signed-out users get the sign-in sheet first, and nothing is added automatically afterwards
+    private func toggleFavorite(_ details: SteamAppDetails) {
+        guard let uid = authService.uid else {
+            isShowingSignIn = true
+            return
+        }
+
+        let appID = gameDetailViewModel.appID
+
+        if wishlistService.contains(appID: appID) {
+            wishlistService.remove(appID: appID, uid: uid)
+        } else {
+            let wishlistItem = WishlistItem(
+                appID: appID,
+                // `title` 已经优先用 Steam 的名字，缺了才用路由带来的 / `title` prefers Steam's name, falling back to the route's
+                name: gameDetailViewModel.title,
+                headerImageURL: details.headerImage,
+                // UUID 可能还在查，nil 也能存 / The UUID may still be resolving; nil is fine to store
+                itadID: gameDetailViewModel.uuid
+            )
+            // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /
+            // Only encoding errors can throw, which this fixed model never hits; server rejections are rolled back by the listener
+            try? wishlistService.add(wishlistItem, uid: uid)
+        }
     }
 
     /// 图片下方的 Steam 类型标签 / Steam genre chips below the media gallery
@@ -302,6 +338,7 @@ struct GameDetailView: View {
         )
     }
     .modelContainer(for: UserSettingModel.self, inMemory: true)
+    .environment(AuthService())
     .environment(WishlistService())
 }
 
@@ -318,5 +355,6 @@ struct GameDetailView: View {
         )
     }
     .modelContainer(for: UserSettingModel.self, inMemory: true)
+    .environment(AuthService())
     .environment(WishlistService())
 }
