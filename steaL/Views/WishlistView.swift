@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import FirebaseCore
 
 struct WishlistView: View {
@@ -13,8 +14,26 @@ struct WishlistView: View {
     @Environment(AuthService.self) private var authService
     @Environment(WishlistService.self) private var wishlistService
 
+    /// 用户设置单例行，只读区域 / Singleton user-settings row; read for the region
+    @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
+    private var settings: [UserSettingModel]
+
+    /// 每行的价格；收藏本身直接读 `wishlistService` / Each row's price; the items themselves come straight from `wishlistService`
+    @State private var viewModel = WishlistViewModel()
+
     /// 是否弹出登录 sheet / Whether the sign-in sheet is shown
     @State private var isShowingSignIn = false
+
+    /// 当前区域，设置就绪前回退澳洲 / Current region; falls back to Australia before settings load
+    private var region: AppRegion {
+        settings.first?.region ?? .australia
+    }
+
+    /// 查价的触发条件：收藏增删或区域变化 / What triggers a price load: the wishlist changing or the region changing
+    private var priceRequest: WishlistPriceRequest {
+        let appIDs = wishlistService.items.map(\.appID)
+        return WishlistPriceRequest(appIDs: appIDs, region: region)
+    }
 
     var body: some View {
         content
@@ -86,8 +105,7 @@ struct WishlistView: View {
                 // 收藏一定带 appID，点了必定能进，不需要首页那种先判断再跳的 Button /
                 // Every saved item has an appID, so the row always navigates; no need for the home page's check-then-push Button
                 NavigationLink(value: GameDetailRoute(appID: item.appID, uuid: item.itadID, title: item.name)) {
-                    // 价格 API 还没接，先用占位价 / Placeholder prices until the price API is wired up
-                    WishlistRowView(item: item, price: item.mockPrice, regular: item.mockRegular)
+                    WishlistRowView(item: item, price: viewModel.priceState(for: item))
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -112,6 +130,16 @@ struct WishlistView: View {
         // 数据由监听器推送，不在 withAnimation 里；长按移除和别处的增删也要有动画 /
         // The listener pushes changes outside withAnimation, so context-menu removals and outside edits still animate
         .animation(.default, value: wishlistService.items.map(\.appID))
+        // 切 tab 回来也会重跑，但 VM 只查还没有状态的行 / Reruns when returning to the tab, but the VM only fetches rows without a state
+        .task(id: priceRequest) {
+            await viewModel.loadPrices(for: wishlistService.items, region: region)
+        }
+        // 系统下拉刷新，也是价格请求失败后的重试入口 / System pull to refresh; also how a failed price gets retried
+        .refreshable {
+            // 刷新中途写 `prices` 会重绘并取消 refreshable 自己的 Task；包一层独立 Task 不受影响（同 `GamesView`）/
+            // Mid-refresh `prices` writes redraw and cancel refreshable's own task; a separate Task survives (as in `GamesView`)
+            await Task { await viewModel.refresh(items: wishlistService.items, region: region) }.value
+        }
     }
 
     // MARK: - 移除 / Removing

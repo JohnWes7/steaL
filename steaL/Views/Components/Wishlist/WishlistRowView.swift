@@ -14,11 +14,8 @@ struct WishlistRowView: View {
     /// 要显示的收藏快照 / The saved snapshot to show
     let item: WishlistItem
 
-    /// 现价；还没接价格 API，页面先传占位价 / Current price; the page passes a placeholder until the price API is wired up
-    let price: ITADPrice
-
-    /// 原价，高于现价就算在打折 / Regular price; higher than `price` means the game is on sale
-    let regular: ITADPrice
+    /// 这一行的价格状态，由 `WishlistViewModel` 给 / This row's price state, supplied by `WishlistViewModel`
+    let price: WishlistViewModel.PriceState
 
     /// 封面尺寸，按 Steam header 的 460 × 215 比例 / Artwork size, in Steam's 460 × 215 header ratio
     private let artworkSize = CGSize(width: 128, height: 60)
@@ -33,7 +30,7 @@ struct WishlistRowView: View {
             // 名称贴封面顶边、价格贴底边，和封面一样高 / Name hugs the artwork's top edge and price its bottom, matching its height
             VStack(alignment: .leading, spacing: 0) {
                 Text(item.name)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(.callout, design: .rounded, weight: .semibold))
                     .foregroundStyle(.primaryText)
                     .lineLimit(1)
 
@@ -41,7 +38,8 @@ struct WishlistRowView: View {
 
                 priceLine
             }
-            .frame(height: artworkSize.height)
+            // 默认和封面一样高，字号放大时允许长高 / As tall as the artwork by default, but free to grow with larger text
+            .frame(minHeight: artworkSize.height)
 
             // 推页箭头由外层 `NavigationLink` 自动加，这里不画 / The outer `NavigationLink` adds the disclosure chevron, so none here
             Spacer(minLength: 0)
@@ -64,7 +62,7 @@ struct WishlistRowView: View {
                             .scaledToFit()
                     } else {
                         Image(systemName: phase.error == nil ? "photo" : "photo.badge.exclamationmark")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(.body, weight: .semibold))
                             .foregroundStyle(.secondaryText)
                     }
                 }
@@ -81,25 +79,49 @@ struct WishlistRowView: View {
 
     // MARK: - 价格 / Price
 
-    /// 打折时绿色现价 + 灰色划线原价，不打折只显示原价 / On sale: green price plus grey struck-through regular; otherwise just the regular price
+    /// 按价格状态切换：占位、价格、没价格、失败 / Switches on the price state: placeholder, price, no price or failure
     @ViewBuilder
     private var priceLine: some View {
-        let isOnSale = regular.amountInt > price.amountInt
+        switch price {
+        case .loading:
+            // 先占住位置，价格回来时不跳动（HIG Loading：尽快显示占位内容）/
+            // Hold the space so nothing jumps when the price lands (HIG Loading: show placeholder content early)
+            Text(verbatim: "$00.00")
+                .font(.system(.subheadline, design: .monospaced, weight: .bold))
+                .redacted(reason: .placeholder)
+        case .loaded(let deal):
+            dealPrice(deal)
+        case .noPrice:
+            Text("No price")
+                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                .foregroundStyle(.secondaryText)
+        case .failed:
+            Label("Couldn't load price", systemImage: "exclamationmark.triangle")
+                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                .foregroundStyle(.secondaryText)
+        }
+    }
+
+    /// 打折时绿色现价 + 灰色划线原价，不打折只显示原价；两个价都来自同一条 deal /
+    /// On sale: green price plus grey struck-through regular; otherwise just the regular price. Both come from the same deal
+    @ViewBuilder
+    private func dealPrice(_ deal: ITADPriceDeal) -> some View {
+        let isOnSale = deal.regular.amountInt > deal.price.amountInt
 
         if isOnSale {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                priceText(price)
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                priceText(deal.price)
+                    .font(.system(.subheadline, design: .monospaced, weight: .bold))
                     .foregroundStyle(.brandGreen)
 
-                priceText(regular)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                priceText(deal.regular)
+                    .font(.system(.caption, design: .monospaced, weight: .medium))
                     .foregroundStyle(.secondaryText)
                     .strikethrough()
             }
         } else {
-            priceText(regular)
-                .font(.system(size: 15, weight: .bold, design: .monospaced))
+            priceText(deal.regular)
+                .font(.system(.subheadline, design: .monospaced, weight: .bold))
                 .foregroundStyle(.primaryText)
         }
     }
@@ -113,12 +135,29 @@ struct WishlistRowView: View {
     }
 }
 
+#if DEBUG
+extension WishlistViewModel.PriceState {
+
+    /// 预览用：四种状态各一个，和 `WishlistItem.previewSamples` 前四条配对 /
+    /// Preview states, one of each, paired with the first four `WishlistItem.previewSamples`
+    static let previewStates: [WishlistViewModel.PriceState] = [
+        // 样例里第一条是 Fanatical 的 Steam key，打折中 / The sample's first deal is a discounted Fanatical Steam key
+        .loaded(ITADPriceGame.previewSample.deals[0]),
+        .loading,
+        .noPrice,
+        .failed,
+    ]
+}
+#endif
+
 #Preview {
     // 包进 `NavigationLink` 才看得到系统加的箭头 / Wrapped in `NavigationLink` so the system chevron shows
     NavigationStack {
-        List(WishlistItem.previewSamples) { item in
+        List(0..<4, id: \.self) { index in
+            let item = WishlistItem.previewSamples[index]
+            let price = WishlistViewModel.PriceState.previewStates[index]
             NavigationLink(value: item.appID) {
-                WishlistRowView(item: item, price: item.mockPrice, regular: item.mockRegular)
+                WishlistRowView(item: item, price: price)
             }
             .listRowBackground(Color.clear)
         }
