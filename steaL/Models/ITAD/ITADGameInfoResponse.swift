@@ -22,8 +22,9 @@ struct ITADGameInfoResponse: Codable, Hashable, Identifiable, Sendable {
     let slug: String
     /// 游戏标题 / Game title
     let title: String
-    /// 条目类型 / Item type
-    let type: String
+    /// 条目类型；新收录的条目可能是 `null`（实测 R6 的 Premier Pack DLC）/
+    /// Item type; `null` for some newly tracked items
+    let type: String?
     /// 是否限制级内容 / Whether the item is marked mature
     let mature: Bool
     /// Steam 应用 ID，比走 lookup 快一步 / Steam application ID, one hop cheaper than a lookup
@@ -78,7 +79,7 @@ struct ITADGameInfoResponse: Codable, Hashable, Identifiable, Sendable {
         id = try container.decode(String.self, forKey: .id)
         slug = try container.decode(String.self, forKey: .slug)
         title = try container.decode(String.self, forKey: .title)
-        type = try container.decode(String.self, forKey: .type)
+        type = try container.decodeIfPresent(String.self, forKey: .type)
         mature = try container.decode(Bool.self, forKey: .mature)
         appid = try container.decodeIfPresent(Int.self, forKey: .appid)
 
