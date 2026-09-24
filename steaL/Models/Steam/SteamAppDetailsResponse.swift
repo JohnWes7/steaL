@@ -357,6 +357,15 @@ extension SteamAppDetails {
             case .demo, .unreleased, .paid: true
             }
         }
+
+        /// 能不能收藏：试玩版应该收藏本体，永久免费没有价格可追踪 /
+        /// Whether it can be wishlisted; a demo's full game is the one to track, and a free-forever title has no price
+        var canWishlist: Bool {
+            switch self {
+            case .demo, .freeForever: false
+            case .unreleased, .paid: true
+            }
+        }
     }
 
     /// 游戏类型；三个条件并不互斥（试玩版与限时免费都是 `is_free == true`），顺序即优先级 /

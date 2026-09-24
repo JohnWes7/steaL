@@ -5,6 +5,7 @@
 //  Created by yijiang on 2026/9/12.
 //
 
+import FirebaseCore
 import SwiftData
 import SwiftUI
 
@@ -189,7 +190,11 @@ struct IOS26SearchView: View {
 }
 
 #Preview {
+    // 预览不走 `AppDelegate`，直接连真实 Firebase；点进详情页要读 `WishlistService` /
+    // Previews skip `AppDelegate`, so connect to the real Firebase; the detail page reads `WishlistService`
+    let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
     NavigationStack {
         IOS26SearchView()
     }
+    .environment(WishlistService())
 }

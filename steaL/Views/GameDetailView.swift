@@ -5,6 +5,7 @@
 //  Created by yijiang on 2026/9/12.
 //
 
+import FirebaseCore
 import SwiftData
 import SwiftUI
 
@@ -16,6 +17,9 @@ struct GameDetailView: View {
     /// 设置单例，用来决定请求的区域与语言 / The settings singleton, which decides region and language
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
+
+    /// 当前账号的 wishlist，用来判断心形是否已收藏 / The current account's wishlist, for the heart's filled state
+    @Environment(WishlistService.self) private var wishlistService
 
     @State private var gameDetailViewModel: GameDetailViewModel
     @State private var isSteamDetailExpanded = false
@@ -157,6 +161,46 @@ struct GameDetailView: View {
                 .padding(.bottom, 32)
             }
         }
+        // 挂在加载完成的内容上：加载中与失败页不出现心形 / Attached to the loaded content, so loading and error pages show no heart
+        .toolbar {
+            if showsWishlistButton(details) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    wishlistButton
+                }
+            }
+        }
+    }
+
+    // MARK: - 收藏 / Favourites
+
+    /// 是否已在 wishlist / Whether the game is on the wishlist
+    private var isFavorite: Bool {
+        wishlistService.contains(appID: gameDetailViewModel.appID)
+    }
+
+    /// 要不要显示心形：已收藏的总是显示，免得在详情页取消不了 /
+    /// Whether to show the heart; a wishlisted game always shows it so it can still be removed here
+    private func showsWishlistButton(_ details: SteamAppDetails) -> Bool {
+        if isFavorite {
+            return true
+        }
+
+        return details.gameKind.canWishlist
+    }
+
+    /// 导航栏的收藏按钮 / The favourite button in the navigation bar
+    private var wishlistButton: some View {
+        Button {
+            // 先只看显示效果，切换收藏之后再接 / Display only for now; toggling gets wired up next
+        } label: {
+            Label(
+                isFavorite ? "Remove from favourites" : "Add to favourites",
+                systemImage: isFavorite ? "heart.fill" : "heart"
+            )
+        }
+        // 已收藏用粉色，与首页心形一致；未收藏跟随系统默认 / Pink when saved, matching the home hearts; system default otherwise
+        .tint(isFavorite ? Color.pink : nil)
+        .contentTransition(.symbolEffect(.replace))
     }
 
     /// 图片下方的 Steam 类型标签 / Steam genre chips below the media gallery
@@ -246,6 +290,8 @@ struct GameDetailView: View {
 }
 
 #Preview("主页路径 / Home path") {
+    // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
+    let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
     NavigationStack {
         GameDetailView(
             route: GameDetailRoute(
@@ -256,9 +302,12 @@ struct GameDetailView: View {
         )
     }
     .modelContainer(for: UserSettingModel.self, inMemory: true)
+    .environment(WishlistService())
 }
 
 #Preview("搜索路径 / Search path") {
+    // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
+    let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
     NavigationStack {
         GameDetailView(
             route: GameDetailRoute(
@@ -269,4 +318,5 @@ struct GameDetailView: View {
         )
     }
     .modelContainer(for: UserSettingModel.self, inMemory: true)
+    .environment(WishlistService())
 }
