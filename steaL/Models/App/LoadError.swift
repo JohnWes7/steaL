@@ -70,10 +70,10 @@ enum LoadError: Error, Equatable {
                 return .server(statusCode: statusCode)
             }
 
-        // Steam 的 `gameNotFound` 归一成通用失败，不当作离线 / `gameNotFound` becomes a generic failure, not offline
+        // 查不到游戏不是失败，`SteamAPI` 返回 `nil`，不会走到这里 / A missing game is not a failure; `SteamAPI` returns `nil` instead
         case let apiError as SteamAPIError:
             switch apiError {
-            case .invalidResponse, .gameNotFound:
+            case .invalidResponse:
                 return .unknown
             case .requestFailed(let statusCode, _):
                 return .server(statusCode: statusCode)

@@ -71,19 +71,21 @@ class SteamAPI {
         }
     }
 
-    /// 获取游戏详情：详情页的**硬门槛**，`success == false` 抛 `.gameNotFound` /
-    /// Fetches one game's store details, the detail page's **hard requirement**
+    /// 获取游戏详情：详情页的**硬门槛** / Fetches one game's store details, the detail page's **hard requirement**
     ///
     /// **不要**加 `filters=basic`（会裁掉 `movies` / `screenshots` / `genres`）/ **Never** pass `filters=basic`
     ///
     /// - Parameter appID: Steam App ID / the Steam application ID
     /// - Parameter region: 区域，决定货币与商店可用性 / the region; drives currency and availability
     /// - Parameter language: 语言，用于本地化标题与视频名 / the language used for titles and movie names
+    /// - Returns: 查不到（下架或当前地区不卖，`success == false`）是 `nil`，这不是错误；只有请求失败才抛 /
+    ///   `nil` when Steam has no such game (delisted or not sold in the region, `success == false`), which is
+    ///   not an error; only a failed request throws
     static func fetchAppDetails(
         appID: Int,
         region: AppRegion = .australia,
         language: AppLanguage = .english
-    ) async throws -> SteamAppDetails {
+    ) async throws -> SteamAppDetails? {
         // 构建请求 URL / Construct request URL
         var urlComponents = URLComponents(string: "https://store.steampowered.com/api/appdetails")!
         urlComponents.queryItems = [
@@ -134,11 +136,8 @@ class SteamAPI {
 
         // 只查一个 appid，字典只有一条；`success == false` 与 `data` 缺失都算查不到 /
         // Only one appid was requested, so a failed `success` and a missing `data` both mean a miss
-        guard let details = response.entries.values.first?.data else {
-            throw SteamAPIError.gameNotFound(appID: appID)
-        }
-
-        return details
+        let entry = response.entries.values.first
+        return entry?.data
     }
 
     /// 一次请求批量检查 appID 在 Steam 上存不存在、有没有价格，用来在 ITAD 给的多个候选里挑对的那个 /
@@ -193,8 +192,6 @@ class SteamAPI {
 enum SteamAPIError: Error {
     /// 响应不是 HTTP / The response is not HTTP
     case invalidResponse
-    /// 该 appID 在 Steam 上不存在或已下架 / The appID does not exist on Steam or was delisted
-    case gameNotFound(appID: Int)
     /// 状态码不是 2xx，带服务端原始响应 / A non-2xx status, with the raw server body
     case requestFailed(statusCode: Int, body: String?)
 }

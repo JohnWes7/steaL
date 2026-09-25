@@ -97,6 +97,14 @@ struct GameDetailView: View {
         case .loaded(let details):
             detailContent(details)
 
+        // 查了没有：不是失败，不走 `LoadErrorView`、不给重试 / Checked and missing: not a failure, so no `LoadErrorView` and no retry
+        case .notFound:
+            ContentUnavailableView(
+                "Game Unavailable",
+                systemImage: "questionmark.app",
+                description: Text("This game isn't on the Steam store in your region, or it has been removed.")
+            )
+
         case .failed(let error):
             LoadErrorView(error: error) {
                 Task {

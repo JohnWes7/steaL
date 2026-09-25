@@ -33,6 +33,9 @@ final class GameDetailViewModel {
         case loading
         /// Steam 详情已拿到 / The Steam details are in
         case loaded(SteamAppDetails)
+        /// 请求成功但 Steam 上没有这款游戏（下架或当前地区不卖）；不是失败，重试也不会变 /
+        /// The request worked but Steam has no such game (delisted or not sold here); not a failure, and a retry would not help
+        case notFound
         /// 加载失败，携带归一化后的错误 / Load failed, carrying the normalised error
         case failed(LoadError)
     }
@@ -138,7 +141,7 @@ final class GameDetailViewModel {
 
         // 硬门槛：拿不到 Steam 详情就没有详情页 / Hard requirement: no Steam details, no page
         do {
-            let details = try await SteamAPI.fetchAppDetails(
+            let fetchedDetails = try await SteamAPI.fetchAppDetails(
                 appID: appID,
                 region: region,
                 language: language
@@ -146,6 +149,12 @@ final class GameDetailViewModel {
 
             // 视图消失或请求被取消后不再写状态 / No writes once the view is gone or cancelled
             guard !Task.isCancelled else { return }
+
+            // 查不到不是失败，不走 `LoadError` / A miss is not a failure, so it skips `LoadError`
+            guard let details = fetchedDetails else {
+                state = .notFound
+                return
+            }
 
             // 详情一到就切状态，比价随后补上，不挡首屏 / Switch as the details land; prices fill in later
             state = .loaded(details)

@@ -184,11 +184,11 @@ final class WishlistViewModel {
         return results.compactMapValues { isComingSoon in isComingSoon }
     }
 
-    /// 向 Steam 查一个游戏是否未发售，失败为 nil / Asks Steam whether one game is unreleased; nil on failure
+    /// 向 Steam 查一个游戏是否未发售，失败或查不到（下架）为 nil / Asks Steam whether one game is unreleased; nil on failure or a miss (delisted)
     private static func fetchIsComingSoon(appID: Int, region: AppRegion) async -> Bool? {
         do {
             let details = try await SteamAPI.fetchAppDetails(appID: appID, region: region)
-            return details.isComingSoon
+            return details?.isComingSoon
         } catch {
             if !Task.isCancelled {
                 Logger.wishlist.error("release check failed / failed: \(String(describing: error))")
