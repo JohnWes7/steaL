@@ -52,14 +52,14 @@ struct DealsSectionView: View {
     /// 请求成功但列表为空时的提示，附刷新入口 /
     /// Note for a successful but empty list, with a refresh action
     private var emptyState: some View {
+        // 样式同 `LoadErrorView`：默认颜色，系统文字按钮 / Styled like `LoadErrorView`: default colours, a plain text button
         ContentUnavailableView {
             Label("No Deals Found", systemImage: "tag.slash")
-                .foregroundStyle(.secondaryText)
         } description: {
             Text("There are no discounted games to show right now. Try again later.")
-                .foregroundStyle(.secondaryText)
         } actions: {
-            SectionRetryButton(title: "Refresh", action: retry)
+            Button("Refresh", action: retry)
+                .tint(.brandBlue)
         }
         .frame(maxWidth: .infinity)
     }

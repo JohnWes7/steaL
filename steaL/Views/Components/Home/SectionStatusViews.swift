@@ -19,28 +19,7 @@ struct SectionLoadingView: View {
     }
 }
 
-/// 空列表的刷新按钮 / The refresh button of an empty list
-struct SectionRetryButton: View {
-
-    /// 按钮文案，如 `Refresh` / The button copy, such as `Refresh`
-    let title: String
-
-    /// 点击动作 / The tap action
-    let action: () -> Void
-
-    var body: some View {
-        Button(title, action: action)
-            .tint(.brandBlue)
-    }
-}
-
 #Preview("加载中 / Loading") {
     SectionLoadingView()
-        .background(Color.appBackground)
-}
-
-#Preview("空列表按钮 / Empty-list button") {
-    SectionRetryButton(title: "Refresh", action: {})
-        .padding(20)
         .background(Color.appBackground)
 }
