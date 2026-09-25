@@ -178,6 +178,10 @@ struct PriceSectionView: View {
         isBest: Bool
     ) -> some View {
         let drmNames = offer.drm.map(\.name).joined(separator: ", ")
+        // 竖条标出在打折的行：打折用品牌绿，原价用淡灰 /
+        // The bar flags discounted rows: brand green on sale, muted grey at full price
+        let isOnSale = offer.cut > 0
+        let barColor = isOnSale ? Color.brandGreen : Color.secondaryText.opacity(0.5)
 
         return Button {
             guard let url = URL(string: offer.url) else { return }
@@ -186,7 +190,7 @@ struct PriceSectionView: View {
             HStack(spacing: 12) {
                 if !isBest {
                     RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(Color.secondaryText.opacity(0.5))
+                        .fill(barColor)
                         .frame(width: 5, height: 42)
                 }
 
