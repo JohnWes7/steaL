@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 
 @MainActor
@@ -64,6 +65,7 @@ class SearchViewModel {
 			state = .loaded(response.items)
 		} catch {
 			guard !Task.isCancelled else { return }
+			Logger.search.error("search failed / failed: \(String(describing: error))")
 			state = .failed(LoadError.from(error))
 		}
 

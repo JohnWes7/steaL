@@ -6,6 +6,7 @@
 //
 
 import FirebaseCore
+import OSLog
 import SwiftData
 import SwiftUI
 
@@ -230,6 +231,7 @@ struct ProfileView: View {
         do {
             try authService.signOut()
         } catch {
+            Logger.auth.error("sign out failed / failed: \(String(describing: error))")
             errorMessage = error.localizedDescription
         }
     }
@@ -304,6 +306,7 @@ struct ProfileView: View {
                 try await wishlistService.deleteAll(uid: uid)
                 try await authService.deleteAccount()
             } catch {
+                Logger.auth.error("delete account failed / failed: \(String(describing: error))")
                 deleteErrorMessage = error.localizedDescription
             }
         }

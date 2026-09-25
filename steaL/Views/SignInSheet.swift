@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseCore
+import OSLog
 
 /// 登录 / 注册 sheet，两种模式在同一个 sheet 里切换 / Sign-in / sign-up sheet; both modes switch in place
 struct SignInSheet: View {
@@ -204,6 +205,7 @@ struct SignInSheet: View {
                 // 成功后 `AuthService.state` 由监听器更新，各页面自己刷新 / The listener updates the state; pages refresh on their own
                 dismiss()
             } catch {
+                Logger.auth.error("\(mode.rawValue) failed / failed: \(String(describing: error))")
                 errorMessage = error.localizedDescription
             }
         }

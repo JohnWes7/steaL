@@ -8,6 +8,7 @@
 import Foundation
 import FirebaseFirestore
 import Observation
+import OSLog
 
 @MainActor
 @Observable
@@ -60,6 +61,7 @@ final class WishlistService {
             }
         } catch {
             guard !Task.isCancelled else { return }
+            Logger.wishlist.error("listen failed / failed: \(String(describing: error))")
             state = .failed(error)
         }
     }
