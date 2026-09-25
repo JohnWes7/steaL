@@ -168,16 +168,24 @@ struct MediaGalleryView: View {
             }
     }
 
-    /// 视频页：播放中是内嵌播放器，否则是封面加播放按钮 /
-    /// A movie page: the inline player while playing, otherwise a poster with a play button
-    @ViewBuilder
+    /// 视频页：封面加播放按钮，播放中把内嵌播放器盖在上面 /
+    /// A movie page: a poster with a play button, covered by the inline player while playing
     private func moviePage(_ movie: SteamMovie) -> some View {
-        if trailer.movie == movie {
-            TrailerPlayerView(trailer: trailer)
-        } else {
-            mediaPage(movie.thumbnail.flatMap { URL(string: $0) })
-                .overlay { playBadge(movie) }
-        }
+        let isPlaying = trailer.movie == movie
+
+        // 封面和按钮一直留着：玻璃按钮在按下回弹前被移除，之后新建的按钮会带着放大残留（实测） /
+        // The poster and button stay put: removing a glass button before its press springs back
+        // leaves the next one stuck enlarged (observed)
+        return mediaPage(movie.thumbnail.flatMap { URL(string: $0) })
+            .overlay {
+                playBadge(movie)
+                    .accessibilityHidden(isPlaying)
+            }
+            .overlay {
+                if isPlaying {
+                    TrailerPlayerView(trailer: trailer)
+                }
+            }
     }
 
     /// 视频页上的播放按钮 / The play button on a movie page
