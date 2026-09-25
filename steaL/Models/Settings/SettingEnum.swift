@@ -125,4 +125,12 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
         case .simplifiedChinese: return "简体中文"
         }
     }
+
+    /// 语言的英文名，告诉 AI 用什么语言回答 / The language's English name, telling the model which language to reply in
+    var englishName: String {
+        switch self {
+        case .english: return "English"
+        case .simplifiedChinese: return "Simplified Chinese"
+        }
+    }
 }

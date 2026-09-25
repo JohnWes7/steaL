@@ -34,7 +34,7 @@ struct DetailAIAdviceResponse: Codable, Hashable, Sendable {
 extension DetailAIAdviceResponse {
 
     /// 买、等还是跳过 / Buy, wait, or skip
-    enum Verdict: String, Codable, Hashable, Sendable {
+    enum Verdict: String, Codable, Hashable, Sendable, CaseIterable {
         case buy
         case wait
         case skip
@@ -52,7 +52,7 @@ extension DetailAIAdviceResponse {
     }
 
     /// 理由的立场 / A reason's stance
-    enum Stance: String, Codable, Hashable, Sendable {
+    enum Stance: String, Codable, Hashable, Sendable, CaseIterable {
         /// 利好 / In favour of buying
         case pro
         /// 需要注意 / Worth a caution
@@ -63,7 +63,7 @@ extension DetailAIAdviceResponse {
 
     /// 理由的主题；没有游戏时长这类 App 拿不到数据的主题 /
     /// A reason's topic; nothing the app has no data for, such as play time
-    enum Topic: String, Codable, Hashable, Sendable {
+    enum Topic: String, Codable, Hashable, Sendable, CaseIterable {
         /// 价格与史低 / Price and historical lows
         case price
         /// 好评率 / Review scores
