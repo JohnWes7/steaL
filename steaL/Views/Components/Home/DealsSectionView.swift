@@ -38,7 +38,7 @@ struct DealsSectionView: View {
             SectionLoadingView()
 
         case .failed(let error):
-            SectionErrorView(error: error, retry: retry)
+            LoadErrorView(error: error, retry: retry)
 
         case .loaded(let items):
             if items.isEmpty {

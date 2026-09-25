@@ -98,21 +98,14 @@ struct GameDetailView: View {
             detailContent(details)
 
         case .failed(let error):
-            ContentUnavailableView {
-                Label(error.title, systemImage: error.symbolName)
-            } description: {
-                Text(error.message)
-            } actions: {
-                Button("Try Again") {
-                    Task {
-                        await gameDetailViewModel.load(
-                            region: region,
-                            language: language,
-                            isRetry: true
-                        )
-                    }
+            LoadErrorView(error: error) {
+                Task {
+                    await gameDetailViewModel.load(
+                        region: region,
+                        language: language,
+                        isRetry: true
+                    )
                 }
-                .tint(.brandGreen)
             }
         }
     }

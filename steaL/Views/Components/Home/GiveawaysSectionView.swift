@@ -25,7 +25,7 @@ struct GiveawaysSectionView: View {
             SectionLoadingView()
 
         case .failed(let error):
-            SectionErrorView(error: error, retry: retry)
+            LoadErrorView(error: error, retry: retry)
 
         case .loaded(let giveaways):
             if giveaways.isEmpty {

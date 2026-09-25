@@ -130,17 +130,9 @@ struct IOS26SearchView: View {
                 .scrollIndicators(.hidden)
             }
 
+        // 不给重试：改一下搜索词就会重新请求 / No retry: editing the query searches again
         case .failed(let error):
-            ContentUnavailableView {
-                Label {
-                    Text(error.title)
-                } icon: {
-                    Image(systemName: error.symbolName)
-                        .foregroundStyle(.brandGreen)
-                }
-            } description: {
-                Text(error.message)
-            }
+            LoadErrorView(error: error)
         }
     }
 
