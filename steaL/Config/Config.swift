@@ -11,10 +11,13 @@ enum Config {
     // key 来自 Secrets.xcconfig（不进 git），经 Info.plist 的 $(...) 替换进包里
     /// ITAD API key / ITAD API key
     static let itadAPIKey = infoValue(for: "ITADAPIKey")
-    /// DeepSeek API key / DeepSeek API key
+    /// LLM 服务商的 API key / The LLM provider's API key
     static let llmAPIKey = infoValue(for: "LLMAPIKey")
-    static let llmModel = ""
-    static let llmAPIURL = ""
+    /// LLM 模型名，如 `deepseek-flash` / The LLM model name, such as `deepseek-flash`
+    static let llmModel = infoValue(for: "LLMModel")
+    /// OpenAI Chat Completions 兼容的 base URL，如 `https://api.deepseek.com` /
+    /// An OpenAI Chat Completions compatible base URL, such as `https://api.deepseek.com`
+    static let llmAPIURL = infoValue(for: "LLMAPIURL")
 
     /// 读 Info.plist 里的字符串，缺了返回空串 / Reads a string from Info.plist, empty if missing
     private static func infoValue(for key: String) -> String {
