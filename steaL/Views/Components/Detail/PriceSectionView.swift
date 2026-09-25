@@ -63,10 +63,16 @@ struct PriceSectionView: View {
             case .loadedWithoutHistory(let prices):
                 currentOffers(prices)
 
-            case .unavailable:
+            // 查了没有：不给 Retry，重试也不会变 / A plain miss: no retry, since it would not change anything
+            case .notFound:
                 priceTitle
 
-                UnavailablePromptView(message: "No historical price data", retry: retry)
+                UnavailablePromptView(message: "No prices found for this game.")
+
+            case .failed:
+                priceTitle
+
+                UnavailablePromptView(message: "Couldn't load prices.", retry: retry)
 
             // `body` 已经挡掉 `.hidden` / `body` filters `.hidden` out
             case .hidden:
@@ -76,7 +82,7 @@ struct PriceSectionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// 还没分出区块时的标题（加载中 / 无数据）/ The title used before a part of its own exists
+    /// 还没分出区块时的标题（加载中 / 没找到 / 失败）/ The title used before a part of its own exists
     private var priceTitle: some View {
         Text("PRICES")
             .font(.system(size: 13, weight: .bold, design: .default))
@@ -374,7 +380,13 @@ struct PriceSectionView: View {
                 retry: {}
             )
             PriceSectionView(
-                state: .unavailable,
+                state: .notFound,
+                offerFilter: .constant(.steam),
+                isShowingAllOffers: .constant(false),
+                retry: {}
+            )
+            PriceSectionView(
+                state: .failed,
                 offerFilter: .constant(.steam),
                 isShowingAllOffers: .constant(false),
                 retry: {}

@@ -86,8 +86,12 @@ struct ITADInfoSectionView: View {
                     }
                 }
 
-            case .unavailable:
-                UnavailablePromptView(message: "No info data", retry: retry)
+            // 查了没有：不给 Retry，重试也不会变 / A plain miss: no retry, since it would not change anything
+            case .notFound:
+                UnavailablePromptView(message: "No IsThereAnyDeal details for this game.")
+
+            case .failed:
+                UnavailablePromptView(message: "Couldn't load details.", retry: retry)
 
             // `body` 已经挡掉 `.hidden` / `body` filters `.hidden` out
             case .hidden:
@@ -194,7 +198,8 @@ struct ITADInfoSectionView: View {
     ScrollView {
         VStack(alignment: .leading, spacing: 24) {
             ITADInfoSectionView(state: .loading, retry: {})
-            ITADInfoSectionView(state: .unavailable, retry: {})
+            ITADInfoSectionView(state: .notFound, retry: {})
+            ITADInfoSectionView(state: .failed, retry: {})
         }
         .padding(20)
     }

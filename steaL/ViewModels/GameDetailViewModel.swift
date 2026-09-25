@@ -37,10 +37,10 @@ final class GameDetailViewModel {
         case failed(LoadError)
     }
 
-    /// 比价区块自己的状态：慢一块不该把整页拖成加载态；请求失败一律 `.unavailable`（给 Retry），
-    /// 查不到看游戏类型 /
+    /// 比价区块自己的状态：慢一块不该把整页拖成加载态；请求失败是 `.failed`（给 Retry），
+    /// 查不到看游戏类型（`.notFound` 或 `.hidden`）/
     /// The price section's own state: one slow section must not hold the page loading; a failure is
-    /// always `.unavailable` (with a retry), while a miss depends on the kind of game
+    /// `.failed` (with a retry), while a miss depends on the kind of game (`.notFound` or `.hidden`)
     enum PricesState: Equatable {
         /// ViewModel 判定这个类型不该有比价 / The view model decided this kind has no prices
         case hidden
@@ -50,8 +50,11 @@ final class GameDetailViewModel {
         case loaded(ITADPriceGame)
         /// 比价到手，但不显示历史低价（永久免费）/ The prices are in, minus the historical lows
         case loadedWithoutHistory(ITADPriceGame)
-        /// 问过了，没有可显示的价格 / Asked, and there is nothing to show
-        case unavailable
+        /// 请求成功，但 ITAD 没收录或当前地区没有报价；重试也不会变 /
+        /// The request worked, but ITAD does not list the game or has no offers here; a retry would not help
+        case notFound
+        /// 请求失败（UUID 查找或 `prices/v3`），给 Retry / The request failed (UUID lookup or `prices/v3`); offers a retry
+        case failed
 
         /// 把请求成功拿到的比价落成状态，`nil` 是查不到；请求失败不走这里 /
         /// Resolves a successful prices result into a state, `nil` being a miss; failures never get here
@@ -62,7 +65,7 @@ final class GameDetailViewModel {
                     return .hidden
                 }
 
-                return .unavailable
+                return .notFound
             }
 
             if kind.showsPriceHistory {
@@ -81,8 +84,10 @@ final class GameDetailViewModel {
         case loading
         /// 信息到手 / The info is in
         case loaded(ITADGameInfoResponse)
-        /// 问过了，没有可显示的信息 / Asked, and there is no info to show
-        case unavailable
+        /// ITAD 没收录这款游戏；重试也不会变 / ITAD does not list this game; a retry would not help
+        case notFound
+        /// 请求失败（UUID 查找或 `info/v2`），给 Retry / The request failed (UUID lookup or `info/v2`); offers a retry
+        case failed
     }
 
     /// 页面当前状态 / Current state of the page
@@ -167,23 +172,23 @@ final class GameDetailViewModel {
                 resolvedUUID = try await resolveUUID()
             } catch {
                 // 请求失败，两块都给 Retry / The lookup failed, so both sections offer a retry
-                pricesState = .unavailable
-                infoState = .unavailable
+                pricesState = .failed
+                infoState = .failed
                 return
             }
 
             // ITAD 没收录这款游戏 / ITAD does not list this game
             guard let resolvedUUID else {
                 pricesState = .from(nil, kind: details.gameKind)
-                infoState = .unavailable
+                infoState = .notFound
                 return
             }
 
             async let prices = fetchPricesState(uuid: resolvedUUID, region: region, kind: details.gameKind)
-            async let info = fetchInfoIfPossible(uuid: resolvedUUID)
+            async let info = fetchInfoState(uuid: resolvedUUID)
 
             pricesState = await prices
-            infoState = (await info).map(InfoState.loaded) ?? .unavailable
+            infoState = await info
 
         } catch {
             guard !Task.isCancelled else { return }
@@ -207,7 +212,7 @@ final class GameDetailViewModel {
         do {
             resolvedUUID = try await resolveUUID()
         } catch {
-            pricesState = .unavailable
+            pricesState = .failed
             return
         }
 
@@ -227,20 +232,26 @@ final class GameDetailViewModel {
 
         guard !Task.isCancelled else { return }
 
-        // 信息区块里，没收录和请求失败都是 `.unavailable` / For the info, a miss and a failure look the same
-        let resolvedUUID = try? await resolveUUID()
-        guard let resolvedUUID else {
-            infoState = .unavailable
+        let resolvedUUID: String?
+        do {
+            resolvedUUID = try await resolveUUID()
+        } catch {
+            infoState = .failed
             return
         }
 
-        let info = await fetchInfoIfPossible(uuid: resolvedUUID)
+        guard let resolvedUUID else {
+            infoState = .notFound
+            return
+        }
+
+        let newState = await fetchInfoState(uuid: resolvedUUID)
         guard !Task.isCancelled else { return }
-        infoState = info.map(InfoState.loaded) ?? .unavailable
+        infoState = newState
     }
 
-    /// 查一次比价并落成状态：查不到交给 `PricesState.from`，请求失败一律 `.unavailable` /
-    /// Fetches the prices as a state: a miss goes through `PricesState.from`, a failure is `.unavailable`
+    /// 查一次比价并落成状态：查不到交给 `PricesState.from`，请求失败是 `.failed` /
+    /// Fetches the prices as a state: a miss goes through `PricesState.from`, a failure is `.failed`
     ///
     /// 响应是**稀疏数组**，只能按 `id` 取；查不到不是错误 /
     /// The response is a **sparse array**, found by `id`; a missing entry is not an error
@@ -259,19 +270,21 @@ final class GameDetailViewModel {
             if !(error is CancellationError) {
                 Logger.gameDetail.error("prices failed / failed: \(String(describing: error))")
             }
-            return .unavailable
+            return .failed
         }
     }
 
-    /// 获取 ITAD 游戏信息，失败时静默降级 / Fetches the ITAD game info, degrading silently on failure
-    private func fetchInfoIfPossible(uuid: String) async -> ITADGameInfoResponse? {
+    /// 查一次 ITAD 游戏信息并落成状态；UUID 已确认收录，所以只有成功或失败 /
+    /// Fetches the ITAD game info as a state; the UUID is known to be listed, so it either loads or fails
+    private func fetchInfoState(uuid: String) async -> InfoState {
         do {
-            return try await ITADAPI.fetchGameInfo(uuid: uuid)
+            let info = try await ITADAPI.fetchGameInfo(uuid: uuid)
+            return .loaded(info)
         } catch {
             if !(error is CancellationError) {
                 Logger.gameDetail.error("info failed / failed: \(String(describing: error))")
             }
-            return nil
+            return .failed
         }
     }
 
