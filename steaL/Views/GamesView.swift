@@ -161,8 +161,8 @@ struct GamesView: View {
 
     // MARK: - 进详情页 / Opening the detail page
 
-    /// 条目的点击行为：三态对应三种结果，`Int?` 区分不了「还在查」与「查过没有」/
-    /// What happens when a row is tapped; three states, which a single `Int?` could not express
+    /// 条目的点击行为：四态对应四种结果，`Int?` 区分不了「还在查」「查过没有」与「查失败了」/
+    /// What happens when a row is tapped; four states, which a single `Int?` could not express
     private func handleTap(_ item: HomeDealItem) {
         switch item.steam {
         case .pending:
@@ -173,8 +173,12 @@ struct GamesView: View {
             // 赋值即跳转，`item:` 非空就推栈 / Assigning navigates: `.navigationDestination(item:)` pushes once non-nil
             homeDetailItem = GameDetailRoute(appID: appID, uuid: item.id, title: item.deal.title)
 
-        case .unavailable:
+        case .notFound:
             warning = "“\(item.deal.title)” is not available on Steam, so there is no detail page to show."
+
+        // 查失败不代表 Steam 上没有，提示下拉刷新重查 / A failed lookup does not mean it is missing; point to pull to refresh
+        case .failed:
+            warning = "Couldn't check “\(item.deal.title)” on Steam. Pull down to refresh and try again."
         }
     }
 

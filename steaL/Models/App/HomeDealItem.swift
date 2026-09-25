@@ -28,8 +28,8 @@ struct HomeDealItem: Identifiable, Hashable, Sendable {
 
 extension HomeDealItem {
 
-    /// 这个条目在 Steam 上的关联情况，三态互斥 /
-    /// How this entry maps onto Steam; the three cases are mutually exclusive
+    /// 这个条目在 Steam 上的关联情况，四态互斥 /
+    /// How this entry maps onto Steam; the four cases are mutually exclusive
     enum SteamLink: Hashable, Sendable {
 
         /// 还没查完 / Still resolving
@@ -38,9 +38,12 @@ extension HomeDealItem {
         /// 查到了 appID，可以进详情页 / Resolved: the detail page can open
         case resolved(Int)
 
-        /// 查过了，但 ITAD 没有对应的 app 级条目 /
-        /// Looked up, but ITAD has no app-level entry for this game
-        case unavailable
+        /// 查过了，但 ITAD 没有对应的 app 级条目；重试也不会变 /
+        /// Looked up, but ITAD has no app-level entry for this game; a retry would not help
+        case notFound
+
+        /// lookup 请求失败，下拉刷新会重查 / The lookup request failed; pull to refresh looks it up again
+        case failed
 
         /// 可用的 appID，没有就是 `nil` / The appID when there is one
         var appID: Int? {

@@ -117,6 +117,7 @@ final class GamesViewModel {
         let uuids = items.map(\.id)
 
         do {
+            // 一次请求全部appid, 如果fail了进 catch 全部设置为fail
             let lookup = try await ITADAPI.lookupShopIDs(uuids: uuids)
 
             // 请求在飞时可能换了地区或重试，结果已过期 / The region may have changed while this was in flight
@@ -159,8 +160,8 @@ final class GamesViewModel {
 
             Logger.games.error("prefetchAppIDs failed / failed: \(String(describing: error))")
 
-            // 还挂在 `.pending` 的条目标成 `.unavailable`，否则卡片永远点不动 / Settle anything still `.pending`
-            settlePendingAsUnavailable()
+            // 还挂在 `.pending` 的条目标成 `.failed`，否则卡片永远点不动 / Settle anything still `.pending` as failed
+            settlePendingAsFailed()
         }
     }
 
@@ -213,8 +214,11 @@ final class GamesViewModel {
 
     /// 按选好的 appID 整批更新列表 / Applies the picked appIDs across the whole feed in one pass
     ///
-    /// - Parameter appIDByUUID: ITAD UUID → appID；不在字典里的游戏标成 `.unavailable` /
-    ///   ITAD UUID to appID; games missing from it become `.unavailable`
+    /// 只在 lookup 请求成功后调用，所以不在字典里就是真的没有；请求失败走 `settlePendingAsFailed()` /
+    /// Only called once the lookup succeeded, so a missing game really has none; a failed request goes to `settlePendingAsFailed()`
+    ///
+    /// - Parameter appIDByUUID: ITAD UUID → appID；不在字典里的游戏标成 `.notFound` /
+    ///   ITAD UUID to appID; games missing from it become `.notFound`
     private func applyAppIDs(_ appIDByUUID: [String: Int]) {
         guard case .loaded(let items) = dealState else { return }
 
@@ -224,22 +228,22 @@ final class GamesViewModel {
             if let appID = appIDByUUID[item.id] {
                 updated.steam = .resolved(appID)
             } else {
-                updated.steam = .unavailable
+                updated.steam = .notFound
             }
 
             return updated
         })
     }
 
-    /// 把仍在等待中的条目落定为 `.unavailable` /
-    /// Settles every still-pending entry as `.unavailable`
-    private func settlePendingAsUnavailable() {
+    /// lookup 请求失败时，把仍在等待中的条目落定为 `.failed` /
+    /// Settles every still-pending entry as `.failed` once the lookup request has failed
+    private func settlePendingAsFailed() {
         guard case .loaded(let items) = dealState else { return }
 
         dealState = .loaded(items.map { item in
             guard item.steam == .pending else { return item }
             var updated = item
-            updated.steam = .unavailable
+            updated.steam = .failed
             return updated
         })
     }
