@@ -104,6 +104,21 @@ final class WishlistService {
         collection(for: uid).document(String(appID)).updateData(["itadID": itadID])
     }
 
+    // 删账号前调用：账号删了以后 Rules 就不再放行，数据会删不掉。客户端没有「删整个集合」的接口，只能取出来逐条删；
+    // 用 async 版本，因为要等服务器确认删完才能接着删账号。一个 batch 上限 500 条，wishlist 用不到 /
+    // Called before deleting the account: afterwards Rules no longer allow it. Clients can't delete a whole collection, so fetch and
+    // delete each document; the async overloads wait for the server so the account is deleted only after. A batch holds 500 writes, plenty here
+    /// 删掉某个账号的整个 wishlist / Deletes an account's whole wishlist
+    /// - Parameter uid: 当前账号 / The current account
+    func deleteAll(uid: String) async throws {
+        let snapshot = try await collection(for: uid).getDocuments()
+        let batch = database.batch()
+        for document in snapshot.documents {
+            batch.deleteDocument(document.reference)
+        }
+        try await batch.commit()
+    }
+
     // MARK: - 私有 / Private
 
     /// `users/{uid}/wishlist` 集合 / The `users/{uid}/wishlist` collection

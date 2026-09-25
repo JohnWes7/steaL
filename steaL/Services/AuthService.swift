@@ -100,6 +100,27 @@ final class AuthService {
     func signOut() throws {
         try auth.signOut()
     }
+
+    // MARK: - 删除账号 / Account deletion
+
+    // Firebase 只允许「最近登录过」的用户删号，否则报 `requiresRecentLogin`；删之前总是先重新验证一次 /
+    // Firebase only lets recently signed-in users delete themselves (`requiresRecentLogin` otherwise), so always re-verify first
+    /// 用当前账号的邮箱和输入的密码重新验证 / Re-verifies the current account with its email and the entered password
+    /// - Parameter password: 用户输入的密码 / The password the user entered
+    func reauthenticate(password: String) async throws {
+        guard let user, let email = user.email, !password.isEmpty else {
+            throw AuthError.missingFields
+        }
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+        _ = try await user.reauthenticate(with: credential)
+    }
+
+    /// 删除当前账号；成功后监听器把 `state` 变成 `.signedOut` /
+    /// Deletes the current account; on success the listener moves `state` to `.signedOut`
+    func deleteAccount() async throws {
+        guard let user else { return }
+        try await user.delete()
+    }
 }
 
 /// 登录状态 / Authentication state

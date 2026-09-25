@@ -14,11 +14,20 @@ struct ProfileView: View {
     private var profileViewModel = ProfileViewModel()
 
     @Environment(AuthService.self) private var authService
+    @Environment(WishlistService.self) private var wishlistService
 
     /// 登出失败的文案，非 nil 时弹 alert / Sign-out failure message; shows the alert when non-nil
     @State private var errorMassage: String?
     /// 是否弹出登出确认 / Whether the sign-out confirmation is shown
     @State private var isConfirmingSignOut = false
+    /// 是否弹出删号确认（带密码框）/ Whether the delete-account confirmation (with its password field) is shown
+    @State private var isConfirmingDelete = false
+    /// 删号确认里输入的密码 / The password typed into the delete-account confirmation
+    @State private var deletePassword = ""
+    /// 正在删号，行内显示转圈、挡住重复点击 / Deleting; the row shows a spinner and ignores repeat taps
+    @State private var isDeletingAccount = false
+    /// 删号失败的文案，非 nil 时弹 alert / Delete-account failure message; shows the alert when non-nil
+    @State private var deleteErrorMessage: String?
     /// 是否弹出登录 sheet / Whether the sign-in sheet is shown
     @State private var isShowingSignIn = false
 
@@ -146,6 +155,13 @@ struct ProfileView: View {
                             Button("Sign Out", role: .destructive, action: signOut)
                         }
                     }
+
+                    // 单独一个 Section，和 Sign Out 隔开，减少误触 / Its own section, set apart from Sign Out to avoid mis-taps
+                    Section {
+                        deleteAccountRow
+                    } footer: {
+                        Text("Permanently deletes your account and wishlist. This can't be undone.")
+                    }
                 }
 
                 // 页脚单独一个空 Section：Sign Out 隐藏时，它不会跟着空 Section 离上面很远 /
@@ -217,6 +233,81 @@ struct ProfileView: View {
             errorMassage = error.localizedDescription
         }
     }
+
+    // MARK: - 删除账号 / Delete account
+
+    /// 删号行：点了弹带密码框的确认 alert / The delete row; tapping shows the confirmation alert with a password field
+    private var deleteAccountRow: some View {
+        Button(role: .destructive) {
+            isConfirmingDelete = true
+        } label: {
+            HStack(spacing: 12) {
+                IconTileView(icon: "person.crop.circle.badge.xmark", tint: .red.opacity(0.75))
+
+                Text("Delete Account")
+
+                Spacer(minLength: 12)
+
+                if isDeletingAccount {
+                    ProgressView()
+                }
+            }
+            // 撑满整行、空白也可点，和 Sign Out 行一样 / Fill the row and make the blank area tappable, like the Sign Out row
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .disabled(isDeletingAccount)
+        // 删之前 Firebase 要求重新验证，所以确认和输密码放在同一个 alert 里，一步完成 /
+        // Firebase needs a fresh sign-in before deleting, so confirming and entering the password happen in one alert
+        .alert("Delete Account?", isPresented: $isConfirmingDelete) {
+            SecureField("Password", text: $deletePassword)
+                .textContentType(.password)
+            Button("Cancel", role: .cancel) {
+                deletePassword = ""
+            }
+            Button("Delete", role: .destructive, action: deleteAccount)
+        } message: {
+            Text("Your account and wishlist will be permanently deleted. Enter your password to confirm.")
+        }
+        .alert(
+            "Couldn't Delete Account",
+            isPresented: Binding(
+                get: { deleteErrorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        deleteErrorMessage = nil
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteErrorMessage ?? "")
+        }
+    }
+
+    // 顺序：重新验证 → 删 wishlist → 删账号。先删数据：账号删了以后 Rules 不再放行，数据就成了删不掉的孤儿；
+    // 反过来第三步失败时只是 wishlist 已空、账号还在，再删一次即可 /
+    // Order: re-verify → delete wishlist → delete account. Data goes first because Rules reject it once the account is gone;
+    // if the last step fails, the account just remains with an empty wishlist and the user can try again
+    /// 成功后 `AuthService.state` 由监听器变成 `.signedOut`，这个 Section 随之隐藏 /
+    /// On success the listener moves `AuthService.state` to `.signedOut` and this section hides
+    private func deleteAccount() {
+        let password = deletePassword
+        deletePassword = ""
+        guard !isDeletingAccount, let uid = authService.uid else { return }
+        isDeletingAccount = true
+        Task {
+            defer { isDeletingAccount = false }
+            do {
+                try await authService.reauthenticate(password: password)
+                try await wishlistService.deleteAll(uid: uid)
+                try await authService.deleteAccount()
+            } catch {
+                deleteErrorMessage = error.localizedDescription
+            }
+        }
+    }
 }
 
 #Preview {
@@ -236,4 +327,5 @@ struct ProfileView: View {
     }
     .modelContainer(container)
     .environment(AuthService())
+    .environment(WishlistService())
 }
