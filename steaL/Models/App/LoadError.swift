@@ -7,10 +7,11 @@
 
 import Foundation
 
+// 不遵守 `Error`：它从不被 `throw`，只是交给 View 的值 / Not an `Error`: it is never thrown, just a value handed to the view
 /// 在viewmodel中使用 把网络层的失败归一成几种状况，每种自带固定英文文案与 SF Symbol /
 /// UI-facing error: normalises network failures into a few cases, each with fixed copy and an
 /// SF Symbol
-enum LoadError: Error, Equatable {
+enum LoadError: Equatable {
     /// 无网络，或连不上主机 / No connection, or the host cannot be reached
     case offline
     /// 服务端返回非 2xx / The server answered with a non-2xx status
@@ -56,8 +57,10 @@ enum LoadError: Error, Equatable {
         case let urlError as URLError:
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost,
-                 .cannotConnectToHost, .timedOut, .dataNotAllowed:
+                 .cannotConnectToHost, .dataNotAllowed:
                 return .offline
+            // `.timedOut` 也落到这里：超时可能只是服务器慢，不断定成离线 /
+            // `.timedOut` lands here too: a timeout may just be a slow server, so it is not called offline
             default:
                 return .unknown
             }

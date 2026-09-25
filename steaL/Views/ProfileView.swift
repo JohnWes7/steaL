@@ -17,7 +17,7 @@ struct ProfileView: View {
     @Environment(WishlistService.self) private var wishlistService
 
     /// 登出失败的文案，非 nil 时弹 alert / Sign-out failure message; shows the alert when non-nil
-    @State private var errorMassage: String?
+    @State private var errorMessage: String?
     /// 是否弹出登出确认 / Whether the sign-out confirmation is shown
     @State private var isConfirmingSignOut = false
     /// 是否弹出删号确认（带密码框）/ Whether the delete-account confirmation (with its password field) is shown
@@ -193,13 +193,13 @@ struct ProfileView: View {
             .alert(
                 "Sign Out Failed",
                 isPresented: Binding(
-                    get: { errorMassage != nil },
-                    set: { if !$0 { errorMassage = nil } }
+                    get: { errorMessage != nil },
+                    set: { if !$0 { errorMessage = nil } }
                 )
             ) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(errorMassage ?? "")
+                Text(errorMessage ?? "")
             }
         }
     }
@@ -230,7 +230,7 @@ struct ProfileView: View {
         do {
             try authService.signOut()
         } catch {
-            errorMassage = error.localizedDescription
+            errorMessage = error.localizedDescription
         }
     }
 
