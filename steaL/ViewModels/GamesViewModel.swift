@@ -92,9 +92,6 @@ final class GamesViewModel {
 
             // 完整错误只进日志，界面只看到 `LoadError` / Log the full error; the UI only sees `LoadError`
             Logger.games.error("fetchDeals failed / failed: \(String(describing: error))")
-            if let itadError = error as? ITADAPIError {
-                Logger.games.error("detailed error / detail: \(itadError.debugDescription)")
-            }
 
             dealState = .failed(LoadError.from(error))
         }
@@ -161,9 +158,6 @@ final class GamesViewModel {
             if Task.isCancelled { return }
 
             Logger.games.error("prefetchAppIDs failed / failed: \(String(describing: error))")
-            if let itadError = error as? ITADAPIError {
-                Logger.games.error("detailed error / detail: \(itadError.debugDescription)")
-            }
 
             // 还挂在 `.pending` 的条目标成 `.unavailable`，否则卡片永远点不动 / Settle anything still `.pending`
             settlePendingAsUnavailable()
@@ -265,9 +259,6 @@ final class GamesViewModel {
 
             // 完整错误只进日志，界面只看到 `LoadError` / Log the full error; the UI only sees `LoadError`
             Logger.games.error("fetchGiveaways failed / failed: \(String(describing: error))")
-            if let itadError = error as? ITADAPIError {
-                Logger.games.error("detailed error / detail: \(itadError.debugDescription)")
-            }
 
             giveawaysState = .failed(LoadError.from(error))
         }

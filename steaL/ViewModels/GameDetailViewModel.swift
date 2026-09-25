@@ -189,9 +189,6 @@ final class GameDetailViewModel {
             guard !Task.isCancelled else { return }
 
             Logger.gameDetail.error("load failed / failed: \(String(describing: error))")
-            if let steamError = error as? SteamAPIError {
-                Logger.gameDetail.error("detailed error / detail: \(steamError.debugDescription)")
-            }
 
             state = .failed(LoadError.from(error))
         }

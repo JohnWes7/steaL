@@ -352,7 +352,9 @@ class ITADAPI {
 }
 
 enum ITADAPIError: Error, LocalizedError {
+    /// 响应不是 HTTP / The response is not HTTP
     case invalidResponse
+    /// 状态码不是 2xx，带服务端原始响应 / A non-2xx status, with the raw server body
     case requestFailed(statusCode: Int, body: String?)
 
     /// 面向用户 / For the UI
@@ -362,16 +364,6 @@ enum ITADAPIError: Error, LocalizedError {
             return "Invalid response from the server."
         case .requestFailed(let statusCode, _):
             return "Request failed with status code \(statusCode)."
-        }
-    }
-
-    /// 面向调试，包含服务端原始响应 / For debugging, includes the raw server body
-    var debugDescription: String {
-        switch self {
-        case .invalidResponse:
-            return "invalidResponse: 响应的类型不是 HTTPURLResponse"
-        case .requestFailed(let statusCode, let body):
-            return "HTTP \(statusCode): \(body ?? "<empty body>")"
         }
     }
 }
