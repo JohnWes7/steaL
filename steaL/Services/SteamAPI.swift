@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// Steam 官方商店接口 / Steam's own store endpoints
 ///
@@ -64,7 +65,7 @@ class SteamAPI {
             return try JSONDecoder().decode(SteamSearchResponse.self, from: data)
         } catch {
             #if DEBUG
-            print("[Steam] 搜索解码失败 / Search decoding failed: \(error)")
+            Logger.steam.error("搜索解码失败 / Search decoding failed: \(String(describing: error))")
             #endif
             throw error
         }
@@ -126,7 +127,7 @@ class SteamAPI {
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
-            print("[Steam] 解码失败 / Decoding failed: \(error)")
+            Logger.steam.error("解码失败 / Decoding failed: \(String(describing: error))")
             #endif
             throw error
         }
@@ -223,15 +224,15 @@ enum SteamAPIError: Error, LocalizedError {
 private extension SteamAPI {
 
     static func logRequest(_ request: URLRequest) {
-        print("[Steam] \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
+        Logger.steam.debug("\(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
     }
 
     static func logResponse(_ response: HTTPURLResponse, data: Data) {
-        print("[Steam] status: \(response.statusCode)")
+        Logger.steam.debug("status: \(response.statusCode)")
 
         // appdetails 响应很大，截断 / The appdetails payload is large, so truncate it
         let text = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
-        print("[Steam] body:\n\(String(text.prefix(2000)))")
+        Logger.steam.debug("body:\n\(String(text.prefix(2000)))")
     }
 }
 #endif

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// 通用的 LLM 调用，走 OpenAI Chat Completions 兼容协议；换服务商只改 `Secrets.xcconfig` 的地址、key、模型名 /
 /// A generic LLM call over the OpenAI Chat Completions compatible protocol; switching providers only
@@ -165,26 +166,26 @@ enum LLMAPIError: Error, LocalizedError {
 private extension LLMAPI {
 
     static func logRequest(_ request: URLRequest) {
-        print("[LLM] \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
+        Logger.llm.debug("\(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
 
         // 别把 API Key 打进日志 / Never print the API key
         var headers = request.allHTTPHeaderFields ?? [:]
         if headers["Authorization"] != nil {
             headers["Authorization"] = "Bearer ********"
         }
-        print("[LLM] headers: \(headers)")
+        Logger.llm.debug("headers: \(headers)")
 
         if let body = request.httpBody {
             let text = String(data: body, encoding: .utf8) ?? "<\(body.count) bytes>"
-            print("[LLM] body: \(text)")
+            Logger.llm.debug("body: \(text)")
         }
     }
 
     static func logResponse(_ response: HTTPURLResponse, data: Data) {
-        print("[LLM] status: \(response.statusCode)")
+        Logger.llm.debug("status: \(response.statusCode)")
 
         let text = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
-        print("[LLM] body: \(text)")
+        Logger.llm.debug("body: \(text)")
     }
 }
 #endif

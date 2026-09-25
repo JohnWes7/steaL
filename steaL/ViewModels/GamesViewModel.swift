@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 @MainActor
 @Observable
@@ -90,9 +91,9 @@ final class GamesViewModel {
             if Task.isCancelled { return }
 
             // 完整错误只进日志，界面只看到 `LoadError` / Log the full error; the UI only sees `LoadError`
-            print("[GamesViewModel] fetchDeals failed / failed: \(error)")
+            Logger.games.error("fetchDeals failed / failed: \(String(describing: error))")
             if let itadError = error as? ITADAPIError {
-                print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
+                Logger.games.error("detailed error / detail: \(itadError.debugDescription)")
             }
 
             dealState = .failed(LoadError.from(error))
@@ -153,15 +154,15 @@ final class GamesViewModel {
             applyAppIDs(appIDByUUID)
 
             #if DEBUG
-            print("[GamesViewModel] Steam appID 预取 / prefetch: \(lookup.trackedCount)/\(uuids.count) 条拿到 appID")
+            Logger.games.debug("Steam appID 预取 / prefetch: \(lookup.trackedCount)/\(uuids.count) 条拿到 appID")
             #endif
 
         } catch {
             if Task.isCancelled { return }
 
-            print("[GamesViewModel] prefetchAppIDs failed / failed: \(error)")
+            Logger.games.error("prefetchAppIDs failed / failed: \(String(describing: error))")
             if let itadError = error as? ITADAPIError {
-                print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
+                Logger.games.error("detailed error / detail: \(itadError.debugDescription)")
             }
 
             // 还挂在 `.pending` 的条目标成 `.unavailable`，否则卡片永远点不动 / Settle anything still `.pending`
@@ -176,7 +177,7 @@ final class GamesViewModel {
             return try await SteamAPI.fetchAvailability(of: appIDs, region: region)
         } catch {
             if !Task.isCancelled {
-                print("[GamesViewModel] appID 校验失败，退回第一个候选 / check failed, using first candidate: \(error)")
+                Logger.games.error("appID 校验失败，退回第一个候选 / check failed, using first candidate: \(String(describing: error))")
             }
             return nil
         }
@@ -263,9 +264,9 @@ final class GamesViewModel {
             if Task.isCancelled { return }
 
             // 完整错误只进日志，界面只看到 `LoadError` / Log the full error; the UI only sees `LoadError`
-            print("[GamesViewModel] fetchGiveaways failed / failed: \(error)")
+            Logger.games.error("fetchGiveaways failed / failed: \(String(describing: error))")
             if let itadError = error as? ITADAPIError {
-                print("[GamesViewModel] detailed error / detail: \(itadError.debugDescription)")
+                Logger.games.error("detailed error / detail: \(itadError.debugDescription)")
             }
 
             giveawaysState = .failed(LoadError.from(error))

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// 游戏详情页的数据状态机：Steam 的 `appdetails` 是硬门槛，ITAD 比价失败只少一块区块 /
 /// State machine for the game detail page: Steam's `appdetails` is the hard requirement, while a
@@ -187,9 +188,9 @@ final class GameDetailViewModel {
         } catch {
             guard !Task.isCancelled else { return }
 
-            print("[GameDetailViewModel] load failed / failed: \(error)")
+            Logger.gameDetail.error("load failed / failed: \(String(describing: error))")
             if let steamError = error as? SteamAPIError {
-                print("[GameDetailViewModel] detailed error / detail: \(steamError.debugDescription)")
+                Logger.gameDetail.error("detailed error / detail: \(steamError.debugDescription)")
             }
 
             state = .failed(LoadError.from(error))
@@ -259,7 +260,7 @@ final class GameDetailViewModel {
         } catch {
             // 取消是正常的（页面离开），其余失败只记日志 / Cancellation is normal; the rest is just logged
             if !(error is CancellationError) {
-                print("[GameDetailViewModel] prices failed / failed: \(error)")
+                Logger.gameDetail.error("prices failed / failed: \(String(describing: error))")
             }
             return .unavailable
         }
@@ -271,7 +272,7 @@ final class GameDetailViewModel {
             return try await ITADAPI.fetchGameInfo(uuid: uuid)
         } catch {
             if !(error is CancellationError) {
-                print("[GameDetailViewModel] info failed / failed: \(error)")
+                Logger.gameDetail.error("info failed / failed: \(String(describing: error))")
             }
             return nil
         }
@@ -291,7 +292,7 @@ final class GameDetailViewModel {
             response = try await ITADAPI.lookupUUID(appID: appID)
         } catch {
             if !(error is CancellationError) {
-                print("[GameDetailViewModel] UUID lookup failed / failed: \(error)")
+                Logger.gameDetail.error("UUID lookup failed / failed: \(String(describing: error))")
             }
             throw error
         }

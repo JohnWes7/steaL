@@ -8,6 +8,7 @@
 import SwiftData
 import SwiftUI
 import FirebaseCore
+import OSLog
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
@@ -54,8 +55,8 @@ struct steaLApp: App {
 
         #if DEBUG
         // 启动时打印当前设置内容，方便调试 / Logs the current settings at launch, for debugging
-        print("""
-        [Settings] 当前设置 / current settings:
+        Logger.settings.debug("""
+        当前设置 / current settings:
           id: \(settings.id)
           theme: \(settings.theme.rawValue)
           region: \(settings.region.rawValue)

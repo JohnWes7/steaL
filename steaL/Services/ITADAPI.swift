@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 class ITADAPI {
     //TODO: 改造弱类型fetchDeals body
@@ -99,7 +100,7 @@ class ITADAPI {
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
-            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            Logger.itad.error("解码失败 / Decoding failed: \(String(describing: error))")
             #endif
             throw error
         }
@@ -158,7 +159,7 @@ class ITADAPI {
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
-            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            Logger.itad.error("解码失败 / Decoding failed: \(String(describing: error))")
             #endif
             throw error
         }
@@ -220,7 +221,7 @@ class ITADAPI {
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
-            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            Logger.itad.error("解码失败 / Decoding failed: \(String(describing: error))")
             #endif
             throw error
         }
@@ -286,7 +287,7 @@ class ITADAPI {
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
-            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            Logger.itad.error("解码失败 / Decoding failed: \(String(describing: error))")
             #endif
             throw error
         }
@@ -342,7 +343,7 @@ class ITADAPI {
         } catch {
             #if DEBUG
             // 解码失败时把原始 body 打出来，方便对照字段名 / Log raw body to compare field names
-            print("[ITAD] 解码失败 / Decoding failed: \(error)")
+            Logger.itad.error("解码失败 / Decoding failed: \(String(describing: error))")
             #endif
             throw error
         }
@@ -379,20 +380,20 @@ enum ITADAPIError: Error, LocalizedError {
 private extension ITADAPI {
 
     static func logRequest(_ request: URLRequest) {
-        print("[ITAD] \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
+        Logger.itad.debug("\(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
 
         // 别把 API Key 打进日志 / Never print the API key
         var headers = request.allHTTPHeaderFields ?? [:]
         if headers["ITAD-API-Key"] != nil { headers["ITAD-API-Key"] = "********" }
-        print("[ITAD] headers: \(headers)")
+        Logger.itad.debug("headers: \(headers)")
 
         if let body = request.httpBody {
-            print("[ITAD] body: \(String(data: body, encoding: .utf8) ?? "<binary>")")
+            Logger.itad.debug("body: \(String(data: body, encoding: .utf8) ?? "<binary>")")
         }
     }
 
     static func logResponse(_ response: HTTPURLResponse, data: Data) {
-        print("[ITAD] status: \(response.statusCode)")
+        Logger.itad.debug("status: \(response.statusCode)")
 
         let text: String
         if let object = try? JSONSerialization.jsonObject(with: data),
@@ -402,7 +403,7 @@ private extension ITADAPI {
         } else {
             text = String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
         }
-        print("[ITAD] body:\n\(text)")
+        Logger.itad.debug("body:\n\(text)")
     }
 }
 #endif

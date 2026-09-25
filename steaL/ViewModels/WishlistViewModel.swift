@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// Wishlist 页的价格与发售状态核对：收藏本身由 `WishlistService` 推送，这里按 appID 管每行的价格，并向 Steam 核对发售状态 /
 /// Prices and release checks for the wishlist page: the saved items come from `WishlistService`; this tracks each row's price by appID and checks release status with Steam
@@ -190,7 +191,7 @@ final class WishlistViewModel {
             return details.isComingSoon
         } catch {
             if !Task.isCancelled {
-                print("[WishlistViewModel] release check failed / failed: \(error)")
+                Logger.wishlist.error("release check failed / failed: \(String(describing: error))")
             }
             return nil
         }
@@ -308,7 +309,7 @@ final class WishlistViewModel {
         } catch {
             // 取消是正常的（切 tab），调用方会丢掉结果 / Cancellation is normal; the caller discards the result
             if !Task.isCancelled {
-                print("[WishlistViewModel] prices failed / failed: \(error)")
+                Logger.wishlist.error("prices failed / failed: \(String(describing: error))")
             }
             return uuidByAppID.mapValues { _ in PriceState.failed }
         }
@@ -366,7 +367,7 @@ final class WishlistViewModel {
             return .found(game.id)
         } catch {
             if !Task.isCancelled {
-                print("[WishlistViewModel] UUID lookup failed / failed: \(error)")
+                Logger.wishlist.error("UUID lookup failed / failed: \(String(describing: error))")
             }
             return .failed
         }

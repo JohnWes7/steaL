@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 // MARK: - 根对象 / Root
 
@@ -90,7 +91,7 @@ struct ITADGameInfoResponse: Codable, Hashable, Identifiable, Sendable {
         } catch {
             #if DEBUG
             // 已知形态不会走到这里，走到这里就说明形态变了 / Only an unknown shape lands here
-            print("[ITAD] assets 形态未知，已按无图片处理 / unknown assets shape: \(error)")
+            Logger.itad.error("assets 形态未知，已按无图片处理 / unknown assets shape: \(String(describing: error))")
             #endif
             assets = nil
         }
