@@ -190,25 +190,13 @@ class SteamAPI {
     }
 }
 
-enum SteamAPIError: Error, LocalizedError {
+enum SteamAPIError: Error {
     /// 响应不是 HTTP / The response is not HTTP
     case invalidResponse
     /// 该 appID 在 Steam 上不存在或已下架 / The appID does not exist on Steam or was delisted
     case gameNotFound(appID: Int)
     /// 状态码不是 2xx，带服务端原始响应 / A non-2xx status, with the raw server body
     case requestFailed(statusCode: Int, body: String?)
-
-    /// 面向用户 / For the UI
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse:
-            return "Invalid response from the server."
-        case .gameNotFound:
-            return "This game isn't available on Steam."
-        case .requestFailed(let statusCode, _):
-            return "Request failed with status code \(statusCode)."
-        }
-    }
 }
 
 #if DEBUG

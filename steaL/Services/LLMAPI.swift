@@ -115,7 +115,7 @@ enum LLMAPI {
 // MARK: - 错误 / Errors
 
 /// `LLMAPI` 的错误；UI 由 `LoadError.from(_:)` 归一 / `LLMAPI`'s errors, normalised for the UI by `LoadError.from(_:)`
-enum LLMAPIError: Error, LocalizedError {
+enum LLMAPIError: Error {
     /// `Secrets.xcconfig` 里 `LLM_API_URL` / `LLM_API_KEY` / `LLM_MODEL` 有空值或 URL 不合法 /
     /// `LLM_API_URL`, `LLM_API_KEY` or `LLM_MODEL` in `Secrets.xcconfig` is empty, or the URL is invalid
     case missingConfiguration
@@ -127,22 +127,6 @@ enum LLMAPIError: Error, LocalizedError {
     case emptyContent
     /// 回答被截断（`finish_reason == "length"`）/ The answer was cut off
     case truncated
-
-    /// 面向用户 / For the UI
-    var errorDescription: String? {
-        switch self {
-        case .missingConfiguration:
-            return "The AI service is not configured."
-        case .invalidResponse:
-            return "Invalid response from the AI service."
-        case .requestFailed(let statusCode, _):
-            return "The AI service failed with status code \(statusCode)."
-        case .emptyContent:
-            return "The AI service returned an empty answer."
-        case .truncated:
-            return "The AI answer was cut off."
-        }
-    }
 }
 
 // MARK: - 调试日志 / Debug logging
