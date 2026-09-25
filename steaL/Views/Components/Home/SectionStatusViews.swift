@@ -30,7 +30,6 @@ struct SectionRetryButton: View {
 
     var body: some View {
         Button(title, action: action)
-            .buttonStyle(.borderedProminent)
             .tint(.brandBlue)
     }
 }
