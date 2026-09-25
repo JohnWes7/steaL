@@ -23,8 +23,13 @@ struct WishlistRowView: View {
     /// 封面圆角 / Artwork corner radius
     private let artworkCornerRadius: CGFloat = 8
 
+    /// 左侧长条宽度，和详情页价格行一致 / Leading bar width, matching the detail page's price rows
+    private let barWidth: CGFloat = 5
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
+            saleBar
+
             artwork
 
             // 名称贴封面顶边、价格贴底边，和封面一样高 / Name hugs the artwork's top edge and price its bottom, matching its height
@@ -44,8 +49,25 @@ struct WishlistRowView: View {
             // 推页箭头由外层 `NavigationLink` 自动加，这里不画 / The outer `NavigationLink` adds the disclosure chevron, so none here
             Spacer(minLength: 0)
         }
+        // 按内容的理想高度排版，长条的 maxHeight 才会撑到整行高而不是无限高 /
+        // Lay out at the content's ideal height so the bar's maxHeight fills the row rather than growing without bound
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 4)
         .contentShape(Rectangle())
+    }
+
+    // MARK: - 长条 / Leading bar
+
+    /// 打折绿色、其余灰色，和折扣徽标同一个判断；打折已有徽标与划线价，颜色只是加强，不单靠颜色传达 /
+    /// Green on sale, grey otherwise, using the badge's test; the badge and struck-through price already say it, so colour isn't the only cue
+    private var saleBar: some View {
+        let barColor = discountCut == nil ? Color.secondaryText.opacity(0.5) : Color.brandGreen
+
+        return RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .fill(barColor)
+            .frame(width: barWidth)
+            .frame(maxHeight: .infinity)
+            .accessibilityHidden(true)
     }
 
     // MARK: - 封面 / Artwork
