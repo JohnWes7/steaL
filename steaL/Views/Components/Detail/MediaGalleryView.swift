@@ -87,7 +87,10 @@ struct MediaGalleryView: View {
                 }
                 .scrollTargetLayout()
             }
-            .scrollTargetBehavior(.paging)
+            // 对齐到每一页本身，不用 `.paging`：横屏时 `.paging` 按容器尺寸翻，和安全区内的页宽差一截，越翻越偏（实测） /
+            // Align to each page itself rather than `.paging`: in landscape `.paging` steps by the container size,
+            // which differs from the safe-area page width, so pages drift further with every swipe (observed)
+            .scrollTargetBehavior(.viewAligned(limitBehavior: .alwaysByOne))
             .scrollPosition(id: $page)
             .scrollIndicators(.hidden)
             // 停稳后再判断，滑到一半时不做副作用 / Decide once the pager settles, never halfway through a swipe
