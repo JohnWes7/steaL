@@ -27,3 +27,6 @@ CLAUDE.md
 DerivedData/
 *.ipa
 *.dSYM
+
+# API keys（模板 Secrets.example.xcconfig 要提交）
+Secrets.xcconfig

@@ -1,0 +1,3 @@
+// steaL 目标的基础构建配置 / Base build configuration for the steaL target
+// Secrets.xcconfig 不在仓库里，缺了也能编译，key 为空 / Secrets.xcconfig is gitignored; builds without it, keys become empty
+#include? "Secrets.xcconfig"

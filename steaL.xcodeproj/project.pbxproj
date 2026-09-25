@@ -14,11 +14,25 @@
 
 /* Begin PBXFileReference section */
 		A26CD4943041577B003C0AF7 /* steaL.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = steaL.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2F1C0A1306A000000000001 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A2F1C0A1306A000000000002 /* Exceptions for "steaL" folder in "steaL" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A26CD4933041577B003C0AF7 /* steaL */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A26CD4963041577B003C0AF7 /* steaL */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A2F1C0A1306A000000000002 /* Exceptions for "steaL" folder in "steaL" target */,
+			);
 			path = steaL;
 			sourceTree = "<group>";
 		};
@@ -41,6 +55,7 @@
 		A26CD48B3041577B003C0AF7 = {
 			isa = PBXGroup;
 			children = (
+				A2F1C0A1306A000000000001 /* Config.xcconfig */,
 				A26CD4963041577B003C0AF7 /* steaL */,
 				A26CD4953041577B003C0AF7 /* Products */,
 			);
@@ -261,6 +276,7 @@
 		};
 		A26CD4A03041577C003C0AF7 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A2F1C0A1306A000000000001 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -268,6 +284,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = steaL/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -292,6 +309,7 @@
 		};
 		A26CD4A13041577C003C0AF7 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A2F1C0A1306A000000000001 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -299,6 +317,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = steaL/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
