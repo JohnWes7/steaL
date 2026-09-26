@@ -12,20 +12,29 @@ import OSLog
 /// A generic LLM call over the OpenAI Chat Completions compatible protocol; switching providers only
 /// changes the URL, key and model in `Secrets.xcconfig`
 ///
-/// 只管发请求与解码，prompt 由调用方用 `DetailAIAdvicePrompt` 生成 /
-/// Only sends and decodes; the caller builds the prompt with `DetailAIAdvicePrompt`
+/// 只管发请求与解码：prompt 由调用方生成（如 `DetailAIAdvicePrompt`），输出类型由调用方用 `generating:` 指定，
+/// 写法对齐 Foundation Models 的 `respond(to:generating:)` /
+/// Only sends and decodes: the caller builds the prompt (e.g. `DetailAIAdvicePrompt`) and names the output
+/// type with `generating:`, mirroring Foundation Models' `respond(to:generating:)`
 enum LLMAPI {
 
     /// 思考模式要先推理再回答，比普通请求慢得多 / A thinking model reasons before answering, far slower than usual
     private static let timeout: TimeInterval = 120
 
-    /// 请求一次购买建议 / Asks for one purchase advice
+    /// 发一次 system + user 消息，把回答的 JSON 解成指定类型 /
+    /// Sends one system + user message pair and decodes the JSON answer into the given type
     ///
-    /// - Parameter systemPrompt: 规则与输出格式 / the rules and output format
-    /// - Parameter userPrompt: 这款游戏的数据 / this game's data
+    /// - Parameter systemPrompt: 规则与输出格式，要提到 "json" 并给出示例 /
+    ///   the rules and output format; must mention "json" and give an example
+    /// - Parameter userPrompt: 这次的输入数据 / this request's input data
+    /// - Parameter type: 回答要解成的类型 / the type to decode the answer into
     /// - Throws: `LLMAPIError`、`URLError`，或回答不是约定格式时的 `DecodingError` /
     ///   `LLMAPIError`, `URLError`, or `DecodingError` when the answer is not in the agreed format
-    static func fetchAdvice(systemPrompt: String, userPrompt: String) async throws -> DetailAIAdviceResponse {
+    static func respond<Content: Decodable>(
+        systemPrompt: String,
+        userPrompt: String,
+        generating type: Content.Type
+    ) async throws -> Content {
         let systemMessage = LLMChatRequest.Message(role: .system, content: systemPrompt)
         let userMessage = LLMChatRequest.Message(role: .user, content: userPrompt)
         let body = LLMChatRequest(
@@ -78,7 +87,7 @@ enum LLMAPI {
 
         // 第二次解码：回答本身，严格按约定格式 / Second decode: the answer itself, strictly in the agreed format
         let contentData = Data(trimmedContent.utf8)
-        return try JSONDecoder().decode(DetailAIAdviceResponse.self, from: contentData)
+        return try JSONDecoder().decode(type, from: contentData)
     }
 
     /// 组 `POST {base}/chat/completions`；配置没填就不发请求 /
