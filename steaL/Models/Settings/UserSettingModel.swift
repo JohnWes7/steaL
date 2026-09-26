@@ -37,6 +37,17 @@ final class UserSettingModel {
     /// 是否开启发售通知 / Whether release notifications are on
     var isGameReleaseAlertsEnabled: Bool = true
 
+    // MARK: - AI 模型 / AI model
+
+    // 只记选中的是哪一个；服务商和模型列表在 `LLMProvider`，找不到（被删了）就用内置的 /
+    // Only records which one is chosen; providers and model lists live in `LLMProvider`, and a missing one falls back to the built-in
+
+    /// 选中的 `LLMProvider.id`；`nil` 是内置的服务商 / The chosen `LLMProvider.id`; `nil` means the built-in provider
+    var llmProviderID: UUID?
+
+    /// 选中服务商下的模型名；`nil` 是内置的模型 / The chosen model name within that provider; `nil` means the built-in model
+    var llmModelName: String?
+
     // MARK: - 初始化 / Init
 
     init(

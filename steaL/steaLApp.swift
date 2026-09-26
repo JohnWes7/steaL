@@ -44,7 +44,7 @@ struct steaLApp: App {
 
         let container: ModelContainer
         do {
-            container = try ModelContainer(for: UserSettingModel.self)
+            container = try ModelContainer(for: UserSettingModel.self, LLMProvider.self)
         } catch {
             fatalError("Failed to create ModelContainer / 创建容器失败: \(error)")
         }
@@ -55,6 +55,9 @@ struct steaLApp: App {
 
         #if DEBUG
         // 启动时打印当前设置内容，方便调试 / Logs the current settings at launch, for debugging
+        let providerID = settings.llmProviderID?.uuidString
+        let providerText = providerID ?? "built-in"
+        let modelText = settings.llmModelName ?? "built-in"
         Logger.settings.debug("""
         当前设置 / current settings:
           id: \(settings.id)
@@ -63,6 +66,8 @@ struct steaLApp: App {
           language: \(settings.language.rawValue)
           priceDropAlerts: \(settings.isPriceDropAlertsEnabled)
           gameReleaseAlerts: \(settings.isGameReleaseAlertsEnabled)
+          llmProviderID: \(providerText)
+          llmModelName: \(modelText)
         """)
         #endif
     }
