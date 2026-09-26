@@ -45,6 +45,15 @@ extension SteamAppDetails {
             case .unreleased, .paid: true
             }
         }
+
+        /// 要不要给 AI 购买建议：试玩版不卖，永久免费不用花钱，都没有「买不买」可问 /
+        /// Whether AI purchase advice applies; a demo is not sold and a free-forever title costs nothing
+        var canGetAIAdvice: Bool {
+            switch self {
+            case .demo, .freeForever: false
+            case .unreleased, .paid: true
+            }
+        }
     }
 
     /// 游戏类型；三个条件并不互斥（试玩版与限时免费都是 `is_free == true`），顺序即优先级 /

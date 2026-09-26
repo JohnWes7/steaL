@@ -127,13 +127,16 @@ final class GameDetailViewModel {
     /// AI 购买建议的输入；拼不出来是 `nil`，详情页据此决定显不显示 AI 入口 /
     /// The AI purchase advice input; `nil` when it cannot be built, which also hides the AI entry
     ///
-    /// 要 Steam 详情、比价（含 Steam 激活的 deal），并等信息区块加载完；信息失败或没收录也照样给，AI 只是少了口碑与在线人数。
-    /// demo 的比价是 `.hidden`，所以不会有入口 /
-    /// Needs the Steam details and prices with a Steam-activating deal, and waits for the info section to finish;
-    /// a failed or missing info section still counts, the model just lacks reviews and players.
-    /// A demo's prices are `.hidden`, so it never gets the entry
+    /// 要 Steam 详情（试玩版与永久免费不给，见 `GameKind.canGetAIAdvice`）、比价（含 Steam 激活的 deal），
+    /// 并等信息区块加载完；信息失败或没收录也照样给，AI 只是少了口碑与在线人数 /
+    /// Needs the Steam details (never for a demo or a free-forever title, see `GameKind.canGetAIAdvice`),
+    /// prices with a Steam-activating deal, and waits for the info section to finish;
+    /// a failed or missing info section still counts, the model just lacks reviews and players
     var adviceContext: DetailAIAdviceContext? {
         guard case .loaded(let details) = state else { return nil }
+
+        let gameKind = details.gameKind
+        guard gameKind.canGetAIAdvice else { return nil }
 
         let prices: ITADPriceGame
         switch pricesState {
