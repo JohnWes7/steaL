@@ -184,10 +184,11 @@ struct GameDetailView: View {
         // 挂在加载完成的内容上：加载中与失败页不出现心形 / Attached to the loaded content, so loading and error pages show no heart
         .toolbar {
             // 和心形同在右上角、共用一块玻璃，心形最常用放最右 / Shares the trailing glass group with the heart, which stays outermost as the most used
-            if showsAIAdviceButton {
+            // 拼得出 AI 的输入才有入口，条件由 ViewModel 定 / The entry shows only when the view model can build the AI input
+            if let adviceContext = gameDetailViewModel.adviceContext {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("AI Advice", systemImage: "sparkles") {
-                        isShowingAIAdvice = true
+                        showAIAdvice(context: adviceContext)
                     }
                     .tint(.brandBlue)
                 }
@@ -203,14 +204,14 @@ struct GameDetailView: View {
 
     // MARK: - AI 建议 / AI advice
 
-    /// 比价加载完且有 Steam 激活的 deal 才显示 AI 入口；demo 的比价是 `.hidden`，所以也不会出现 /
-    /// Shows the AI entry only once prices are in with a Steam-activating deal; a demo's prices are `.hidden`, so it never shows
-    private var showsAIAdviceButton: Bool {
-        switch gameDetailViewModel.pricesState {
-        case .loaded(let prices), .loadedWithoutHistory(let prices):
-            return prices.bestSteamDeal != nil
-        case .hidden, .loading, .notFound, .failed:
-            return false
+    /// 打开 sheet 并在需要时生成；请求从这里发而不是 sheet 的 `.task`，关掉 sheet 不会取消它 /
+    /// Opens the sheet and generates if needed; the request starts here rather than in the sheet's `.task`,
+    /// so closing the sheet does not cancel it
+    private func showAIAdvice(context: DetailAIAdviceContext) {
+        isShowingAIAdvice = true
+
+        Task {
+            await aiAdviceViewModel.generateIfNeeded(context: context, language: language)
         }
     }
 

@@ -124,6 +124,40 @@ final class GameDetailViewModel {
         return initialTitle
     }
 
+    /// AI 购买建议的输入；拼不出来是 `nil`，详情页据此决定显不显示 AI 入口 /
+    /// The AI purchase advice input; `nil` when it cannot be built, which also hides the AI entry
+    ///
+    /// 要 Steam 详情、比价（含 Steam 激活的 deal），并等信息区块加载完；信息失败或没收录也照样给，AI 只是少了口碑与在线人数。
+    /// demo 的比价是 `.hidden`，所以不会有入口 /
+    /// Needs the Steam details and prices with a Steam-activating deal, and waits for the info section to finish;
+    /// a failed or missing info section still counts, the model just lacks reviews and players.
+    /// A demo's prices are `.hidden`, so it never gets the entry
+    var adviceContext: DetailAIAdviceContext? {
+        guard case .loaded(let details) = state else { return nil }
+
+        let prices: ITADPriceGame
+        switch pricesState {
+        case .loaded(let loadedPrices), .loadedWithoutHistory(let loadedPrices):
+            prices = loadedPrices
+        case .hidden, .loading, .notFound, .failed:
+            return nil
+        }
+
+        guard prices.bestSteamDeal != nil else { return nil }
+
+        let info: ITADGameInfoResponse?
+        switch infoState {
+        case .loading:
+            return nil
+        case .loaded(let loadedInfo):
+            info = loadedInfo
+        case .hidden, .notFound, .failed:
+            info = nil
+        }
+
+        return DetailAIAdviceContext(title: title, details: details, prices: prices, info: info)
+    }
+
     /// 加载一页详情 / Loads one detail page
     ///
     /// - Parameter region: 商店区域，决定货币 / the store region, which drives the currency
