@@ -24,7 +24,10 @@ final class WishlistViewModel {
 
     /// 一行的价格状态 / One row's price state
     enum PriceState {
-        /// 还没查到 / Not fetched yet
+        /// 还没查到；只由 `priceState(for:)` 从「字典里没有」合成，**不要写进 `priceStates`**：
+        /// 请求被取消时字典里没留下它，下次 `.task(id:)` 才会重查，写进去就会卡在加载中 /
+        /// Not fetched yet; only synthesised by `priceState(for:)` from a missing entry. **Never store it in `priceStates`**:
+        /// a cancelled request then leaves nothing behind and the next `.task(id:)` refetches, while a stored one would stick
         case loading
         /// 能在 Steam 激活的 deal 里最便宜的那条 / The cheapest deal that activates on Steam
         case loaded(ITADPriceDeal)

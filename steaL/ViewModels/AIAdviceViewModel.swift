@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// 详情页 AI 购买建议的状态机；由 `GameDetailView` 用 `@State` 持有，结果跟着详情页，关掉 sheet 还在 /
 /// State machine for the detail page's AI purchase advice; owned by `GameDetailView` via `@State`,
@@ -35,6 +36,42 @@ final class AIAdviceViewModel {
     func generateIfNeeded(context: DetailAIAdviceContext, language: AppLanguage) async {
         guard case .idle = state else { return }
 
-        // 下一步：组 prompt → `LLMAPI.respond` → 写状态 / Next: build the prompt, call `LLMAPI.respond`, write the state
+        await generate(context: context, language: language)
+    }
+
+    /// 组 prompt → 远程生成 → 写状态；之后的 Retry / Regenerate 也走这里 /
+    /// Builds the prompt, generates remotely, and writes the state; Retry and Regenerate will reuse it
+    private func generate(context: DetailAIAdviceContext, language: AppLanguage) async {
+        // 在第一次 `await` 之前置 loading，连点两下也只会发一次 / Set before the first `await`, so a double tap sends once
+        state = .loading
+
+        do {
+            let systemPrompt = try DetailAIAdvicePrompt.systemPrompt(language: language)
+            let userPrompt = try DetailAIAdvicePrompt.userMessage(context: context)
+
+            let advice = try await LLMAPI.respond(
+                systemPrompt: systemPrompt,
+                userPrompt: userPrompt,
+                generating: DetailAIAdviceResponse.self
+            )
+
+            // 被取消就退回 idle，否则卡在 loading、之后不会再生成 / Back to idle on cancel, or it would stick at loading for good
+            guard !Task.isCancelled else {
+                state = .idle
+                return
+            }
+
+            state = .loaded(advice)
+
+        } catch {
+            guard !Task.isCancelled else {
+                state = .idle
+                return
+            }
+
+            Logger.gameDetail.error("AI advice failed / failed: \(String(describing: error))")
+
+            state = .failed(LoadError.from(error))
+        }
     }
 }
