@@ -86,6 +86,9 @@ struct GameDetailView: View {
         .sheet(isPresented: $isShowingSignIn) {
             SignInSheet()
         }
+        .sheet(isPresented: $isShowingAIAdvice) {
+            AIAdviceSheet(viewModel: aiAdviceViewModel)
+        }
     }
 
     private var navigationTitle: String {
@@ -180,11 +183,34 @@ struct GameDetailView: View {
         }
         // 挂在加载完成的内容上：加载中与失败页不出现心形 / Attached to the loaded content, so loading and error pages show no heart
         .toolbar {
+            // 和心形同在右上角、共用一块玻璃，心形最常用放最右 / Shares the trailing glass group with the heart, which stays outermost as the most used
+            if showsAIAdviceButton {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("AI Advice", systemImage: "sparkles") {
+                        isShowingAIAdvice = true
+                    }
+                    .tint(.brandBlue)
+                }
+            }
+
             if showsWishlistButton(details) {
                 ToolbarItem(placement: .topBarTrailing) {
                     wishlistButton(details)
                 }
             }
+        }
+    }
+
+    // MARK: - AI 建议 / AI advice
+
+    /// 比价加载完且有 Steam 激活的 deal 才显示 AI 入口；demo 的比价是 `.hidden`，所以也不会出现 /
+    /// Shows the AI entry only once prices are in with a Steam-activating deal; a demo's prices are `.hidden`, so it never shows
+    private var showsAIAdviceButton: Bool {
+        switch gameDetailViewModel.pricesState {
+        case .loaded(let prices), .loadedWithoutHistory(let prices):
+            return prices.bestSteamDeal != nil
+        case .hidden, .loading, .notFound, .failed:
+            return false
         }
     }
 
