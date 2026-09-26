@@ -39,14 +39,11 @@ final class UserSettingModel {
 
     // MARK: - AI 模型 / AI model
 
-    // 只记选中的是哪一个；服务商和模型列表在 `LLMProvider`，找不到（被删了）就用内置的 /
-    // Only records which one is chosen; providers and model lists live in `LLMProvider`, and a missing one falls back to the built-in
-
-    /// 选中的 `LLMProvider.id`；`nil` 是内置的服务商 / The chosen `LLMProvider.id`; `nil` means the built-in provider
-    var llmProviderID: UUID?
-
-    /// 选中服务商下的模型名；`nil` 是内置的模型 / The chosen model name within that provider; `nil` means the built-in model
-    var llmModelName: String?
+    /// 选中的模型，服务商从 `llmModel.provider` 取；`nil` 是内置的服务商与模型。模型或服务商被删时自动置空 /
+    /// The chosen model, with its provider at `llmModel.provider`; `nil` means the built-in provider and model.
+    /// Cleared automatically when the model or its provider is deleted
+    @Relationship(inverse: \LLMModel.selectedBy)
+    var llmModel: LLMModel?
 
     // MARK: - 初始化 / Init
 

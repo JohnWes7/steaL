@@ -23,17 +23,20 @@ final class LLMProvider {
     /// The base URL, such as `https://openrouter.ai/api/v1`; a trailing `/` is dropped before appending `/chat/completions`
     var baseURL: String = ""
 
-    /// 这个服务商下可选的模型名，按用户添加的顺序 / The model names available from this provider, in the order the user added them
-    var modelNames: [String] = []
-
     /// 添加时间，列表按它排序 / When it was added; lists sort by it
     private(set) var createdAt = Date.now
 
+    // MARK: - 关系 / Relationships
+
+    /// 这个服务商下的模型；删服务商时一起删。数组不保证顺序，显示时按 `createdAt` 排 /
+    /// The models under this provider, deleted along with it. The array has no guaranteed order; sort by `createdAt` for display
+    @Relationship(deleteRule: .cascade, inverse: \LLMModel.provider)
+    var models: [LLMModel] = []
+
     // MARK: - 初始化 / Init
 
-    init(name: String, baseURL: String, modelNames: [String]) {
+    init(name: String, baseURL: String) {
         self.name = name
         self.baseURL = baseURL
-        self.modelNames = modelNames
     }
 }
