@@ -87,7 +87,11 @@ struct GameDetailView: View {
             SignInSheet()
         }
         .sheet(isPresented: $isShowingAIAdvice) {
-            AIAdviceSheet(viewModel: aiAdviceViewModel)
+            AIAdviceSheet(
+                viewModel: aiAdviceViewModel,
+                pricesState: gameDetailViewModel.pricesState,
+                regenerate: regenerateAIAdvice
+            )
         }
     }
 
@@ -212,6 +216,16 @@ struct GameDetailView: View {
 
         Task {
             await aiAdviceViewModel.generateIfNeeded(context: context, language: language)
+        }
+    }
+
+    /// sheet 里的 Retry / Regenerate：用最新的数据重新拼输入；拼不出来（如信息区块正在重试）就不动 /
+    /// The sheet's Retry and Regenerate: rebuilds the input from fresh data, doing nothing while it cannot be built
+    private func regenerateAIAdvice() {
+        guard let context = gameDetailViewModel.adviceContext else { return }
+
+        Task {
+            await aiAdviceViewModel.regenerate(context: context, language: language)
         }
     }
 

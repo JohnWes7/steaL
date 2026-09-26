@@ -21,14 +21,19 @@ final class AIAdviceViewModel {
         case idle
         /// 正在生成 / Generating
         case loading
-        /// AI 结果到手 / The advice is in
-        case loaded(DetailAIAdviceResponse)
+        /// AI 结果到手，带生成时间（sheet 底部显示「多久前生成」）/ The advice is in, with when it was generated
+        case loaded(DetailAIAdviceResponse, generatedAt: Date)
         /// 生成失败，给 Retry / Generation failed; offers a retry
         case failed(LoadError)
     }
 
     /// 当前状态 / Current state
-    private(set) var state: State = .idle
+    private(set) var state: State
+
+    /// 平时从 `.idle` 开始；预览可以直接给一个状态 / Starts at `.idle`; previews can pass a state directly
+    init(state: State = .idle) {
+        self.state = state
+    }
 
     /// 只在还没请求过时生成：反复开关 sheet 不会重复请求；生成中、已有结果、失败都不自动重发 /
     /// Generates only when nothing was requested yet, so reopening the sheet never repeats the call;
@@ -39,8 +44,17 @@ final class AIAdviceViewModel {
         await generate(context: context, language: language)
     }
 
-    /// 组 prompt → 远程生成 → 写状态；之后的 Retry / Regenerate 也走这里 /
-    /// Builds the prompt, generates remotely, and writes the state; Retry and Regenerate will reuse it
+    /// sheet 的 Retry / Regenerate：不管上次的结果重新生成；生成中不重复发 /
+    /// The sheet's Retry and Regenerate: generates again whatever the last result; a request in flight is left alone
+    func regenerate(context: DetailAIAdviceContext, language: AppLanguage) async {
+        if case .loading = state {
+            return
+        }
+
+        await generate(context: context, language: language)
+    }
+
+    /// 组 prompt → 远程生成 → 写状态 / Builds the prompt, generates remotely, and writes the state
     private func generate(context: DetailAIAdviceContext, language: AppLanguage) async {
         // 在第一次 `await` 之前置 loading，连点两下也只会发一次 / Set before the first `await`, so a double tap sends once
         state = .loading
@@ -61,7 +75,7 @@ final class AIAdviceViewModel {
                 return
             }
 
-            state = .loaded(advice)
+            state = .loaded(advice, generatedAt: .now)
 
         } catch {
             guard !Task.isCancelled else {

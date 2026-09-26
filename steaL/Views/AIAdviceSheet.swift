@@ -10,18 +10,29 @@ import SwiftUI
 /// 详情页的 AI 购买建议 sheet；结果放在详情页持有的 `AIAdviceViewModel` 里，关掉再开还在 /
 /// The detail page's AI purchase advice sheet; the result lives in the page-owned `AIAdviceViewModel`,
 /// so it survives closing and reopening
+///
+/// 整张 sheet 只看一个状态：AI 成功才显示内容，价格行也只在成功时出现 /
+/// The whole sheet runs on one state: content, the price row included, only appears once the advice is in
 struct AIAdviceSheet: View {
 
     /// 由 `GameDetailView` 持有，sheet 只读 / Owned by `GameDetailView`; the sheet only reads it
     let viewModel: AIAdviceViewModel
 
+    /// 详情页的比价状态，价格行和打开商店都从这里取，和 AI 拿到的是同一份 /
+    /// The detail page's price state; the price row and the store link read it, the same data the model saw
+    let pricesState: GameDetailViewModel.PricesState
+
+    /// Retry / Regenerate：由详情页用最新数据重新拼输入 / Retry and Regenerate; the detail page rebuilds the input from fresh data
+    let regenerate: () -> Void
+
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            // 内容之后按 plan 的 5 块补上 / The five blocks from the plan come later
-            Color.clear
+            content
                 .navigationTitle("Should You Buy?")
+                // HIG Generative AI：告诉用户这是 AI 生成的、可能出错 / HIG: say it is AI-generated and may be wrong
+                .navigationSubtitle("AI analysis, may contain errors")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -35,11 +46,174 @@ struct AIAdviceSheet: View {
         // medium 放得下结论 + 价格一行 + 第一条理由 / Medium fits the verdict, the price row, and the first reason
         .presentationDetents([.medium, .large])
     }
+
+    /// 按状态切换 / Switched on the state
+    @ViewBuilder
+    private var content: some View {
+        switch viewModel.state {
+        // idle 只在点了入口、任务还没跑起来的一瞬间出现 / idle only shows for the instant before the task starts
+        case .idle, .loading:
+            // HIG：写具体在做什么，不要只写 "Processing…" / HIG: say what is happening, not just "Processing…"
+            ProgressView("Checking prices and reviews…")
+                .tint(.brandGreen)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+        case .loaded(let advice, let generatedAt):
+            adviceList(advice, generatedAt: generatedAt)
+
+        case .failed(let error):
+            LoadErrorView(error: error, retry: regenerate)
+        }
+    }
+
+    // MARK: - 结果 / Result
+
+    /// 结论卡 → 价格一行 → 理由 → 操作与来源 / Verdict, price row, reasons, then actions and source
+    private func adviceList(_ advice: DetailAIAdviceResponse, generatedAt: Date) -> some View {
+        List {
+            Section {
+                AIAdviceVerdictView(advice: advice)
+            }
+
+            if let bestSteamDeal, let historyLow {
+                Section {
+                    AIAdvicePriceFactView(deal: bestSteamDeal, historyLow: historyLow)
+                }
+            }
+
+            Section("Why") {
+                ForEach(sortedReasons(advice), id: \.self) { reason in
+                    AIAdviceReasonRow(reason: reason)
+                }
+            }
+
+            Section {
+                primaryAction(advice)
+
+                Button("Regenerate", systemImage: "arrow.clockwise", action: regenerate)
+                    .tint(.brandBlue)
+            } footer: {
+                sourceFooter(generatedAt: generatedAt)
+            }
+        }
+    }
+
+    /// 利好在前，注意和不利在后；prompt 已经要求过，这里再保证一次 /
+    /// Pros first, then cautions and cons; the prompt asks for it, and this makes sure
+    private func sortedReasons(_ advice: DetailAIAdviceResponse) -> [DetailAIAdviceResponse.Reason] {
+        let pros = advice.reasons.filter { reason in reason.stance == .pro }
+        let others = advice.reasons.filter { reason in reason.stance != .pro }
+        return pros + others
+    }
+
+    /// 主操作随结论变：买 → 打开商店；等 → AI 的目标价；跳过 → 没有 /
+    /// The main action follows the verdict: buy opens the store, wait shows the model's target price, skip has none
+    @ViewBuilder
+    private func primaryAction(_ advice: DetailAIAdviceResponse) -> some View {
+        switch advice.scoredVerdict {
+        case .buy:
+            if let bestSteamDeal, let url = URL(string: bestSteamDeal.url) {
+                // 离开 App 用 `arrow.up.forward.square`，沿用项目约定 / Leaving the app uses `arrow.up.forward.square`, per the project's convention
+                Link(destination: url) {
+                    Label("Open in \(bestSteamDeal.shop.name)", systemImage: "arrow.up.forward.square")
+                        .font(.headline)
+                        .foregroundStyle(.onBrandGreen)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(.brandGreen)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+            }
+
+        case .wait:
+            if let targetPriceText = targetPriceText(advice) {
+                Label("Worth it at \(targetPriceText)", systemImage: "tag")
+                    .foregroundStyle(.primaryText)
+            }
+
+        case .skip:
+            EmptyView()
+        }
+    }
+
+    /// AI 的目标价，用 deal 的币种显示 / The model's target price, in the deal's currency
+    private func targetPriceText(_ advice: DetailAIAdviceResponse) -> String? {
+        guard let targetPrice = advice.targetPrice else { return nil }
+        guard let bestSteamDeal else { return nil }
+
+        let currency = bestSteamDeal.price.currency
+        return targetPrice.formatted(.currency(code: currency))
+    }
+
+    /// 数据来源 + 生成时间；结果跟着详情页，要让用户知道是多久前的判断 /
+    /// Data source and generation time; the result lives with the page, so say how old the judgement is
+    private func sourceFooter(generatedAt: Date) -> some View {
+        let relativeText = generatedAt.formatted(.relative(presentation: .named))
+        return Text("Prices and reviews from IsThereAnyDeal. Generated \(relativeText).")
+    }
+
+    // MARK: - 比价 / Prices
+
+    /// 最便宜的 Steam 激活 deal；比价不在已加载时是 nil / The cheapest Steam-activating deal; nil unless prices are loaded
+    private var bestSteamDeal: ITADPriceDeal? {
+        switch pricesState {
+        case .loaded(let prices), .loadedWithoutHistory(let prices):
+            return prices.bestSteamDeal
+        case .hidden, .loading, .notFound, .failed:
+            return nil
+        }
+    }
+
+    /// 价格行要的历史低价；永久免费（`.loadedWithoutHistory`）不显示，那是它免费前的价 /
+    /// The lows for the price row; none for a free-forever title, whose lows predate it going free
+    private var historyLow: ITADPriceHistory? {
+        guard case .loaded(let prices) = pricesState else { return nil }
+        return prices.historyLow
+    }
 }
 
-#Preview {
+#Preview("Buy") {
     Color.clear
         .sheet(isPresented: .constant(true)) {
-            AIAdviceSheet(viewModel: AIAdviceViewModel())
+            AIAdviceSheet(
+                viewModel: AIAdviceViewModel(state: .loaded(.previewBuy, generatedAt: .now.addingTimeInterval(-180))),
+                pricesState: .loaded(.previewSample),
+                regenerate: {}
+            )
+        }
+}
+
+#Preview("Wait") {
+    Color.clear
+        .sheet(isPresented: .constant(true)) {
+            AIAdviceSheet(
+                viewModel: AIAdviceViewModel(state: .loaded(.previewWait, generatedAt: .now)),
+                pricesState: .loaded(.previewSample),
+                regenerate: {}
+            )
+        }
+}
+
+#Preview("Loading") {
+    Color.clear
+        .sheet(isPresented: .constant(true)) {
+            AIAdviceSheet(
+                viewModel: AIAdviceViewModel(state: .loading),
+                pricesState: .loaded(.previewSample),
+                regenerate: {}
+            )
+        }
+}
+
+#Preview("Failed") {
+    Color.clear
+        .sheet(isPresented: .constant(true)) {
+            AIAdviceSheet(
+                viewModel: AIAdviceViewModel(state: .failed(.offline)),
+                pricesState: .loaded(.previewSample),
+                regenerate: {}
+            )
         }
 }

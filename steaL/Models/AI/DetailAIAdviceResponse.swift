@@ -29,6 +29,27 @@ struct DetailAIAdviceResponse: Codable, Hashable, Sendable {
     let targetPrice: Double?
 }
 
+// MARK: - 派生 / Derived
+
+extension DetailAIAdviceResponse {
+
+    /// 按分数段推出的结论，分数段和 system prompt 的规则一致（80+ buy / 50–79 wait / 50 以下 skip）；
+    /// AI 给的 `verdict` 和分数对不上时以分数为准，界面只用这个 /
+    /// The verdict implied by the score, using the same bands as the system prompt;
+    /// the score wins when the model's `verdict` disagrees, and the UI only uses this
+    var scoredVerdict: Verdict {
+        if score >= 80 {
+            return .buy
+        }
+
+        if score >= 50 {
+            return .wait
+        }
+
+        return .skip
+    }
+}
+
 // MARK: - 嵌套结构 / Nested types
 
 extension DetailAIAdviceResponse {
