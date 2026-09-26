@@ -33,6 +33,14 @@ final class LLMProvider {
     @Relationship(deleteRule: .cascade, inverse: \LLMModel.provider)
     var models: [LLMModel] = []
 
+    /// 按添加顺序排好的模型，列表显示用它 / The models in the order they were added, for display in lists
+    var sortedModels: [LLMModel] {
+        let sorted = models.sorted { first, second in
+            first.createdAt < second.createdAt
+        }
+        return sorted
+    }
+
     // MARK: - 初始化 / Init
 
     init(name: String, baseURL: String) {
