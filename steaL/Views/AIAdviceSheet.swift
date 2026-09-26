@@ -58,8 +58,8 @@ struct AIAdviceSheet: View {
                 .tint(.brandGreen)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        case .loaded(let advice, let generatedAt):
-            adviceList(advice, generatedAt: generatedAt)
+        case .loaded(let advice, let generatedAt, let model):
+            adviceList(advice, generatedAt: generatedAt, model: model)
 
         case .failed(let error):
             LoadErrorView(error: error, retry: regenerate)
@@ -68,12 +68,15 @@ struct AIAdviceSheet: View {
 
     // MARK: - 结果 / Result
 
-    /// 结论卡 → 价格一行 → 理由 → 操作与来源 / Verdict, price row, reasons, then actions and source
-    private func adviceList(_ advice: DetailAIAdviceResponse, generatedAt: Date) -> some View {
+    /// 结论卡 → 主操作 → 价格一行 → 理由 → Regenerate 与来源；主操作紧跟结论，看完结论就能点 /
+    /// Verdict, main action, price row, reasons, then Regenerate and source; the action sits right under the verdict
+    private func adviceList(_ advice: DetailAIAdviceResponse, generatedAt: Date, model: String) -> some View {
         List {
             Section {
                 AIAdviceVerdictView(advice: advice)
             }
+
+            primaryActionSection(advice)
 
             if let bestSteamDeal, let historyLow {
                 Section {
@@ -87,13 +90,12 @@ struct AIAdviceSheet: View {
                 }
             }
 
+            // 单独一组：和主按钮放同一组会被 List 连成一块 / Its own section, or the list joins it to the main button
             Section {
-                primaryAction(advice)
-
                 Button("Regenerate", systemImage: "arrow.clockwise", action: regenerate)
                     .tint(.brandBlue)
             } footer: {
-                sourceFooter(generatedAt: generatedAt)
+                sourceFooter(generatedAt: generatedAt, model: model)
             }
         }
     }
@@ -106,31 +108,36 @@ struct AIAdviceSheet: View {
         return pros + others
     }
 
-    /// 主操作随结论变：买 → 打开商店；等 → AI 的目标价；跳过 → 没有 /
-    /// The main action follows the verdict: buy opens the store, wait shows the model's target price, skip has none
+    /// 主操作随结论变，自成一组：买 → 打开商店；等 → AI 的目标价；跳过 → 整组都没有 /
+    /// The main action follows the verdict in its own section: buy opens the store,
+    /// wait shows the model's target price, skip has no section at all
     @ViewBuilder
-    private func primaryAction(_ advice: DetailAIAdviceResponse) -> some View {
+    private func primaryActionSection(_ advice: DetailAIAdviceResponse) -> some View {
         switch advice.scoredVerdict {
         case .buy:
             if let bestSteamDeal, let url = URL(string: bestSteamDeal.url) {
-                // 离开 App 用 `arrow.up.forward.square`，沿用项目约定 / Leaving the app uses `arrow.up.forward.square`, per the project's convention
-                Link(destination: url) {
-                    Label("Open in \(bestSteamDeal.shop.name)", systemImage: "arrow.up.forward.square")
-                        .font(.headline)
-                        .foregroundStyle(.onBrandGreen)
-                        .frame(maxWidth: .infinity)
+                Section {
+                    // 离开 App 用 `arrow.up.forward.square`，沿用项目约定 / Leaving the app uses `arrow.up.forward.square`, per the project's convention
+                    Link(destination: url) {
+                        Label("Open in \(bestSteamDeal.shop.name)", systemImage: "arrow.up.forward.square")
+                            .font(.headline)
+                            .foregroundStyle(.onBrandGreen)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .tint(.brandGreen)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(.brandGreen)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
             }
 
         case .wait:
             if let targetPriceText = targetPriceText(advice) {
-                Label("Worth it at \(targetPriceText)", systemImage: "tag")
-                    .foregroundStyle(.primaryText)
+                Section {
+                    Label("Worth it at \(targetPriceText)", systemImage: "tag")
+                        .foregroundStyle(.primaryText)
+                }
             }
 
         case .skip:
@@ -147,11 +154,11 @@ struct AIAdviceSheet: View {
         return targetPrice.formatted(.currency(code: currency))
     }
 
-    /// 数据来源 + 生成时间；结果跟着详情页，要让用户知道是多久前的判断 /
-    /// Data source and generation time; the result lives with the page, so say how old the judgement is
-    private func sourceFooter(generatedAt: Date) -> some View {
+    /// 数据来源 + 模型 + 生成时间；结果跟着详情页，要让用户知道是谁、多久前的判断 /
+    /// Data source, model and generation time; the result lives with the page, so say who judged it and how long ago
+    private func sourceFooter(generatedAt: Date, model: String) -> some View {
         let relativeText = generatedAt.formatted(.relative(presentation: .named))
-        return Text("Prices and reviews from IsThereAnyDeal. Generated \(relativeText).")
+        return Text("Prices and reviews from IsThereAnyDeal. Generated by \(model) \(relativeText).")
     }
 
     // MARK: - 比价 / Prices
@@ -178,7 +185,7 @@ struct AIAdviceSheet: View {
     Color.clear
         .sheet(isPresented: .constant(true)) {
             AIAdviceSheet(
-                viewModel: AIAdviceViewModel(state: .loaded(.previewBuy, generatedAt: .now.addingTimeInterval(-180))),
+                viewModel: AIAdviceViewModel(state: .loaded(.previewBuy, generatedAt: .now.addingTimeInterval(-180), model: "deepseek-flash")),
                 pricesState: .loaded(.previewSample),
                 regenerate: {}
             )
@@ -189,7 +196,7 @@ struct AIAdviceSheet: View {
     Color.clear
         .sheet(isPresented: .constant(true)) {
             AIAdviceSheet(
-                viewModel: AIAdviceViewModel(state: .loaded(.previewWait, generatedAt: .now)),
+                viewModel: AIAdviceViewModel(state: .loaded(.previewWait, generatedAt: .now, model: "deepseek-flash")),
                 pricesState: .loaded(.previewSample),
                 regenerate: {}
             )

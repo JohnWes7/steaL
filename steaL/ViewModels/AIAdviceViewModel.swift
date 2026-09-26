@@ -21,8 +21,9 @@ final class AIAdviceViewModel {
         case idle
         /// 正在生成 / Generating
         case loading
-        /// AI 结果到手，带生成时间（sheet 底部显示「多久前生成」）/ The advice is in, with when it was generated
-        case loaded(DetailAIAdviceResponse, generatedAt: Date)
+        /// AI 结果到手，带生成时间与模型名（sheet 底部显示「哪个模型、多久前生成」）/
+        /// The advice is in, with when and by which model it was generated, both shown at the bottom of the sheet
+        case loaded(DetailAIAdviceResponse, generatedAt: Date, model: String)
         /// 生成失败，给 Retry / Generation failed; offers a retry
         case failed(LoadError)
     }
@@ -75,7 +76,9 @@ final class AIAdviceViewModel {
                 return
             }
 
-            state = .loaded(advice, generatedAt: .now)
+            // 记的是请求时用的模型名；之后接端上兜底，走端上时换成端上模型的名字 /
+            // The model name sent with the request; the on-device fallback will record its own name instead
+            state = .loaded(advice, generatedAt: .now, model: Config.llmModel)
 
         } catch {
             guard !Task.isCancelled else {
