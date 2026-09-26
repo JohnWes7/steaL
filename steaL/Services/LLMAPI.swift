@@ -11,11 +11,6 @@ import OSLog
 /// 通用的 LLM 调用，走 OpenAI Chat Completions 兼容协议；换服务商只改 `Secrets.xcconfig` 的地址、key、模型名 /
 /// A generic LLM call over the OpenAI Chat Completions compatible protocol; switching providers only
 /// changes the URL, key and model in `Secrets.xcconfig`
-///
-/// 只管发请求与解码：prompt 由调用方生成（如 `DetailAIAdvicePrompt`），输出类型由调用方用 `generating:` 指定，
-/// 写法对齐 Foundation Models 的 `respond(to:generating:)` /
-/// Only sends and decodes: the caller builds the prompt (e.g. `DetailAIAdvicePrompt`) and names the output
-/// type with `generating:`, mirroring Foundation Models' `respond(to:generating:)`
 enum LLMAPI {
 
     /// 思考模式要先推理再回答，比普通请求慢得多 / A thinking model reasons before answering, far slower than usual
