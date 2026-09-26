@@ -47,6 +47,15 @@ struct ProfileView: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
     }
 
+    /// AI 模型行右侧的模型名：选了自己的模型就显示它，否则是内置的 /
+    /// The model name on the AI Model row: the user's own model when one is chosen, otherwise the built-in one
+    private func currentModelName(for settings: UserSettingModel) -> String {
+        if let model = settings.llmModel {
+            return model.name
+        }
+        return Config.llmModel
+    }
+
     var body: some View {
         // `@Bindable` 需要非可选对象 / `@Bindable` needs a non-optional object
         if let storedSettings = settings.first {
@@ -108,16 +117,35 @@ struct ProfileView: View {
                     }
                 }
 
+                Section("AI") {
+                    // 推入一页而不是弹 sheet：里面有选模型和服务商列表，还要再弹编辑表单，是一层层的内容（HIG Modality）/
+                    // A push rather than a sheet: the page holds the model choice and provider list and opens its own form (HIG Modality)
+                    NavigationLink {
+                        AIModelSettingsView()
+                    } label: {
+                        // 右侧显示当前模型，同系统设置「无线局域网　网络名」/ Shows the current model on the trailing side, like Settings' Wi-Fi row
+                        LabeledContent {
+                            Text(currentModelName(for: settings))
+                        } label: {
+                            HStack(spacing: 12) {
+                                IconTileView(icon: "sparkles", tint: .brandBlue)
+
+                                Text("AI Model")
+                            }
+                        }
+                    }
+                }
+
                 Section("About") {
-                    HStack(spacing: 12) {
-                        IconTileView(icon: "info.circle.fill", tint: .secondaryText)
-
-                        Text("App Version")
-
-                        Spacer(minLength: 12)
-
+                    // 标签 + 值，同 AI Model 行 / A label and its value, like the AI Model row
+                    LabeledContent {
                         Text("\(appVersion) (Build \(buildNumber))")
-                            .foregroundStyle(.secondaryText)
+                    } label: {
+                        HStack(spacing: 12) {
+                            IconTileView(icon: "info.circle.fill", tint: .secondaryText)
+
+                            Text("App Version")
+                        }
                     }
 
                     // 右侧箭头表示以后会推入一页 / The chevron marks a row that will push a page later
