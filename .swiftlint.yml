@@ -43,6 +43,11 @@ function_body_length:
   warning: 60
   error: 90
 
+# `#Preview` / `body` 是 result builder，里面丢弃结果只能写 `let _ =`（`_ =` 编译不过），
+# 所以只在 SwiftUI 视图体里忽略这条，普通代码照样报。
+redundant_discardable_let:
+  ignore_swiftui_view_bodies: true
+
 cyclomatic_complexity:
   warning: 15
   error: 25

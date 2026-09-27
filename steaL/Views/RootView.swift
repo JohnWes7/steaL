@@ -69,19 +69,14 @@ struct RootView: View {
 
 
 // Option + Command + Return
-#Preview {
+#Preview(traits: .userSettingSampleData) {
     // 预览不走 `AppDelegate`，这里直接连真实 Firebase，否则 `AuthService()` / `WishlistService()` 调 Firebase 会崩；
     // 重复 `configure()` 也会崩，所以先判断 /
     // Previews skip `AppDelegate`, so connect to the real Firebase here or `AuthService()` / `WishlistService()` crash calling into Firebase;
     // a second `configure()` also crashes, hence the check
     let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
-    let container = try! ModelContainer(
-        for: UserSettingModel.self,
-        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
-    let _ = container.mainContext.insert(UserSettingModel())
-    
-    // 复刻 `MainTabView`：`toolbar` 只在 `NavigationStack` 里生效 / Mirrors `MainTabView`; the modifier needs a `NavigationStack`
+
+    // 设置行由 `.userSettingSampleData` 插入，欢迎页的标记是 `false`，所以每次都会弹欢迎页。
+    // The settings row comes from `.userSettingSampleData` with the onboarding flag `false`, so the welcome sheet always shows.
     RootView()
-        .modelContainer(container)
 }

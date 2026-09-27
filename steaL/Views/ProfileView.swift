@@ -366,14 +366,9 @@ struct ProfileView: View {
     }
 }
 
-#Preview {
-    // 便利版容器是空的，`settings.first` 取不到 `main` 行页面就整页空白，先插一条默认设置 /
-    // The convenience container is empty, and without the "main" row `settings.first` is nil so the page renders nothing
-    let container = try! ModelContainer(
-        for: UserSettingModel.self,
-        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
-    let _ = container.mainContext.insert(UserSettingModel())
+// 没有 `main` 设置行页面会整页空白，由 `.userSettingSampleData` 插入 /
+// Without the "main" settings row the page renders nothing, so `.userSettingSampleData` inserts one
+#Preview(traits: .userSettingSampleData) {
     // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
     let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
 
@@ -381,7 +376,6 @@ struct ProfileView: View {
     NavigationStack {
         ProfileView()
     }
-    .modelContainer(container)
     .environment(AuthService())
     .environment(WishlistService())
 }
