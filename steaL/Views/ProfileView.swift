@@ -47,8 +47,11 @@ struct ProfileView: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
     }
 
-    /// AI 模型行右侧的模型名：选了自己的模型就显示它，否则是内置的 /
-    /// The model name on the AI Model row: the user's own model when one is chosen, otherwise the built-in one
+    /// AI Model 行右侧显示的模型名。
+    /// Returns the model name shown on the AI Model row.
+    ///
+    /// - Parameter settings: 用户设置单例行 / The singleton settings row.
+    /// - Returns: 选了自己的模型就是它的名字，否则是内置模型名 / The chosen model's name, or the built-in model's name when none is chosen.
     private func currentModelName(for settings: UserSettingModel) -> String {
         if let model = settings.llmModel {
             return model.name
@@ -118,12 +121,11 @@ struct ProfileView: View {
                 }
 
                 Section("AI") {
-                    // 推入一页而不是弹 sheet：里面有选模型和服务商列表，还要再弹编辑表单，是一层层的内容（HIG Modality）/
-                    // A push rather than a sheet: the page holds the model choice and provider list and opens its own form (HIG Modality)
+                    // 推入一页而不是弹 sheet：里面有选模型和服务商列表，还要再弹编辑表单，是一层层的内容。
+                    // A push rather than a sheet: the page holds the model choice and provider list and opens its own form.
                     NavigationLink {
                         AIModelSettingsView()
                     } label: {
-                        // 右侧显示当前模型，同系统设置「无线局域网　网络名」/ Shows the current model on the trailing side, like Settings' Wi-Fi row
                         LabeledContent {
                             Text(currentModelName(for: settings))
                         } label: {

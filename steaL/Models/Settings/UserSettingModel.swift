@@ -39,9 +39,12 @@ final class UserSettingModel {
 
     // MARK: - AI 模型 / AI model
 
-    /// 选中的模型，服务商从 `llmModel.provider` 取；`nil` 是内置的服务商与模型。模型或服务商被删时自动置空 /
-    /// The chosen model, with its provider at `llmModel.provider`; `nil` means the built-in provider and model.
-    /// Cleared automatically when the model or its provider is deleted
+    /// 选中的模型，`nil` 是内置的服务商与模型。
+    /// The chosen model; `nil` means the built-in provider and model.
+    ///
+    /// 服务商从 `llmModel.provider` 取。模型或服务商被删时，经反向关系自动置空。
+    /// The provider comes from `llmModel.provider`. It's cleared through the inverse relationship when the model
+    /// or its provider is deleted.
     @Relationship(inverse: \LLMModel.selectedBy)
     var llmModel: LLMModel?
 

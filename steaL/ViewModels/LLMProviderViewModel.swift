@@ -8,29 +8,43 @@
 import Foundation
 import OSLog
 
-/// 服务商页的 API key 状态：Keychain 里有没有这条 key；只查是否存在，不读内容 /
-/// The provider page's API key status: whether the Keychain holds the key; it checks existence and never reads the key
+/// 服务商页的 API key 状态：Keychain 里有没有这条 key。
+/// The provider page's API key status: whether the Keychain holds the key.
+///
+/// 只查是否存在，从不读出 key 的内容。
+/// It checks existence only and never reads the key itself.
 @MainActor
 @Observable
 final class LLMProviderViewModel {
 
-    /// key 的状态 / The key's status
+    /// key 的状态。
+    /// The key's status.
     enum KeyState: Equatable {
-        /// 还在查 / Still checking
+        /// 还在查。
+        /// Still checking.
         case checking
-        /// 存了 / Saved
+        /// 存了。
+        /// Saved.
         case saved
-        /// 没存（比如从不加密的备份恢复后）/ Not saved, e.g. after restoring an unencrypted backup
+        /// 没存，比如从不加密的备份恢复后。
+        /// Not saved, for example after restoring an unencrypted backup.
         case notSet
-        /// 查询失败 / The check failed
+        /// 查询失败。
+        /// The check failed.
         case failed
     }
 
-    /// 当前状态 / Current state
+    /// 当前状态。
+    /// The current state.
     private(set) var keyState: KeyState = .checking
 
-    /// 查一次 key 在不在；再次查时保留旧结果，不闪回「查询中」/
-    /// Checks whether the key exists; a re-check keeps the old result instead of flashing back to checking
+    /// 查一次 key 在不在。
+    /// Checks whether the key exists.
+    ///
+    /// 再次查时保留旧结果，不闪回「查询中」。
+    /// A re-check keeps the old result instead of flashing back to checking.
+    ///
+    /// - Parameter providerID: 服务商的 id / The provider's id.
     func checkKey(for providerID: UUID) async {
         do {
             let hasKey = try await APIKeyStore.hasKey(for: providerID)
