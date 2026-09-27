@@ -62,6 +62,7 @@ struct LLMProviderView: View {
                             Button("Delete", systemImage: "trash", role: .destructive) {
                                 deleteModel(model)
                             }
+                            .tint(.red)
                         }
                 }
 
@@ -71,7 +72,9 @@ struct LLMProviderView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .focused($isAddFieldFocused)
-                    .submitLabel(.done)
+                    // 有字时回车 = 加完继续，空着回车才收键盘，同「提醒事项」；所以是回车键而不是 ✓ /
+                    // Return with text adds and continues, return on empty ends editing, like Reminders; so a return key, not a checkmark
+                    .submitLabel(.return)
                     .onSubmit(addModel)
             } header: {
                 Text("Models")
