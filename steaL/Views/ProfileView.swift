@@ -59,6 +59,22 @@ struct ProfileView: View {
         return Config.llmModel
     }
 
+    /// AI Model 行右侧模型名下面显示的服务商名。
+    /// Returns the provider name shown under the model name on the AI Model row.
+    ///
+    /// 用户可能有好几个服务商，同名模型要靠它区分；内置写「Built-in」，和 AI Model 页的分组标题一致。
+    /// A user may have several providers serving same-named models, so the provider tells them apart; the built-in one reads
+    /// "Built-in", matching its group title on the AI Model page.
+    ///
+    /// - Parameter settings: 用户设置单例行 / The singleton settings row.
+    /// - Returns: 选中模型所属服务商的名字，没选就是「Built-in」 / The chosen model's provider name, or "Built-in" when none is chosen.
+    private func currentProviderName(for settings: UserSettingModel) -> String {
+        if let model = settings.llmModel {
+            return model.provider.name
+        }
+        return String(localized: "Built-in")
+    }
+
     var body: some View {
         // `@Bindable` 需要非可选对象 / `@Bindable` needs a non-optional object
         if let storedSettings = settings.first {
@@ -127,7 +143,14 @@ struct ProfileView: View {
                         AIModelSettingsView()
                     } label: {
                         LabeledContent {
-                            Text(currentModelName(for: settings))
+                            // 模型名在上、服务商在下，同 Apple 设置里带副标题的值。
+                            // Model on top, provider below, like a value with a subtitle in Settings.
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(currentModelName(for: settings))
+
+                                Text(currentProviderName(for: settings))
+                                    .font(.footnote)
+                            }
                         } label: {
                             HStack(spacing: 12) {
                                 IconTileView(icon: "sparkles", tint: .brandBlue)
