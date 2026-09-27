@@ -33,8 +33,10 @@ final class LLMModel {
 
     // MARK: - 初始化 / Init
 
-    // `provider` 要先插入 context；插入这个模型后，`provider.models` 会经反向关系自动带上它，不用再 append /
-    // Insert `provider` first; once this model is inserted, the inverse adds it to `provider.models`, so no append is needed
+    // `provider` 要先插入 context；插入这个模型后，`provider.models` 的数据会经反向关系带上它，
+    // 但不会通知读它的界面，所以列表用 `@Query` 查模型 /
+    // Insert `provider` first; once this model is inserted the inverse adds it to `provider.models`,
+    // but views reading that array aren't notified, so lists query models with `@Query`
     init(name: String, provider: LLMProvider) {
         self.name = name
         self.provider = provider

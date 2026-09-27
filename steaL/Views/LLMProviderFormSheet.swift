@@ -28,9 +28,9 @@ struct LLMProviderFormSheet: View {
 
     // 用 `@Binding` 而不是 `onAdd` 回调：sheet 自己保存、自己关，只把结果写回弹出它的页面 /
     // A `@Binding` rather than an `onAdd` callback: the sheet saves and dismisses itself and only hands the result back
-    /// 新增成功后写入新服务商，弹出它的页面据此推入；编辑时不用 /
-    /// Receives the new provider once added so the presenting page can push it; unused when editing
-    @Binding private var addedProvider: LLMProvider?
+    /// 新增成功后写入新服务商的 id，弹出它的页面据此推入；编辑时不用 /
+    /// Receives the new provider's id once added so the presenting page can push it; unused when editing
+    @Binding private var addedProviderID: UUID?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -54,9 +54,9 @@ struct LLMProviderFormSheet: View {
     // MARK: - 初始化 / Init
 
     /// 新增服务商 / Adds a provider
-    init(addedProvider: Binding<LLMProvider?>) {
+    init(addedProviderID: Binding<UUID?>) {
         self.provider = nil
-        self._addedProvider = addedProvider
+        self._addedProviderID = addedProviderID
         self.name = ""
         self.baseURL = ""
         self.apiKey = ""
@@ -65,7 +65,7 @@ struct LLMProviderFormSheet: View {
     /// 编辑已有服务商；key 不预填（不为显示去读 Keychain）/ Edits a provider; the key is not prefilled, so the Keychain is never read for display
     init(editing provider: LLMProvider) {
         self.provider = provider
-        self._addedProvider = .constant(nil)
+        self._addedProviderID = .constant(nil)
         self.name = provider.name
         self.baseURL = provider.baseURL
         self.apiKey = ""
@@ -275,7 +275,7 @@ struct LLMProviderFormSheet: View {
         try await APIKeyStore.save(apiKeyToSave, for: newProvider.id)
 
         modelContext.insert(newProvider)
-        addedProvider = newProvider
+        addedProviderID = newProvider.id
     }
 
     // key 留空就不动 Keychain；key 存失败时名字和 URL 也不改 /
@@ -296,7 +296,7 @@ struct LLMProviderFormSheet: View {
 }
 
 #Preview("Add", traits: .llmProviderSampleData) {
-    LLMProviderFormSheet(addedProvider: .constant(nil))
+    LLMProviderFormSheet(addedProviderID: .constant(nil))
 }
 
 #Preview("Edit", traits: .llmProviderSampleData) {

@@ -24,6 +24,14 @@ struct AIModelSettingsView: View {
     @Query(sort: \LLMProvider.createdAt)
     private var providers: [LLMProvider]
 
+    // 分组和计数都读这个查询，不读 `provider.models`：从模型那一侧建关系或删除模型时，关系数组不会通知界面刷新
+    // （2026-09-27 实测：加了模型回来还显示旧数量）。同 Apple 示例 SwiftDataAnimals 用 `@Query` 查子表 /
+    // Grouping and counts read this query, not `provider.models`: changes made from the model's side never tell the view
+    // to refresh. Apple's SwiftDataAnimals sample also queries the child table
+    /// 所有服务商的模型，按添加顺序 / Every provider's models, in the order they were added
+    @Query(sort: \LLMModel.createdAt)
+    private var models: [LLMModel]
+
     /// 是否弹出 Add Provider 表单 / Whether the Add Provider form is shown
     @State private var isShowingAddProvider = false
 
@@ -32,8 +40,9 @@ struct AIModelSettingsView: View {
     // Tapping a provider row and pushing after adding share this one state and one `.navigationDestination(item:)`.
     // Rows must not use a closure `NavigationLink { … }` as well: the two fight over the same stack slot, popping and
     // pushing each other until the whole app hangs (seen 2026-09-27)
-    /// 要推入其页面的服务商：点行，或表单刚添加的 / The provider whose page to push: a tapped row, or the one the form just added
-    @State private var openedProvider: LLMProvider?
+    // 存 id 不存对象：服务商页按 id 自己查，同 Apple 示例传分类名 / The id, not the object: the provider page queries by id itself
+    /// 要推入其页面的服务商 id：点行，或表单刚添加的 / The id of the provider whose page to push: a tapped row, or the one just added
+    @State private var openedProviderID: UUID?
 
     var body: some View {
         List {
@@ -42,13 +51,15 @@ struct AIModelSettingsView: View {
             }
 
             ForEach(providers) { provider in
+                let providerModels = models(of: provider)
+
                 Section(provider.name) {
-                    if provider.models.isEmpty {
+                    if providerModels.isEmpty {
                         // 没有可选的也留着这一组，让用户看到这个服务商还没加模型 / Keeps the group so people can see the provider has no models yet
                         Text("No Models")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(provider.sortedModels) { model in
+                        ForEach(providerModels) { model in
                             modelRow(name: model.name, model: model)
                         }
                     }
@@ -75,11 +86,11 @@ struct AIModelSettingsView: View {
         .background(Color.appBackground)
         .navigationTitle("AI Model")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(item: $openedProvider) { provider in
-            LLMProviderView(provider: provider)
+        .navigationDestination(item: $openedProviderID) { providerID in
+            LLMProviderView(providerID: providerID)
         }
         .sheet(isPresented: $isShowingAddProvider) {
-            LLMProviderFormSheet(addedProvider: $openedProvider)
+            LLMProviderFormSheet(addedProviderID: $openedProviderID)
         }
     }
 
@@ -119,7 +130,7 @@ struct AIModelSettingsView: View {
     /// 一行服务商：名字、模型数量、箭头，点了推入服务商页 / One provider row: name, model count and chevron; tapping pushes its page
     private func providerRow(_ provider: LLMProvider) -> some View {
         Button {
-            openedProvider = provider
+            openedProviderID = provider.id
         } label: {
             HStack(spacing: 12) {
                 Text(provider.name)
@@ -156,9 +167,17 @@ struct AIModelSettingsView: View {
 
     // MARK: - 派生数据 / Derived data
 
+    /// 某个服务商的模型，保持查询的添加顺序 / One provider's models, keeping the query's added order
+    private func models(of provider: LLMProvider) -> [LLMModel] {
+        let providerModels = models.filter { model in
+            model.provider.id == provider.id
+        }
+        return providerModels
+    }
+
     /// 服务商行右侧的模型数量 / The model count on a provider row
     private func modelCountText(for provider: LLMProvider) -> String {
-        let count = provider.models.count
+        let count = models(of: provider).count
 
         switch count {
         case 0:

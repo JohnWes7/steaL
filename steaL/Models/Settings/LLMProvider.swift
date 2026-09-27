@@ -28,18 +28,11 @@ final class LLMProvider {
 
     // MARK: - 关系 / Relationships
 
-    /// 这个服务商下的模型；删服务商时一起删。数组不保证顺序，显示时按 `createdAt` 排 /
-    /// The models under this provider, deleted along with it. The array has no guaranteed order; sort by `createdAt` for display
+    // 界面列表不读它，用 `@Query` 查 `LLMModel`：从模型那一侧改关系时它不会通知界面刷新（2026-09-27 实测）/
+    // Views don't list from it but query `LLMModel`: changes from the model's side never tell the view to refresh
+    /// 这个服务商下的模型；删服务商时一起删（cascade）/ The models under this provider, deleted along with it (cascade)
     @Relationship(deleteRule: .cascade, inverse: \LLMModel.provider)
     var models: [LLMModel] = []
-
-    /// 按添加顺序排好的模型，列表显示用它 / The models in the order they were added, for display in lists
-    var sortedModels: [LLMModel] {
-        let sorted = models.sorted { first, second in
-            first.createdAt < second.createdAt
-        }
-        return sorted
-    }
 
     // MARK: - 初始化 / Init
 
