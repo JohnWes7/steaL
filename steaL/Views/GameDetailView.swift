@@ -43,8 +43,8 @@ struct GameDetailView: View {
     /// 完整游戏的路由，非空即推入 / The full game's route; a push happens once it is non-nil
     @State private var fullGameRoute: GameDetailRoute?
 
-    /// ✨ 按钮上的提示，显示与否由 TipKit 按规则决定。
-    /// The tip on the ✨ button; TipKit decides from its rules whether it shows.
+    /// ✨ 按钮上的提示，第一次看到就显示，点过 ✨ 后不再出现。
+    /// The tip on the ✨ button; shows the first time and never again once ✨ has been tapped.
     private let aiAdviceTip = AIAdviceTip()
 
     /// 用导航参数创建详情页及其状态机 / Creates the detail page and its state machine from the route
@@ -87,11 +87,6 @@ struct GameDetailView: View {
         // 用 `.task(id:)`：参数变化自动重跑，离开时自动取消在飞请求 / `.task(id:)` re-runs on a parameter change and cancels on disappear
         .task(id: reloadKey) {
             await gameDetailViewModel.load(region: region, language: language)
-        }
-        // 每进一次详情页记一次，给 ✨ 提示的规则计数。
-        // Donates once per visit, counting towards the ✨ tip's rule.
-        .task {
-            await AIAdviceTip.detailViewed.donate()
         }
         .toolbar(.visible, for: .navigationBar)
         .navigationTitle(navigationTitle)
@@ -211,7 +206,12 @@ struct GameDetailView: View {
                     Button("AI Advice", systemImage: "sparkles") {
                         showAIAdvice(context: adviceContext)
                     }
-                    .tint(.brandBlue)
+                    // iOS 26 导航栏里只有图标的按钮挂不出 popover tip，加一个按钮样式才显示（Apple 论坛的已知问题）；
+                    // `.plain` 不用 tint 上色，颜色改用 `foregroundStyle`。
+                    // On iOS 26 a popover tip won't show on an icon-only toolbar button until it has a button style
+                    // (a known issue on the Apple forums); `.plain` ignores tint, so the colour comes from `foregroundStyle`.
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.brandBlue)
                     .popoverTip(aiAdviceTip)
                 }
             }
@@ -438,8 +438,8 @@ struct GameDetailView: View {
 #Preview("AI 建议提示 / AI advice tip") {
     // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
     let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
-    // 预览不走 `steaLApp.init`：在这里配置 TipKit，并无视规则强制显示提示。
-    // Previews skip `steaLApp.init`: configure TipKit here and force tips to show regardless of their rules.
+    // 预览不走 `steaLApp.init`：在这里配置 TipKit，并强制显示提示（即使之前关过或点过 ✨）。
+    // Previews skip `steaLApp.init`: configure TipKit here and force the tip to show even if it was closed or used.
     let _ = {
         Tips.showAllTipsForTesting()
         try? Tips.configure()
