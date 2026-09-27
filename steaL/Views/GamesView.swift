@@ -203,26 +203,41 @@ struct GamesView: View {
 
     // MARK: - 区块标题 / Section titles
 
-    /// 「Hot Deals」区块标题 / Section title for the Hot Deals block
+    /// 「Hot Deals」区块标题，整个标题可点，推入全部 Hot Deals。
+    /// Section title for the Hot Deals block; the whole title is tappable and pushes the full list.
+    ///
+    /// 同 App Store 的区块标题：标题后跟灰色箭头表示「查看全部」，不另放文字按钮。
+    /// Matches App Store shelf titles: a grey chevron after the title means See All, with no separate text button.
     @ViewBuilder
     private var hotDealsHeader: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "flame.fill")
-                .font(.system(size: 24))
-                .foregroundStyle(.orange)
+        HStack(spacing: 0) {
+            Button {
+                isShowingHotDeals = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "flame.fill")
+                        .font(.title2)
+                        .foregroundStyle(.orange)
 
-            Text("Hot Deals")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.primaryText)
+                    HStack(spacing: 6) {
+                        Text("Hot Deals")
+                            .font(.system(.title, weight: .bold))
+                            .foregroundStyle(.primaryText)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(.title3, weight: .bold))
+                            .foregroundStyle(.secondaryText)
+                    }
+                }
+            }
+            // `.plain` 保留标题自己的颜色，不被 tint 染色 / `.plain` keeps the title's own colours instead of the tint
+            .buttonStyle(.plain)
+            // 只读标题，不读两个图标的名字 / Reads just the title, not the two symbol names
+            .accessibilityLabel("Hot Deals")
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityHint("Shows all hot deals")
 
             Spacer(minLength: 0)
-
-            // 同 App Store 首页区块：标题右侧「See All」推入完整列表 / Like App Store shelves: See All beside the title pushes the full list
-            Button("See All") {
-                isShowingHotDeals = true
-            }
-            .font(.body)
-            .tint(.brandGreen)
         }
         .padding(.bottom, 2)
     }
@@ -233,11 +248,11 @@ struct GamesView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
                 Image(systemName: "gift.fill")
-                    .font(.system(size: 24))
+                    .font(.title2)
                     .foregroundStyle(.brandGreen)
 
                 Text("Giveaways")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(.title, weight: .bold))
                     .foregroundStyle(.primaryText)
 
                 Spacer(minLength: 0)
