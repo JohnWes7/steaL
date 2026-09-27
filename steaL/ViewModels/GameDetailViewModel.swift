@@ -105,6 +105,14 @@ final class GameDetailViewModel {
     /// ITAD 请求用的游戏 UUID / The game UUID used for ITAD requests
     private(set) var uuid: String?
 
+    /// 上一次完整加载用的区域，没被取消才记。
+    /// The region of the last load that finished without being cancelled.
+    @ObservationIgnored private var loadedRegion: AppRegion?
+
+    /// 上一次完整加载用的语言，没被取消才记。
+    /// The language of the last load that finished without being cancelled.
+    @ObservationIgnored private var loadedLanguage: AppLanguage?
+
     /// 用导航参数创建状态机 / Creates the state machine from its navigation payload
     init(route: GameDetailRoute) {
         appID = route.appID
@@ -159,6 +167,30 @@ final class GameDetailViewModel {
         }
 
         return DetailAIAdviceContext(title: title, details: details, prices: prices, info: info)
+    }
+
+    /// 同样的区域和语言已经加载完成就什么都不做，否则加载。
+    /// Loads the page unless it has already finished loading for the same region and language.
+    ///
+    /// `.task` 在页面每次出现时都会跑：推入别的页再返回、全屏播放器盖住再关掉，都会让页面重新出现。
+    /// 这时重载会把状态打回 `.loading`，画廊被重建，正在播的预告片也就没了。
+    /// `.task` runs every time the page appears, including after a pushed page pops or the full-screen
+    /// player closes. Reloading then would reset the state to `.loading`, rebuild the gallery and lose the
+    /// trailer that was playing.
+    ///
+    /// - Parameters:
+    ///   - region: 商店区域，决定货币 / The store region, which drives the currency.
+    ///   - language: 语言，Steam 据此本地化文案 / The language Steam localises the copy with.
+    func loadIfNeeded(region: AppRegion, language: AppLanguage) async {
+        let isAlreadyLoaded = region == loadedRegion && language == loadedLanguage
+        guard !isAlreadyLoaded else { return }
+
+        await load(region: region, language: language)
+
+        // 中途被取消（页面消失）的不算，下次出现再加载 / A cancelled load does not count; the next appearance loads again
+        guard !Task.isCancelled else { return }
+        loadedRegion = region
+        loadedLanguage = language
     }
 
     /// 加载一页详情 / Loads one detail page

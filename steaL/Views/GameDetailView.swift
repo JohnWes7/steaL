@@ -84,9 +84,10 @@ struct GameDetailView: View {
             content
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // 用 `.task(id:)`：参数变化自动重跑，离开时自动取消在飞请求 / `.task(id:)` re-runs on a parameter change and cancels on disappear
+        // 用 `.task(id:)`：参数变化自动重跑，离开时自动取消在飞请求；页面重新出现不重载 /
+        // `.task(id:)` re-runs on a parameter change and cancels on disappear; reappearing does not reload
         .task(id: reloadKey) {
-            await gameDetailViewModel.load(region: region, language: language)
+            await gameDetailViewModel.loadIfNeeded(region: region, language: language)
         }
         .toolbar(.visible, for: .navigationBar)
         .navigationTitle(navigationTitle)
