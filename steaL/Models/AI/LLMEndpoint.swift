@@ -29,6 +29,13 @@ struct LLMEndpoint: Sendable {
     /// 请求里 `model` 字段的值，如 `deepseek-flash`。
     /// The value of the request's `model` field, such as `deepseek-flash`.
     let model: String
+
+    /// 服务商的显示名字，`nil` 是内置。
+    /// The provider's display name; `nil` for the built-in one.
+    ///
+    /// 只给界面标明「这次用了谁」，`LLMAPI` 不读它；内置是默认选项，不另起名字。
+    /// Only tells the UI who handled the request, `LLMAPI` never reads it; the built-in one is the default and gets no name.
+    let providerName: String?
 }
 
 // MARK: - 内置 / Built-in
@@ -40,6 +47,7 @@ extension LLMEndpoint {
     static let builtIn = LLMEndpoint(
         baseURL: Config.llmAPIURL,
         apiKey: Config.llmAPIKey,
-        model: Config.llmModel
+        model: Config.llmModel,
+        providerName: nil
     )
 }

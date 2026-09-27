@@ -26,12 +26,13 @@ final class AIAdviceViewModel {
         /// 正在生成。
         /// Generating.
         case loading
-        /// AI 结果到手，带生成时间与模型名。
-        /// The advice is in, with when and by which model it was generated.
+        /// AI 结果到手，带生成时间、模型名与服务商名（`nil` 是内置）。
+        /// The advice is in, with when it was generated, the model name and the provider name (`nil` for the built-in one).
         ///
-        /// sheet 底部显示「哪个模型、多久前生成」。
-        /// The bottom of the sheet shows both.
-        case loaded(DetailAIAdviceResponse, generatedAt: Date, model: String)
+        /// 存的是生成那一刻的名字，不是 `LLMModel`：之后改名或删掉服务商，已生成的结果不跟着变。
+        /// It keeps the names as they were at generation, not an `LLMModel`, so renaming or deleting the provider later
+        /// leaves the result alone.
+        case loaded(DetailAIAdviceResponse, generatedAt: Date, model: String, providerName: String?)
         /// 选的是自己的服务商，但 Keychain 里没有它的 key；不给 Retry，要去设置里补。
         /// The chosen provider has no key in the Keychain; no retry, it has to be added in settings.
         ///
@@ -136,9 +137,14 @@ final class AIAdviceViewModel {
                 return
             }
 
-            // 记的是这次请求实际用的模型名。
-            // Records the model this request actually used.
-            state = .loaded(advice, generatedAt: .now, model: endpoint.model)
+            // 记的是这次请求实际用的模型与服务商。
+            // Records the model and provider this request actually used.
+            state = .loaded(
+                advice,
+                generatedAt: .now,
+                model: endpoint.model,
+                providerName: endpoint.providerName
+            )
 
         } catch {
             guard !Task.isCancelled else {
@@ -173,12 +179,13 @@ final class AIAdviceViewModel {
         let providerID = provider.id
         let baseURL = provider.baseURL
         let modelName = model.name
+        let providerName = provider.name
 
         let apiKey = try await APIKeyStore.read(for: providerID)
         guard let apiKey else {
             return nil
         }
 
-        return LLMEndpoint(baseURL: baseURL, apiKey: apiKey, model: modelName)
+        return LLMEndpoint(baseURL: baseURL, apiKey: apiKey, model: modelName, providerName: providerName)
     }
 }
