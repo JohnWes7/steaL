@@ -56,15 +56,13 @@ struct MediaGalleryView: View {
                 pager
             }
         }
-        // 弹出全屏也会触发 `onDisappear`，那时不能停播 / Presenting full screen also fires `onDisappear`; keep playing then
+        // 弹出全屏可能触发 `onDisappear`，那时不能停播 / Presenting full screen may fire `onDisappear`; keep playing then
         .onDisappear {
             if !trailer.isFullScreen {
                 trailer.stop()
             }
         }
-        .fullScreenCover(isPresented: $trailer.isFullScreen) {
-            TrailerFullScreenView(player: trailer.player, title: trailer.movie?.name ?? "Trailer")
-        }
+        .fullScreenPlayer(isPresented: $trailer.isFullScreen, player: trailer.player)
     }
 
     /// 分页区与下方的分页点；分页点不叠在画面上，所以不会挡视频 /

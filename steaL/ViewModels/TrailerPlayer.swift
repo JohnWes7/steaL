@@ -6,6 +6,7 @@
 //
 
 import AVFoundation
+import AVKit
 
 /// 画廊预告片的播放状态：全画廊共用一个 `AVPlayer`，进度条拖动期间 `isScrubbing` 为真，画廊据此锁住翻页 /
 /// Playback state for the gallery trailer; one `AVPlayer` serves the whole gallery, and `isScrubbing`
@@ -29,7 +30,8 @@ final class TrailerPlayer {
     private(set) var isBuffering = false
     /// 手指按在进度条上 / A finger is on the scrubber
     private(set) var isScrubbing = false
-    /// 是否在系统全屏播放器里 / Whether the system full-screen player is showing
+    /// 是否在系统全屏播放器（模态弹出的 `AVPlayerViewController`）里 /
+    /// Whether the system full-screen player (a modally presented `AVPlayerViewController`) is showing
     var isFullScreen = false
 
     @ObservationIgnored private var timeObserver: Any?
@@ -51,7 +53,16 @@ final class TrailerPlayer {
         guard let urlString = movie.preferredURL, let url = URL(string: urlString) else { return }
 
         stop()
-        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        let item = AVPlayerItem(url: url)
+        // 系统全屏播放器从这里读标题 / The system full-screen player reads its title from here
+        if let name = movie.name {
+            let titleItem = AVMutableMetadataItem()
+            titleItem.identifier = .commonIdentifierTitle
+            titleItem.value = name as NSString
+            titleItem.extendedLanguageTag = "und"
+            item.externalMetadata = [titleItem]
+        }
+        player.replaceCurrentItem(with: item)
         self.movie = movie
         observePlayer()
         player.play()

@@ -202,37 +202,6 @@ private final class PlayerLayerUIView: UIView {
     var playerLayer: AVPlayerLayer? { layer as? AVPlayerLayer }
 }
 
-// MARK: - 全屏 / Full screen
-
-/// 全屏用系统播放器：投屏、横屏、完整控件都在这里。关闭按钮放在导航栏，不压住视频上的系统按钮 /
-/// Full screen uses the system player, with AirPlay, rotation and the full controls. The close button
-/// sits in the navigation bar so it never covers the system buttons on the video
-struct TrailerFullScreenView: View {
-
-    /// 与内嵌画面共用的播放器，进度接着播 / The player shared with the inline view, so playback carries on
-    let player: AVPlayer
-    let title: String
-
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            VideoPlayer(player: player)
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Close", systemImage: "xmark") {
-                            dismiss()
-                        }
-                    }
-                }
-                .background(Color.appBackground)
-        }
-        .environment(\.colorScheme, .dark)
-    }
-}
-
 #Preview("内嵌播放 / Inline") {
     @Previewable @State var trailer = TrailerPlayer()
 
