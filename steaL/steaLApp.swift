@@ -9,6 +9,7 @@ import SwiftData
 import SwiftUI
 import FirebaseCore
 import OSLog
+import TipKit
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
@@ -49,6 +50,14 @@ struct steaLApp: App {
             fatalError("Failed to create ModelContainer / 创建容器失败: \(error)")
         }
         self.container = container
+
+        // TipKit 要在任何提示显示前配置一次；多个提示时每天最多弹一个。
+        // TipKit must be configured once before any tip shows; with several tips, at most one appears a day.
+        do {
+            try Tips.configure([.displayFrequency(.daily)])
+        } catch {
+            Logger.settings.error("TipKit 配置失败 / TipKit configuration failed: \(String(describing: error))")
+        }
 
         // 首帧渲染前保证设置行存在 / Makes sure the settings row exists before the first frame
         let settings = bootstrapSettings(in: container.mainContext)

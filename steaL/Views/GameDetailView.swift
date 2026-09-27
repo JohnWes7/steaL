@@ -8,6 +8,7 @@
 import FirebaseCore
 import SwiftData
 import SwiftUI
+import TipKit
 
 /// 游戏详情页：数据由 `GameDetailViewModel` 加载，Steam 详情是硬门槛，ITAD 比价与评分随后补齐 /
 /// Game detail page; `GameDetailViewModel` loads the Steam details first as the hard
@@ -41,6 +42,10 @@ struct GameDetailView: View {
 
     /// 完整游戏的路由，非空即推入 / The full game's route; a push happens once it is non-nil
     @State private var fullGameRoute: GameDetailRoute?
+
+    /// ✨ 按钮上的提示，显示与否由 TipKit 按规则决定。
+    /// The tip on the ✨ button; TipKit decides from its rules whether it shows.
+    private let aiAdviceTip = AIAdviceTip()
 
     /// 用导航参数创建详情页及其状态机 / Creates the detail page and its state machine from the route
     init(route: GameDetailRoute) {
@@ -82,6 +87,11 @@ struct GameDetailView: View {
         // 用 `.task(id:)`：参数变化自动重跑，离开时自动取消在飞请求 / `.task(id:)` re-runs on a parameter change and cancels on disappear
         .task(id: reloadKey) {
             await gameDetailViewModel.load(region: region, language: language)
+        }
+        // 每进一次详情页记一次，给 ✨ 提示的规则计数。
+        // Donates once per visit, counting towards the ✨ tip's rule.
+        .task {
+            await AIAdviceTip.detailViewed.donate()
         }
         .toolbar(.visible, for: .navigationBar)
         .navigationTitle(navigationTitle)
@@ -202,6 +212,7 @@ struct GameDetailView: View {
                         showAIAdvice(context: adviceContext)
                     }
                     .tint(.brandBlue)
+                    .popoverTip(aiAdviceTip)
                 }
             }
 
@@ -220,6 +231,10 @@ struct GameDetailView: View {
     /// so closing the sheet does not cancel it
     private func showAIAdvice(context: DetailAIAdviceContext) {
         isShowingAIAdvice = true
+
+        // 用过这个功能就不用再提示。
+        // Once the feature has been used, the tip is no longer needed.
+        aiAdviceTip.invalidate(reason: .actionPerformed)
 
         Task {
             await aiAdviceViewModel.generateIfNeeded(context: context, language: language, model: selectedLLMModel)
@@ -411,6 +426,29 @@ struct GameDetailView: View {
             route: GameDetailRoute(
                 appID: 620,
                 uuid: nil,
+                title: "Portal 2"
+            )
+        )
+    }
+    .modelContainer(for: UserSettingModel.self, inMemory: true)
+    .environment(AuthService())
+    .environment(WishlistService())
+}
+
+#Preview("AI 建议提示 / AI advice tip") {
+    // 预览不走 `AppDelegate`，直接连真实 Firebase / Previews skip `AppDelegate`, so connect to the real Firebase here
+    let _ = { if FirebaseApp.app() == nil { FirebaseApp.configure() } }()
+    // 预览不走 `steaLApp.init`：在这里配置 TipKit，并无视规则强制显示提示。
+    // Previews skip `steaLApp.init`: configure TipKit here and force tips to show regardless of their rules.
+    let _ = {
+        Tips.showAllTipsForTesting()
+        try? Tips.configure()
+    }()
+    NavigationStack {
+        GameDetailView(
+            route: GameDetailRoute(
+                appID: 620,
+                uuid: "018d937f-0f5c-72f6-9b1e-2e5b3c4d5e6f",
                 title: "Portal 2"
             )
         )
