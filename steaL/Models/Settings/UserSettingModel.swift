@@ -48,6 +48,15 @@ final class UserSettingModel {
     @Relationship(inverse: \LLMModel.selectedBy)
     var llmModel: LLMModel?
 
+    // MARK: - 引导 / Onboarding
+
+    /// 是否已看过欢迎页，看过就不再在启动时弹出。
+    /// Whether the welcome sheet has been seen; once it has, it no longer appears at launch.
+    ///
+    /// 带默认值，旧数据库升级时 SwiftData 自动补上 `false`，老用户也会看到一次。
+    /// It has a default, so SwiftData fills in `false` when upgrading an existing store and existing users see it once.
+    var hasCompletedOnboarding: Bool = false
+
     // MARK: - 初始化 / Init
 
     init(

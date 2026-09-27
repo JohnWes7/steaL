@@ -76,6 +76,7 @@ struct steaLApp: App {
           language: \(settings.language.rawValue)
           priceDropAlerts: \(settings.isPriceDropAlertsEnabled)
           gameReleaseAlerts: \(settings.isGameReleaseAlertsEnabled)
+          hasCompletedOnboarding: \(settings.hasCompletedOnboarding)
           llmProvider: \(providerText)
           llmModel: \(modelText)
         """)

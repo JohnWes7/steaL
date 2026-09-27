@@ -11,7 +11,7 @@ import FirebaseCore
 
 struct RootView: View {
 
-    /// 用户设置单例行，这里只读显示主题 / Singleton user-settings row; only the display theme is read here
+    /// 用户设置单例行，这里读显示主题与是否看过欢迎页 / Singleton user-settings row; the display theme and whether the welcome sheet was seen are read here
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
 
@@ -32,6 +32,38 @@ struct RootView: View {
             .task(id: authService.uid) {
                 await wishlistService.listen(uid: authService.uid)
             }
+            // 首次启动盖在主界面上，关掉后主界面已经在下面。
+            // Covers the main interface on first launch, which is already there underneath once it closes.
+            .sheet(isPresented: isShowingOnboarding) {
+                OnboardingSheet()
+                    // 只能点 Continue 关，保证至少看一眼。
+                    // Closes only through Continue, so it's seen at least once.
+                    .interactiveDismissDisabled()
+            }
+    }
+
+    // MARK: - 欢迎页 / Onboarding
+
+    /// 欢迎页是否显示，直接读写设置里的标记。
+    /// Whether the welcome sheet shows, read from and written to the flag in settings.
+    ///
+    /// 不另存一份 `@State`：标记是唯一数据源，sheet 关闭时把它置为 `true`。
+    /// No separate `@State`: the flag is the only source of truth, and closing the sheet sets it to `true`.
+    private var isShowingOnboarding: Binding<Bool> {
+        Binding(
+            get: {
+                // 设置行还没有时不弹。
+                // Don't show it while the settings row is missing.
+                let hasCompleted = settings.first?.hasCompletedOnboarding ?? true
+                return !hasCompleted
+            },
+            set: { isPresented in
+                if isPresented {
+                    return
+                }
+                settings.first?.hasCompletedOnboarding = true
+            }
+        )
     }
 }
 
