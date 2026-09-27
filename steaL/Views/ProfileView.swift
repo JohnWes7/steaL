@@ -32,6 +32,13 @@ struct ProfileView: View {
     /// 是否弹出登录 sheet / Whether the sign-in sheet is shown
     @State private var isShowingSignIn = false
 
+    /// 是否弹出欢迎页。
+    /// Whether the welcome sheet is shown.
+    ///
+    /// 和首次启动是同一张 sheet，这里只是再看一遍，不改设置里的标记。
+    /// The same sheet as on first launch; this is only for viewing it again and doesn't touch the flag in settings.
+    @State private var isShowingWelcome = false
+
     /// 用户设置单例行，偏好分组读它的真实值 / Singleton user-settings row; the preferences group reads its real values
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
@@ -162,6 +169,8 @@ struct ProfileView: View {
                 }
 
                 Section("About") {
+                    welcomeRow
+
                     // 标签 + 值，同 AI Model 行 / A label and its value, like the AI Model row
                     LabeledContent {
                         Text("\(appVersion) (Build \(buildNumber))")
@@ -244,6 +253,11 @@ struct ProfileView: View {
             .sheet(isPresented: $isShowingSignIn) {
                 SignInSheet()
             }
+            // 再看一遍时可以下拉关，不加 `.interactiveDismissDisabled()`。
+            // Swipe-to-dismiss is fine when viewing it again, so no `.interactiveDismissDisabled()`.
+            .sheet(isPresented: $isShowingWelcome) {
+                OnboardingSheet()
+            }
             .alert(
                 "Sign Out Failed",
                 isPresented: Binding(
@@ -255,6 +269,33 @@ struct ProfileView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+        }
+    }
+
+    // MARK: - 欢迎页 / Welcome
+
+    /// 再打开欢迎页的一行。
+    /// The row that opens the welcome sheet again.
+    ///
+    /// HIG 要求引导看过之后还能在设置等地方找到。弹 sheet 而不是推入一页，所以不带 `chevron.right`（这个项目里它专指 App 内推页）。
+    /// The HIG asks for onboarding to stay easy to find later, such as in settings. It presents a sheet rather than
+    /// pushing a page, so it has no `chevron.right`, which in this project means an in-app push.
+    private var welcomeRow: some View {
+        Button {
+            isShowingWelcome = true
+        } label: {
+            HStack(spacing: 12) {
+                IconTileView(icon: "hand.wave.fill", tint: .brandGreen)
+
+                // 按钮里当前色是 tint，写固定的 `Color.primary` 才是正文色。
+                // Inside a button the current colour is the tint, so the fixed `Color.primary` keeps body text colour.
+                Text("Welcome to steaL")
+                    .foregroundStyle(Color.primary)
+            }
+            // 撑满整行、空白也可点，同 Sign Out 行。
+            // Fills the row so the blank area is tappable too, like the Sign Out row.
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
     }
 
