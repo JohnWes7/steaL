@@ -174,7 +174,7 @@ struct LLMProviderView: View {
     /// - Returns: Delete Provider 这一组 / The Delete Provider section.
     private func deleteProviderSection(_ provider: LLMProvider) -> some View {
         Section {
-            Button("Delete Provider", role: .destructive) {
+            Button("Delete Provider", systemImage: "trash", role: .destructive) {
                 isConfirmingDelete = true
             }
             .disabled(isDeleting)
