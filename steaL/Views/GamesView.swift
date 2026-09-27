@@ -29,6 +29,10 @@ struct GamesView: View {
     /// `nil` when the user goes back
     @State private var homeDetailItem: GameDetailRoute?
 
+    /// 是否推入全部 Hot Deals 页，区块标题的「See All」置为 `true` /
+    /// Whether the full Hot Deals page is pushed; the section's See All sets it to `true`
+    @State private var isShowingHotDeals = false
+
     /// 进不了详情页时的提示文案，`non-nil` 即弹出 / Warning text; a `non-nil` value raises the alert
     @State private var warning: String?
 
@@ -112,6 +116,9 @@ struct GamesView: View {
         .navigationDestination(item: $homeDetailItem, destination: { route in
             GameDetailView(route: route)
         })
+        .navigationDestination(isPresented: $isShowingHotDeals) {
+            HotDealsView()
+        }
         .sheet(isPresented: $isShowingSignIn) {
             SignInSheet()
         }
@@ -209,6 +216,13 @@ struct GamesView: View {
                 .foregroundStyle(.primaryText)
 
             Spacer(minLength: 0)
+
+            // 同 App Store 首页区块：标题右侧「See All」推入完整列表 / Like App Store shelves: See All beside the title pushes the full list
+            Button("See All") {
+                isShowingHotDeals = true
+            }
+            .font(.body)
+            .tint(.brandGreen)
         }
         .padding(.bottom, 2)
     }
