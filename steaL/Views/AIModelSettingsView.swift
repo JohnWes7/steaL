@@ -27,8 +27,13 @@ struct AIModelSettingsView: View {
     /// 是否弹出 Add Provider 表单 / Whether the Add Provider form is shown
     @State private var isShowingAddProvider = false
 
-    /// 表单刚添加的服务商；有值就推入它的页面，好接着加模型 / The provider the form just added; pushes its page so models can be added next
-    @State private var addedProvider: LLMProvider?
+    // 点服务商行和「添加后推入」共用这一个状态、一个 `.navigationDestination(item:)`。
+    // 不能再给行用闭包式 `NavigationLink { … }`：两种推入抢导航栈的同一个位置，互相退回、推入，整个 App 卡死（2026-09-27 实测）/
+    // Tapping a provider row and pushing after adding share this one state and one `.navigationDestination(item:)`.
+    // Rows must not use a closure `NavigationLink { … }` as well: the two fight over the same stack slot, popping and
+    // pushing each other until the whole app hangs (seen 2026-09-27)
+    /// 要推入其页面的服务商：点行，或表单刚添加的 / The provider whose page to push: a tapped row, or the one the form just added
+    @State private var openedProvider: LLMProvider?
 
     var body: some View {
         List {
@@ -36,22 +41,23 @@ struct AIModelSettingsView: View {
                 modelRow(name: Config.llmModel, model: nil)
             }
 
-            // 没有模型的服务商没有可选的，不单独占一组 / A provider without models has nothing to pick, so it gets no group here
-            ForEach(providersWithModels) { provider in
+            ForEach(providers) { provider in
                 Section(provider.name) {
-                    ForEach(provider.sortedModels) { model in
-                        modelRow(name: model.name, model: model)
+                    if provider.models.isEmpty {
+                        // 没有可选的也留着这一组，让用户看到这个服务商还没加模型 / Keeps the group so people can see the provider has no models yet
+                        Text("No Models")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(provider.sortedModels) { model in
+                            modelRow(name: model.name, model: model)
+                        }
                     }
                 }
             }
 
             Section {
                 ForEach(providers) { provider in
-                    NavigationLink {
-                        LLMProviderView(provider: provider)
-                    } label: {
-                        LabeledContent(provider.name, value: modelCountText(for: provider))
-                    }
+                    providerRow(provider)
                 }
 
                 Button("Add Provider…") {
@@ -69,11 +75,11 @@ struct AIModelSettingsView: View {
         .background(Color.appBackground)
         .navigationTitle("AI Model")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(item: $addedProvider) { provider in
+        .navigationDestination(item: $openedProvider) { provider in
             LLMProviderView(provider: provider)
         }
         .sheet(isPresented: $isShowingAddProvider) {
-            LLMProviderFormSheet(addedProvider: $addedProvider)
+            LLMProviderFormSheet(addedProvider: $openedProvider)
         }
     }
 
@@ -88,9 +94,10 @@ struct AIModelSettingsView: View {
             choose(model)
         } label: {
             HStack(spacing: 12) {
-                // 按钮默认把文字染成 tint 色，选项行要保持正文颜色 / Buttons tint their text; an option row keeps the body color
+                // 按钮里的 `.primary` 是 tint 色的第一层（会变绿），要用固定的系统文字颜色 `Color.primary` /
+                // Inside a button `.primary` is the first level of the tint (green); the fixed system label color `Color.primary` is needed
                 Text(name)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.primary)
 
                 Spacer(minLength: 12)
 
@@ -102,6 +109,33 @@ struct AIModelSettingsView: View {
         }
         // 让 VoiceOver 读出「已选中」/ Lets VoiceOver announce "Selected"
         .accessibilityAddTraits(chosen ? .isSelected : [])
+    }
+
+    // 按钮会把标签染成 tint 色，而 `.primary` / `.secondary` / `.tertiary` 是当前颜色的层级、在按钮里也是绿的，
+    // 所以不用 `LabeledContent`，各段用固定的系统颜色；箭头是手画的，同 Profile 的 About Me 行 /
+    // A button tints its label, and `.primary` / `.secondary` / `.tertiary` are levels of the current color, so they turn
+    // green too; each part uses a fixed system color instead of `LabeledContent`, and the chevron is drawn by hand like
+    // Profile's About Me row
+    /// 一行服务商：名字、模型数量、箭头，点了推入服务商页 / One provider row: name, model count and chevron; tapping pushes its page
+    private func providerRow(_ provider: LLMProvider) -> some View {
+        Button {
+            openedProvider = provider
+        } label: {
+            HStack(spacing: 12) {
+                Text(provider.name)
+                    .foregroundStyle(Color.primary)
+
+                Spacer(minLength: 12)
+
+                Text(modelCountText(for: provider))
+                    .foregroundStyle(Color.secondary)
+
+                // SwiftUI 没有固定的 `Color.tertiary`，用系统的第三级文字颜色 / SwiftUI has no fixed tertiary color, so use the system's
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color(.tertiaryLabel))
+            }
+        }
     }
 
     // MARK: - 选择 / Choosing
@@ -121,14 +155,6 @@ struct AIModelSettingsView: View {
     }
 
     // MARK: - 派生数据 / Derived data
-
-    /// 至少有一个模型的服务商 / The providers that have at least one model
-    private var providersWithModels: [LLMProvider] {
-        let withModels = providers.filter { provider in
-            !provider.models.isEmpty
-        }
-        return withModels
-    }
 
     /// 服务商行右侧的模型数量 / The model count on a provider row
     private func modelCountText(for provider: LLMProvider) -> String {

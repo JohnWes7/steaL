@@ -86,6 +86,28 @@ nonisolated enum APIKeyStore {
         return apiKey
     }
 
+    // MARK: - 是否存在 / Existence
+
+    /// 这个服务商有没有存 key；只查是否存在，不读出内容 / Whether a key is saved for the provider; checks existence without reading it
+    @concurrent
+    static func hasKey(for providerID: UUID) async throws -> Bool {
+        var query = itemQuery(for: providerID)
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        // 只要属性、不要数据：key 本身不会被取出来 / Attributes only, no data, so the key itself is never returned
+        query[kSecReturnAttributes as String] = true
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        if status == errSecItemNotFound {
+            return false
+        }
+        guard status == errSecSuccess else {
+            throw APIKeyStoreError.unexpectedStatus(status)
+        }
+        return true
+    }
+
     // MARK: - 删除 / Delete
 
     /// 删除某个服务商的 key；本来就没有也算成功 / Deletes a provider's key; already gone counts as success

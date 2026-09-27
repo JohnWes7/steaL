@@ -89,7 +89,9 @@ struct LLMProviderFormSheet: View {
                     }
 
                     LabeledContent("Base URL") {
-                        TextField("Base URL", text: $baseURL, prompt: Text("https://api.example.com"))
+                        // 字面量会当本地化 key 按 Markdown 解析，网址被识别成蓝色链接；示例网址也不用翻译 /
+                        // A literal is a localization key parsed as Markdown, which turns the URL into a blue link; an example URL needs no translation
+                        TextField("Base URL", text: $baseURL, prompt: Text(verbatim: "https://api.example.com"))
                             .keyboardType(.URL)
                             .textContentType(.URL)
                             .textInputAutocapitalization(.never)
