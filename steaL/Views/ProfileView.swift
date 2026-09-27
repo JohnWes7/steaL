@@ -312,9 +312,13 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
         case .signedOut:
-            ProfileIdentityCardView(user: nil) { isShowingSignIn = true }
+            ProfileIdentityCardView(user: nil, trackingCount: 0) { isShowingSignIn = true }
         case .signedIn(let user):
-            ProfileIdentityCardView(user: ProfileUser(user: user)) { isShowingSignIn = true }
+            // Tracking 直接数环境里的 wishlist，Firestore 是唯一数据源 /
+            // Tracking counts the wishlist from the environment; Firestore is the single source of truth
+            let profileUser = ProfileUser(user: user)
+            let trackingCount = wishlistService.items.count
+            ProfileIdentityCardView(user: profileUser, trackingCount: trackingCount) { isShowingSignIn = true }
         }
     }
 

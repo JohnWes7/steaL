@@ -47,7 +47,9 @@ final class GamesViewModel {
         [
             "country": region.apiRegionCode,
             "offset": 0,
-            "limit": 20,
+            // 首页只放 5 条：1 张大卡 + 2 行网格，下面的 Giveaways 不被挤到很远 /
+            // The home feed shows 5: one featured card plus two grid rows, keeping Giveaways close
+            "limit": 5,
            "sort": "-hot",
             "nondeals": false,
             "filter": [

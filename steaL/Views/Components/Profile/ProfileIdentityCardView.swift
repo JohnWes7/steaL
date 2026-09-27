@@ -17,6 +17,10 @@ struct ProfileIdentityCardView: View {
     /// 要展示的用户，`nil` 表示未登录 / The user shown; `nil` means signed out
     let user: ProfileUser?
 
+    /// 收藏的游戏数，显示在 Tracking；只在登录后用到。
+    /// The number of wishlisted games, shown as Tracking; only used when signed in.
+    let trackingCount: Int
+
     /// 点 Sign In，由页面弹出登录 sheet；只在未登录时用到 / Tapping Sign In; the page presents the sign-in sheet. Only used when signed out
     let signIn: () -> Void
 
@@ -117,11 +121,11 @@ struct ProfileIdentityCardView: View {
 
     // MARK: - 统计 / Stats
 
-    /// 两项统计并排，中间一条竖线分隔；还没有数据源，先写死 0（Tracking 等 wishlist 接好）/
-    /// The two stats side by side, split by a vertical rule; no data source yet, so both are 0 until the wishlist lands
+    /// 两项统计并排，中间一条竖线分隔；Alerts sent 还没有数据源，先写死 0 /
+    /// The two stats side by side, split by a vertical rule; Alerts sent has no data source yet, so it stays 0
     private var statsRow: some View {
         HStack(spacing: 0) {
-            stat(value: 0, label: "Tracking", tint: .brandGreen)
+            stat(value: trackingCount, label: "Tracking", tint: .brandGreen)
 
             Divider()
                 .frame(height: 34)
@@ -171,7 +175,7 @@ struct ProfileIdentityCardView: View {
 #Preview("Signed In") {
     List {
         Section {
-            ProfileIdentityCardView(user: .mock, signIn: {})
+            ProfileIdentityCardView(user: .mock, trackingCount: 12, signIn: {})
         }
     }
     .scrollContentBackground(.hidden)
@@ -181,7 +185,7 @@ struct ProfileIdentityCardView: View {
 #Preview("Signed Out") {
     List {
         Section {
-            ProfileIdentityCardView(user: nil, signIn: {})
+            ProfileIdentityCardView(user: nil, trackingCount: 0, signIn: {})
         }
     }
     .scrollContentBackground(.hidden)
