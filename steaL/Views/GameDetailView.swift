@@ -53,6 +53,13 @@ struct GameDetailView: View {
     /// 当前语言 / Current language
     private var language: AppLanguage { settings.first?.language ?? .english }
 
+    /// AI 建议要用的模型。
+    /// The model the AI advice uses.
+    ///
+    /// 设置里选中的自己的模型；`nil` 是内置。
+    /// The user's own model chosen in settings; `nil` means the built-in one.
+    private var selectedLLMModel: LLMModel? { settings.first?.llmModel }
+
     struct ReloadKey: Equatable, Hashable {
         let region: AppRegion
         let language: AppLanguage
@@ -215,7 +222,7 @@ struct GameDetailView: View {
         isShowingAIAdvice = true
 
         Task {
-            await aiAdviceViewModel.generateIfNeeded(context: context, language: language)
+            await aiAdviceViewModel.generateIfNeeded(context: context, language: language, model: selectedLLMModel)
         }
     }
 
@@ -225,7 +232,7 @@ struct GameDetailView: View {
         guard let context = gameDetailViewModel.adviceContext else { return }
 
         Task {
-            await aiAdviceViewModel.regenerate(context: context, language: language)
+            await aiAdviceViewModel.regenerate(context: context, language: language, model: selectedLLMModel)
         }
     }
 

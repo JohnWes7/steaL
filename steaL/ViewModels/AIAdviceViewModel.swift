@@ -32,6 +32,12 @@ final class AIAdviceViewModel {
         /// sheet 底部显示「哪个模型、多久前生成」。
         /// The bottom of the sheet shows both.
         case loaded(DetailAIAdviceResponse, generatedAt: Date, model: String)
+        /// 选的是自己的服务商，但 Keychain 里没有它的 key；不给 Retry，要去设置里补。
+        /// The chosen provider has no key in the Keychain; no retry, it has to be added in settings.
+        ///
+        /// 「没有」不是失败，所以不走 `LoadError`；从不加密的备份恢复时会遇到。
+        /// Having none is not a failure, so it skips `LoadError`; it happens after restoring an unencrypted backup.
+        case missingAPIKey(providerName: String)
         /// 生成失败，给 Retry。
         /// Generation failed; offers a retry.
         case failed(LoadError)
@@ -58,10 +64,11 @@ final class AIAdviceViewModel {
     /// - Parameters:
     ///   - context: AI 的输入数据 / The input data for the AI.
     ///   - language: 回答用的语言 / The language to answer in.
-    func generateIfNeeded(context: DetailAIAdviceContext, language: AppLanguage) async {
+    ///   - model: 设置里选中的模型，`nil` 是内置 / The model chosen in settings, `nil` for the built-in one.
+    func generateIfNeeded(context: DetailAIAdviceContext, language: AppLanguage, model: LLMModel?) async {
         guard case .idle = state else { return }
 
-        await generate(context: context, language: language)
+        await generate(context: context, language: language, model: model)
     }
 
     /// sheet 的 Retry / Regenerate：不管上次的结果重新生成。
@@ -73,30 +80,45 @@ final class AIAdviceViewModel {
     /// - Parameters:
     ///   - context: AI 的输入数据 / The input data for the AI.
     ///   - language: 回答用的语言 / The language to answer in.
-    func regenerate(context: DetailAIAdviceContext, language: AppLanguage) async {
+    ///   - model: 设置里选中的模型，`nil` 是内置 / The model chosen in settings, `nil` for the built-in one.
+    func regenerate(context: DetailAIAdviceContext, language: AppLanguage, model: LLMModel?) async {
         if case .loading = state {
             return
         }
 
-        await generate(context: context, language: language)
+        await generate(context: context, language: language, model: model)
     }
 
-    /// 组 prompt → 远程生成 → 写状态。
-    /// Builds the prompt, generates remotely, and writes the state.
+    /// 组 endpoint 与 prompt → 远程生成 → 写状态。
+    /// Builds the endpoint and the prompt, generates remotely, and writes the state.
     ///
     /// - Parameters:
     ///   - context: AI 的输入数据 / The input data for the AI.
     ///   - language: 回答用的语言 / The language to answer in.
-    private func generate(context: DetailAIAdviceContext, language: AppLanguage) async {
+    ///   - model: 设置里选中的模型，`nil` 是内置 / The model chosen in settings, `nil` for the built-in one.
+    private func generate(context: DetailAIAdviceContext, language: AppLanguage, model: LLMModel?) async {
         // 在第一次 `await` 之前置 loading，连点两下也只会发一次。
         // Set before the first `await`, so a double tap sends once.
         state = .loading
 
-        // 暂时只用内置服务商；之后在这里按设置里选的模型换成用户自己的。
-        // Only the built-in provider for now; the user's chosen model will be resolved here later.
-        let endpoint = LLMEndpoint.builtIn
+        // `await` 期间模型可能被删，服务商名要先取出来。
+        // The model may be deleted during the `await`, so read the provider name first.
+        let providerName = model?.provider.name
 
         do {
+            let resolvedEndpoint = try await makeEndpoint(for: model)
+
+            guard let endpoint = resolvedEndpoint else {
+                guard !Task.isCancelled else {
+                    state = .idle
+                    return
+                }
+
+                let missingKeyProviderName = providerName ?? ""
+                state = .missingAPIKey(providerName: missingKeyProviderName)
+                return
+            }
+
             let systemPrompt = try DetailAIAdvicePrompt.systemPrompt(language: language)
             let userPrompt = try DetailAIAdvicePrompt.userMessage(context: context)
 
@@ -128,5 +150,35 @@ final class AIAdviceViewModel {
 
             state = .failed(LoadError.from(error))
         }
+    }
+
+    /// 按选中的模型组请求目标：没选是内置，选了就用它的服务商地址与 Keychain 里的 key。
+    /// Builds the request target for the chosen model: the built-in one when none is chosen,
+    /// otherwise its provider's URL and the key from the Keychain.
+    ///
+    /// 读 Keychain 之前先把要用的值取出来：`await` 期间模型可能被删掉，之后不能再碰它。
+    /// The values are read before touching the Keychain: the model may be deleted during the `await`
+    /// and must not be touched afterwards.
+    ///
+    /// - Parameter model: 设置里选中的模型，`nil` 是内置 / The model chosen in settings, `nil` for the built-in one.
+    /// - Returns: 组好的 endpoint；Keychain 里没有这个服务商的 key 时是 `nil` /
+    ///   The endpoint, or `nil` when the Keychain has no key for the provider.
+    /// - Throws: 读 Keychain 失败时的 `APIKeyStoreError` / `APIKeyStoreError` when reading the Keychain fails.
+    private func makeEndpoint(for model: LLMModel?) async throws -> LLMEndpoint? {
+        guard let model else {
+            return .builtIn
+        }
+
+        let provider = model.provider
+        let providerID = provider.id
+        let baseURL = provider.baseURL
+        let modelName = model.name
+
+        let apiKey = try await APIKeyStore.read(for: providerID)
+        guard let apiKey else {
+            return nil
+        }
+
+        return LLMEndpoint(baseURL: baseURL, apiKey: apiKey, model: modelName)
     }
 }
