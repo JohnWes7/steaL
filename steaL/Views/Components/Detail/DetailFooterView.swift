@@ -35,11 +35,11 @@ struct DetailFooterView: View {
     private func idRow(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(.footnote, design: .rounded, weight: .medium))
                 .foregroundStyle(.secondaryText)
 
             Text(value)
-                .font(.system(size: 15, weight: .medium, design: .default))
+                .font(.system(.subheadline, weight: .medium))
                 .foregroundStyle(.secondaryText)
         }
         .accessibilityElement(children: .combine)

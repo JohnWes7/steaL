@@ -49,7 +49,7 @@ struct MediaGalleryView: View {
                     .aspectRatio(16 / 9, contentMode: .fit)
                     .overlay {
                         Image(systemName: "photo")
-                            .font(.system(size: 30, weight: .medium))
+                            .font(.system(.title, weight: .medium))
                             .foregroundStyle(.secondaryText)
                     }
             } else {
@@ -164,7 +164,7 @@ struct MediaGalleryView: View {
         Color.surfaceElevated
             .overlay {
                 Image(systemName: "photo.badge.exclamationmark")
-                    .font(.system(size: 30, weight: .medium))
+                    .font(.system(.title, weight: .medium))
                     .foregroundStyle(.secondaryText)
             }
     }
@@ -195,7 +195,7 @@ struct MediaGalleryView: View {
             trailer.play(movie)
         } label: {
             Image(systemName: "play.fill")
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(.title2, weight: .semibold))
                 .frame(width: 44, height: 44)
         }
         .buttonStyle(.glass)

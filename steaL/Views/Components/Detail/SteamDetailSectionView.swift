@@ -111,7 +111,7 @@ struct SteamDetailSectionView: View {
     /// 简介正文的统一样式 / Shared styling for the description body
     private func descriptionText(_ text: String, lineLimit: Int? = nil) -> some View {
         Text(text)
-            .font(.system(size: 17, weight: .regular, design: .rounded))
+            .font(.system(.body, design: .rounded, weight: .regular))
             .foregroundStyle(.secondaryText)
             .lineSpacing(5)
             .lineLimit(lineLimit)
@@ -138,7 +138,7 @@ struct SteamDetailSectionView: View {
         if !categories.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Categories")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(.subheadline, weight: .semibold))
                     .foregroundStyle(.secondaryText)
 
                 categoryChipGrid(categories)
@@ -154,7 +154,7 @@ struct SteamDetailSectionView: View {
         FlowLayout(itemSpacing: 8, rowSpacing: 8) {
             ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
                 Text(label)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .foregroundStyle(.primaryText)
                     .padding(.horizontal, 12)
                     .frame(minHeight: 32)
@@ -167,12 +167,12 @@ struct SteamDetailSectionView: View {
     private func infoRow(label: String, value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(label)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(.subheadline, weight: .semibold))
                 .foregroundStyle(.secondaryText)
                 .frame(width: 96, alignment: .leading)
 
             Text(value)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(.subheadline, weight: .medium))
                 .foregroundStyle(.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }

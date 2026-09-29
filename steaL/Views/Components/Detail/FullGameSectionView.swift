@@ -27,7 +27,7 @@ struct FullGameSectionView: View {
             Button(action: open) {
                 HStack(spacing: 12) {
                     Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(.subheadline, weight: .bold))
                         .foregroundStyle(.appBackground)
                         .frame(width: 32, height: 32)
                         .background(
@@ -37,11 +37,11 @@ struct FullGameSectionView: View {
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(name)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(.system(.callout, design: .rounded, weight: .semibold))
                             .foregroundStyle(.primaryText)
 
                         Text("Opens in this app")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(.footnote, design: .rounded, weight: .medium))
                             .foregroundStyle(.secondaryText)
                     }
 
@@ -49,7 +49,7 @@ struct FullGameSectionView: View {
 
                     // 蓝色只做小面积强调：`surfaceElevated` 上的蓝色正文只有 4.13:1，不达标 / Blue body copy only reaches 4.13:1
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(.callout, weight: .bold))
                         .foregroundStyle(.brandBlue)
                 }
                 .padding(14)

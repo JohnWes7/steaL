@@ -333,11 +333,11 @@ struct GameDetailView: View {
         if let date = details.releaseDate?.date {
             HStack(spacing: 10) {
                 Image(systemName: "calendar")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(.callout, weight: .medium))
                     .foregroundStyle(.brandGreen)
 
                 Text(details.isComingSoon ? "Coming soon · \(date)" : "Released · \(date)")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(.callout, design: .rounded, weight: .semibold))
                     .foregroundStyle(.primaryText)
             }
         }
@@ -349,7 +349,7 @@ struct GameDetailView: View {
             HStack(spacing: 8) {
                 ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
                     Text(label)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
                         .foregroundStyle(.primaryText)
                         .padding(.horizontal, 12)
                         .frame(height: 32)

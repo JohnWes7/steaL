@@ -38,7 +38,7 @@ struct DemoSectionView: View {
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "arrow.down.circle.fill")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(.subheadline, weight: .bold))
                         .foregroundStyle(.appBackground)
                         .frame(width: 32, height: 32)
                         .background(
@@ -48,11 +48,11 @@ struct DemoSectionView: View {
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text("\(name)")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(.system(.callout, design: .rounded, weight: .semibold))
                             .foregroundStyle(.primaryText)
 
                         Text("Opens the Steam store page")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(.footnote, design: .rounded, weight: .medium))
                             .foregroundStyle(.secondaryText)
                     }
 
@@ -61,7 +61,7 @@ struct DemoSectionView: View {
                     // 与完整游戏入口同形状，靠尾符号与颜色区分出 / 入 App /
                     // Same shape as the full-game entry; the trailing mark and its colour tell exit from push
                     Image(systemName: "arrow.up.forward.square")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(.callout, weight: .bold))
                         .foregroundStyle(.brandGreen)
                 }
                 .padding(14)

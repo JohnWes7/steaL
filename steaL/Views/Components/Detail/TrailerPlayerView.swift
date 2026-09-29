@@ -41,7 +41,7 @@ struct TrailerPlayerView: View {
     private var closeButton: some View {
         Button(action: trailer.stop) {
             Image(systemName: "xmark")
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(.subheadline, weight: .bold))
                 .frame(width: 24, height: 24)
         }
         .buttonStyle(.glass)
@@ -55,7 +55,7 @@ struct TrailerPlayerView: View {
         HStack(spacing: 10) {
             Button(action: trailer.togglePlayPause) {
                 Image(systemName: trailer.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(.subheadline, weight: .bold))
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.glass)
@@ -72,7 +72,7 @@ struct TrailerPlayerView: View {
             )
 
             Text(timeText)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(.caption, design: .rounded, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(.primaryText)
 
@@ -80,7 +80,7 @@ struct TrailerPlayerView: View {
                 trailer.isFullScreen = true
             } label: {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(.subheadline, weight: .bold))
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.glass)

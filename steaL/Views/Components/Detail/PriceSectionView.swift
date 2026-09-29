@@ -109,7 +109,7 @@ struct PriceSectionView: View {
 
             if lows.isEmpty {
                 Text("No historical price data")
-                    .font(.system(size: 14))
+                    .font(.subheadline)
                     .foregroundStyle(.secondaryText)
             } else {
                 ForEach(Array(lows.enumerated()), id: \.offset) { index, entry in
@@ -173,7 +173,7 @@ struct PriceSectionView: View {
             }
         } else if offerFilter == .all {
             Text("No current offers")
-                .font(.system(size: 14))
+                .font(.subheadline)
                 .foregroundStyle(.secondaryText)
         }
     }
@@ -210,7 +210,7 @@ struct PriceSectionView: View {
                 // Every row carries the "leaves the app" mark: onBrandGreen on the slab, muted grey on the plain
                 // rows, so twelve of them stay quiet
                 Image(systemName: "arrow.up.forward.square")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(.title3, weight: .semibold))
                     .foregroundStyle(isBest ? Color.onBrandGreen : Color.secondaryText)
             }
             // 图标槽由符号自己占出来（12 间距 + 20 图标），两侧留白每行一致，价格才对成一列 /
@@ -248,12 +248,12 @@ struct PriceSectionView: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 8) {
                 Text(offer.shop.name)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(.callout, design: .rounded, weight: .semibold))
                     .foregroundStyle(isBest ? Color.onBrandGreen : Color.primaryText)
 
                 if isBest {
                     Text("BEST")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded, weight: .bold))
                         .foregroundStyle(.brandGreen)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
@@ -262,7 +262,7 @@ struct PriceSectionView: View {
             }
 
             Text(offer.cut > 0 ? "Save \(offer.cut)%" : "Current price")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(.footnote, design: .rounded, weight: .medium))
                 .foregroundStyle(
                     isBest
                         ? Color.onBrandGreen.opacity(0.72)
@@ -270,7 +270,7 @@ struct PriceSectionView: View {
                 )
 
             Text(drmNames.isEmpty ? "DRM unavailable" : drmNames)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(.caption2, design: .rounded, weight: .semibold))
                 .foregroundStyle(isBest ? Color.onBrandGreen.opacity(0.72) : Color.secondaryText)
                 .lineLimit(1)
         }
@@ -280,14 +280,14 @@ struct PriceSectionView: View {
     private func offerPrice(_ offer: ITADPriceDeal, isBest: Bool) -> some View {
         VStack(alignment: .trailing, spacing: 3) {
             Text(priceText(offer.price))
-                .font(.system(size: 19, weight: .bold, design: .monospaced))
+                .font(.system(.title3, design: .monospaced, weight: .bold))
                 .foregroundStyle(isBest ? Color.onBrandGreen : Color.primaryText)
 
             if offer.cut > 0 {
                 Text(
                     offer.regular.amount.formatted(.currency(code: offer.regular.currency))
                 )
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .font(.system(.caption, design: .monospaced, weight: .medium))
                 .foregroundStyle(isBest ? Color.onBrandGreen.opacity(0.72) : Color.secondaryText)
                 .strikethrough()
             }
@@ -314,13 +314,13 @@ struct PriceSectionView: View {
                 .frame(width: 5, height: 42)
 
             Text(label)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.system(.callout, design: .rounded, weight: .semibold))
                 .foregroundStyle(.primaryText)
 
             Spacer(minLength: 12)
 
             Text(priceText(price))
-                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                .font(.system(.title3, design: .monospaced, weight: .bold))
                 .foregroundStyle(accent)
         }
         .padding(.vertical, 6)

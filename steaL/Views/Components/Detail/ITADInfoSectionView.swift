@@ -106,18 +106,18 @@ struct ITADInfoSectionView: View {
     private func itadMetric(icon: String, label: String, value: String, tint: Color) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .bold))
+                .font(.system(.subheadline, weight: .bold))
                 .foregroundStyle(.appBackground)
                 .frame(width: 32, height: 32)
                 .background(tint, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .font(.system(.title3, design: .rounded, weight: .heavy))
                     .foregroundStyle(tint)
 
                 Text(label)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(.caption, design: .rounded, weight: .medium))
                     .foregroundStyle(.secondaryText)
                     .lineLimit(1)
             }
@@ -136,18 +136,18 @@ struct ITADInfoSectionView: View {
             HStack(alignment: .firstTextBaseline) {
                 HStack(spacing: 6) {
                     Image(systemName: "hand.thumbsup.fill")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(.subheadline, weight: .bold))
                         .foregroundStyle(.brandGreen)
 
                     Text("\(score)%")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .font(.system(.body, design: .rounded, weight: .bold))
                         .foregroundStyle(.brandGreen)
                 }
 
                 Spacer(minLength: 12)
 
                 Text(review.count.map { "\($0.formatted()) reviews" } ?? "Review count unavailable")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.system(.subheadline, design: .rounded, weight: .medium))
                     .foregroundStyle(.secondaryText)
             }
 
@@ -165,13 +165,13 @@ struct ITADInfoSectionView: View {
 
             HStack {
                 Text(source)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .font(.system(.body, design: .rounded, weight: .semibold))
                     .foregroundStyle(.primaryText)
 
                 Spacer(minLength: 12)
 
                 Text("\(score)/100")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.system(.subheadline, design: .rounded, weight: .medium))
                     .foregroundStyle(.secondaryText)
             }
         }

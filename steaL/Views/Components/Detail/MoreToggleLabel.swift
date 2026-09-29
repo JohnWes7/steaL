@@ -18,10 +18,10 @@ struct MoreToggleLabel: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(isExpanded ? "Show less" : "More")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
 
             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                .font(.system(size: 12, weight: .bold))
+                .font(.system(.caption, weight: .bold))
         }
         .foregroundStyle(.brandBlue)
     }
