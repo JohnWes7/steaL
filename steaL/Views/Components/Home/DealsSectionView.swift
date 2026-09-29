@@ -26,10 +26,16 @@ struct DealsSectionView: View {
     /// 重试动作，异步工作由页面包好 / The retry action; the page wraps the async work
     let retry: () -> Void
 
-    /// 两列等宽网格 / Two equal-width grid columns
+    /// 自适应网格列：竖屏两列，横屏按宽度放更多列，卡片大小不变。
+    /// Adaptive grid columns: two in portrait, more in landscape, with cards keeping their size.
+    ///
+    /// 最小 160 让所有 iPhone 竖屏都正好两列（SE 放得下两列，Pro Max 放不下三列），列宽与原来的两列平分一致；
+    /// 最大 200 是 Pro Max 竖屏的列宽，更宽的屏幕上卡片不再被拉大。
+    /// A 160 minimum keeps every iPhone at exactly two columns in portrait (two fit on SE, three don't
+    /// on Pro Max), matching the old equal split; the 200 maximum is the Pro Max portrait width, so
+    /// wider screens don't stretch the cards.
     private let gridColumns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
+        GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 12),
     ]
 
     var body: some View {
@@ -64,8 +70,8 @@ struct DealsSectionView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// 首条 hero 卡 + 其余两列网格；收 `HomeDealItem` 是因为每行还要带 Steam appID 的解析结果 /
-    /// Hero card first, then a two-column grid; each row also carries its Steam appID resolution
+    /// 首条 hero 卡 + 其余自适应网格；收 `HomeDealItem` 是因为每行还要带 Steam appID 的解析结果 /
+    /// Hero card first, then an adaptive grid; each row also carries its Steam appID resolution
     @ViewBuilder
     private func content(_ items: [HomeDealItem]) -> some View {
 
@@ -87,7 +93,7 @@ struct DealsSectionView: View {
             .buttonStyle(.plain)
         }
 
-        // 其余条目排成两列网格 / Rest of the items in a two-column grid
+        // 其余条目排成自适应网格（竖屏两列） / Rest of the items in an adaptive grid (two columns in portrait)
         LazyVGrid(columns: gridColumns, spacing: 12) {
             ForEach(items.dropFirst()) { item in
                 Button {

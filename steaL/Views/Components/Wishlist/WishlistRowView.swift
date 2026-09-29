@@ -78,14 +78,20 @@ struct WishlistRowView: View {
         Color.imagePlaceholder
             .overlay {
                 RetryingAsyncImage(url: item.headerImageURL.flatMap(URL.init(string:))) { phase in
-                    if let image = phase.image {
+                    switch phase {
+                    case .success(let image):
                         image
                             .resizable()
                             .scaledToFit()
-                    } else {
-                        Image(systemName: phase.error == nil ? "photo" : "photo.badge.exclamationmark")
+                    case .failure:
+                        Image(systemName: "photo.badge.exclamationmark")
                             .font(.system(.body, weight: .semibold))
                             .foregroundStyle(.secondaryText)
+                    default:
+                        // 加载中（`.empty`）用系统转圈，与失败图标区分；封面只有 60pt 高，用小号 /
+                        // A system spinner while loading (`.empty`), distinct from the failure icon; small, as the artwork is only 60pt tall
+                        ProgressView()
+                            .controlSize(.small)
                     }
                 }
             }

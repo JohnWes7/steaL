@@ -93,13 +93,16 @@ struct GiveawayRowView: View {
         .clipped()
     }
 
-    /// 加载中占位，撑满缩略图区域 / Loading placeholder that fills the thumbnail area
+    /// 加载中占位：占位底色上一个系统转圈，撑满缩略图区域。
+    /// Loading placeholder: a system spinner on the placeholder colour, filling the thumbnail area.
+    ///
+    /// 与失败的图标区分开，一眼能看出还在加载。
+    /// It sets loading apart from the failure icon, so an unfinished load reads as one at a glance.
     private var placeholder: some View {
         ZStack {
             Color.imagePlaceholder
-            Image(systemName: "photo")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.secondaryText)
+            ProgressView()
+                .controlSize(.small)
         }
     }
 
@@ -110,7 +113,7 @@ struct GiveawayRowView: View {
         ZStack {
             Color.imagePlaceholder
             Image(systemName: "photo.badge.exclamationmark")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(.body, weight: .semibold))
                 .foregroundStyle(.secondaryText)
         }
     }
