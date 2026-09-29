@@ -38,6 +38,10 @@ struct DealsSectionView: View {
         GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 12),
     ]
 
+    /// 当前的文字大小，辅助功能档位下网格换成单列大卡。
+    /// The current text size; accessibility sizes swap the grid for a single column of large cards.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         switch state {
         case .loading:
@@ -72,45 +76,76 @@ struct DealsSectionView: View {
 
     /// 首条 hero 卡 + 其余自适应网格；收 `HomeDealItem` 是因为每行还要带 Steam appID 的解析结果 /
     /// Hero card first, then an adaptive grid; each row also carries its Steam appID resolution
+    ///
+    /// 辅助功能档位下两列放不下放大的文字，其余条目也用 hero 卡排成单列。
+    /// At accessibility sizes two columns can't fit the enlarged text, so the rest also use hero cards in one column.
     @ViewBuilder
     private func content(_ items: [HomeDealItem]) -> some View {
+        let otherItems = Array(items.dropFirst())
 
         // 首条 hero 卡 / Hero card for the first item
         if let firstItem = items.first {
-            // 卡片包成 `Button`，`.plain` 让卡内收藏按钮的点击不被外层吞掉 / `.plain` keeps the card's own favourite button clickable
-            Button {
-                onSelect(firstItem)
-            } label: {
-                DealCardView(
-                    deal: firstItem.deal,
-                    isFavorite: isFavorite(firstItem),
-                    isFavoriteEnabled: firstItem.appID != nil,
-                    onToggleFavorite: {
-                        onToggleFavorite(firstItem)
-                    }
-                )
-            }
-            .buttonStyle(.plain)
+            heroCard(for: firstItem)
         }
 
-        // 其余条目排成自适应网格（竖屏两列） / Rest of the items in an adaptive grid (two columns in portrait)
-        LazyVGrid(columns: gridColumns, spacing: 12) {
-            ForEach(items.dropFirst()) { item in
-                Button {
-                    onSelect(item)
-                } label: {
-                    DealGridCardView(
-                        deal: item.deal,
-                        isFavorite: isFavorite(item),
-                        isFavoriteEnabled: item.appID != nil,
-                        onToggleFavorite: {
-                            onToggleFavorite(item)
-                        }
-                    )
+        if dynamicTypeSize.isAccessibilitySize {
+            // 其余条目单列排 hero 卡 / Rest of the items as hero cards in one column
+            VStack(spacing: 12) {
+                ForEach(otherItems) { item in
+                    heroCard(for: item)
                 }
-                .buttonStyle(.plain)
+            }
+        } else {
+            // 其余条目排成自适应网格（竖屏两列） / Rest of the items in an adaptive grid (two columns in portrait)
+            LazyVGrid(columns: gridColumns, spacing: 12) {
+                ForEach(otherItems) { item in
+                    gridCard(for: item)
+                }
             }
         }
+    }
+
+    /// 一条优惠的 hero 大卡，整张卡可点。
+    /// A large hero card for one deal; the whole card is tappable.
+    ///
+    /// - Parameter item: 要显示的优惠 / The deal to show.
+    /// - Returns: 包着 `DealCardView` 的按钮 / A button wrapping `DealCardView`.
+    private func heroCard(for item: HomeDealItem) -> some View {
+        // 卡片包成 `Button`，`.plain` 让卡内收藏按钮的点击不被外层吞掉 / `.plain` keeps the card's own favourite button clickable
+        Button {
+            onSelect(item)
+        } label: {
+            DealCardView(
+                deal: item.deal,
+                isFavorite: isFavorite(item),
+                isFavoriteEnabled: item.appID != nil,
+                onToggleFavorite: {
+                    onToggleFavorite(item)
+                }
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 一条优惠的网格小卡，整张卡可点。
+    /// A compact grid card for one deal; the whole card is tappable.
+    ///
+    /// - Parameter item: 要显示的优惠 / The deal to show.
+    /// - Returns: 包着 `DealGridCardView` 的按钮 / A button wrapping `DealGridCardView`.
+    private func gridCard(for item: HomeDealItem) -> some View {
+        Button {
+            onSelect(item)
+        } label: {
+            DealGridCardView(
+                deal: item.deal,
+                isFavorite: isFavorite(item),
+                isFavoriteEnabled: item.appID != nil,
+                onToggleFavorite: {
+                    onToggleFavorite(item)
+                }
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

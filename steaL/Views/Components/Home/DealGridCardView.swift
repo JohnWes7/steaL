@@ -132,7 +132,7 @@ struct DealGridCardView: View {
     private var discountBadge: some View {
         if deal.deal.cut > 0 {
             Text("-\(deal.deal.cut)%")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(.footnote, design: .rounded, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 11)
                 .padding(.vertical, 5)
@@ -144,7 +144,7 @@ struct DealGridCardView: View {
     private var favoriteButton: some View {
         Button(action: onToggleFavorite) {
             Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(.body, weight: .semibold))
                 .foregroundStyle(isFavorite ? Color.pink : Color.white)
                 .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
         }
@@ -170,7 +170,7 @@ struct DealGridCardView: View {
     /// White title on the cover art; no reserved second line, and the overlay keeps it flush
     private var titleBlock: some View {
         Text(deal.title)
-            .font(.system(size: 18, weight: .bold))
+            .font(.system(.headline, weight: .bold))
             .foregroundStyle(.white)
             .lineLimit(2)
             .multilineTextAlignment(.leading)
@@ -208,7 +208,7 @@ struct DealGridCardView: View {
                 Text(price.amount, format: .currency(code: price.currency))
             }
         }
-        .font(.system(size: 19, weight: .bold, design: .monospaced))
+        .font(.system(.title3, design: .monospaced, weight: .bold))
         .foregroundStyle(.brandGreen)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
@@ -218,7 +218,7 @@ struct DealGridCardView: View {
     /// Shop name in the rating's slot; long names shrink instead of truncating
     private var shopName: some View {
         Text(deal.deal.shop.name)
-            .font(.system(size: 14, weight: .medium))
+            .font(.system(.subheadline, weight: .medium))
             .foregroundStyle(.secondaryText)
             .lineLimit(1)
             .minimumScaleFactor(0.65)

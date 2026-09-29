@@ -27,6 +27,10 @@ struct DealCardView: View {
     /// 卡片圆角，图片区和价格行共用同一套裁切 / Shared corner radius, clipped once for the whole card
     private let cornerRadius: CGFloat = 20
 
+    /// 当前的文字大小，辅助功能档位下换成竖排布局。
+    /// The current text size; accessibility sizes switch to a stacked layout.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         VStack(spacing: 0) {
             artwork
@@ -46,7 +50,12 @@ struct DealCardView: View {
             .overlay { banner }
             .overlay { scrim }
             .overlay(alignment: .top) { topBar }
-            .overlay(alignment: .bottom) { titleBlock }
+            .overlay(alignment: .bottom) {
+                // 辅助功能档位下标题放不进图片，改到价格行里 / At accessibility sizes the title moves into the price row
+                if !dynamicTypeSize.isAccessibilitySize {
+                    titleBlock
+                }
+            }
             .clipped()
     }
 
@@ -126,7 +135,7 @@ struct DealCardView: View {
     private var discountBadge: some View {
         if deal.deal.cut > 0 {
             Text("-\(deal.deal.cut)%")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 13)
                 .padding(.vertical, 7)
@@ -139,7 +148,7 @@ struct DealCardView: View {
     private var favoriteButton: some View {
         Button(action: onToggleFavorite) {
             Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .font(.system(size: 23, weight: .semibold))
+                .font(.system(.title2, weight: .semibold))
                 .foregroundStyle(isFavorite ? Color.pink : Color.white)
                 .shadow(color: .black.opacity(0.45), radius: 5, y: 1)
         }
@@ -153,19 +162,13 @@ struct DealCardView: View {
     /// 图片底部的质量标签与标题 / Quality tag and title pinned over the bottom of the artwork
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if let qualityLabel {
-                Text(qualityLabel)
-                    .font(.system(size: 12, weight: .heavy))
-                    .tracking(0.6)
-                    .foregroundStyle(.brandGreen)
-                    .environment(\.colorScheme, .dark)
-            }
+            // 压在暗色渐变上，固定用 dark 取色 / Sits on the dark scrim, so it resolves dark colours
+            qualityTag
+                .environment(\.colorScheme, .dark)
 
-            Text(deal.title)
-                .font(.system(size: 26, weight: .bold))
+            titleText
                 .foregroundStyle(.white)
                 .lineLimit(2)
-                .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -173,26 +176,75 @@ struct DealCardView: View {
         .padding(.bottom, 16)
     }
 
+    /// 绿色质量标签，没有标签时不显示。
+    /// The green quality tag, hidden when there is no label.
+    @ViewBuilder
+    private var qualityTag: some View {
+        if let qualityLabel {
+            Text(qualityLabel)
+                .font(.system(.caption, weight: .heavy))
+                .tracking(0.6)
+                .foregroundStyle(.brandGreen)
+        }
+    }
+
+    /// 游戏标题，颜色由放置的位置决定。
+    /// The game title; where it sits decides its colour.
+    private var titleText: some View {
+        Text(deal.title)
+            .font(.system(.title, weight: .bold))
+            .multilineTextAlignment(.leading)
+    }
+
     // MARK: - 价格行 / Price row
 
-    /// 底部价格行：左侧当前价与原价，右侧购买商店 / Bottom row with current and regular price on the left, shop on the right
+    /// 底部价格行，内容按文字大小换布局。
+    /// Bottom price row, whose content changes layout with the text size.
     private var priceRow: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 1) {
-                currentPrice
-                regularPrice
+        priceRowContent
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(Color.appBackground.opacity(0.4))  // 想更暗就调大
             }
+    }
 
-            Spacer(minLength: 0)
+    /// 价格行的内容：平时左价格右商店；辅助功能档位下标题、价格、商店从上到下排。
+    /// Price row content: prices left and shop right normally; title, prices and shop stacked at accessibility sizes.
+    ///
+    /// 大字号下横排放不下，标题也盖满图片，所以换成竖排而不是缩小或截断文字。
+    /// At large sizes the row no longer fits and the title would cover the artwork, so the layout stacks instead of shrinking or truncating text.
+    @ViewBuilder
+    private var priceRowContent: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    qualityTag
+                    titleText
+                        .foregroundStyle(.primaryText)
+                }
 
-            shopPill
+                prices
+                shopPill
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(alignment: .center, spacing: 12) {
+                prices
+                Spacer(minLength: 0)
+                shopPill
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .overlay(Color.appBackground.opacity(0.4))  // 想更暗就调大
+    }
+
+    /// 当前价在上、划线原价在下。
+    /// Current price above the struck-through regular price.
+    private var prices: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            currentPrice
+            regularPrice
         }
     }
 
@@ -208,7 +260,7 @@ struct DealCardView: View {
                 Text(price.amount, format: .currency(code: price.currency))
             }
         }
-        .font(.system(size: 26, weight: .bold, design: .monospaced))
+        .font(.system(.title, design: .monospaced, weight: .bold))
         .foregroundStyle(.brandGreen)
     }
 
@@ -219,7 +271,7 @@ struct DealCardView: View {
 
         if regular.amountInt > deal.deal.price.amountInt {
             Text(regular.amount, format: .currency(code: regular.currency))
-                .font(.system(size: 16, weight: .medium, design: .monospaced))
+                .font(.system(.callout, design: .monospaced, weight: .medium))
                 .foregroundStyle(.secondaryText)
                 .strikethrough()
         }
@@ -229,7 +281,7 @@ struct DealCardView: View {
     /// Shop tag. `/deals/v2` returns a single best deal per game, so there is only ever one shop here
     private var shopPill: some View {
         Text(deal.deal.shop.name)
-            .font(.system(size: 14, weight: .semibold))
+            .font(.system(.subheadline, weight: .semibold))
             .foregroundStyle(.secondaryText)
             .lineLimit(1)
             .padding(.horizontal, 13)
@@ -266,4 +318,13 @@ struct DealCardView: View {
             .padding(14)
     }
     .background(Color.appBackground)
+}
+
+#Preview("大字号 / Accessibility size") {
+    ScrollView {
+        DealCardView(deal: .previewSample, isFavorite: true, isFavoriteEnabled: true, onToggleFavorite: {})
+            .padding(14)
+    }
+    .background(Color.appBackground)
+    .dynamicTypeSize(.accessibility3)
 }
