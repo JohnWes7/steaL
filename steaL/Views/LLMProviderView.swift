@@ -177,6 +177,7 @@ struct LLMProviderView: View {
             Button("Delete Provider", systemImage: "trash", role: .destructive) {
                 isConfirmingDelete = true
             }
+            .listItemTint(.red)
             .disabled(isDeleting)
             .confirmationDialog(
                 "Delete \(provider.name)?",
