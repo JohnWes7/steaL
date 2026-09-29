@@ -39,7 +39,7 @@ struct SteamDetailSectionView: View {
         {
             VStack(alignment: .leading, spacing: 14) {
                 Text("GAME DETAIL")
-                    .font(.system(size: 13, weight: .bold, design: .default))
+                    .font(.system(.footnote, weight: .bold))
                     .foregroundStyle(.brandGreen)
 
                 if isExpanded {

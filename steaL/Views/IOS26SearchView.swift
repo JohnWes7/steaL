@@ -96,7 +96,7 @@ struct IOS26SearchView: View {
                     .tint(.brandBlue)
 
                 Text("Searching the Steam store...")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(.subheadline, weight: .medium))
                     .foregroundStyle(.secondaryText)
             }
 
@@ -142,7 +142,7 @@ struct IOS26SearchView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(item.name)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(.callout, weight: .semibold))
                     .foregroundStyle(.primaryText)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -175,7 +175,7 @@ struct IOS26SearchView: View {
         ZStack {
             Color.imagePlaceholder
             Image(systemName: symbol)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(.callout, weight: .semibold))
                 .foregroundStyle(.secondaryText)
         }
     }

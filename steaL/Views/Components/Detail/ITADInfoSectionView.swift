@@ -27,7 +27,7 @@ struct ITADInfoSectionView: View {
     private var section: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("ITAD DETAILS")
-                .font(.system(size: 13, weight: .bold, design: .default))
+                .font(.system(.footnote, weight: .bold))
                 .foregroundStyle(.brandGreen)
 
             switch state {
@@ -44,7 +44,7 @@ struct ITADInfoSectionView: View {
                 if !reviews.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Reviews")
-                            .font(.system(size: 22, weight: .heavy))
+                            .font(.system(.title2, weight: .heavy))
                             .foregroundStyle(.primaryText)
 
                         ForEach(Array(reviews.enumerated()), id: \.offset) { _, review in

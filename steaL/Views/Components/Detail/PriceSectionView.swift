@@ -85,7 +85,7 @@ struct PriceSectionView: View {
     /// 还没分出区块时的标题（加载中 / 没找到 / 失败）/ The title used before a part of its own exists
     private var priceTitle: some View {
         Text("PRICES")
-            .font(.system(size: 13, weight: .bold, design: .default))
+            .font(.system(.footnote, weight: .bold))
             .foregroundStyle(.brandGreen)
     }
 
@@ -104,7 +104,7 @@ struct PriceSectionView: View {
 
         VStack(alignment: .leading, spacing: 16) {
             Text("PRICE HISTORY")
-                .font(.system(size: 13, weight: .bold, design: .default))
+                .font(.system(.footnote, weight: .bold))
                 .foregroundStyle(.brandGreen)
 
             if lows.isEmpty {
@@ -138,7 +138,7 @@ struct PriceSectionView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("CURRENT OFFERS")
-                        .font(.system(size: 13, weight: .bold, design: .default))
+                        .font(.system(.footnote, weight: .bold))
                         .foregroundStyle(.brandGreen)
 
                 }

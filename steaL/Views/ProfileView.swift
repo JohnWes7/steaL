@@ -191,7 +191,7 @@ struct ProfileView: View {
                         Spacer(minLength: 12)
 
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(.subheadline, weight: .semibold))
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -232,7 +232,7 @@ struct ProfileView: View {
                 Section {
                 } footer: {
                     Text("steaL · FIT3178 Project")
-                        .font(.system(size: 12, weight: .medium, design: .default))
+                        .font(.system(.caption, weight: .medium))
                         .foregroundStyle(.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }

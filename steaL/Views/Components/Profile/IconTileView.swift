@@ -19,7 +19,7 @@ struct IconTileView: View {
 
     var body: some View {
         Image(systemName: icon)
-            .font(.system(size: 15, weight: .bold))
+            .font(.system(.subheadline, weight: .bold))
             .foregroundStyle(.white)
             .frame(width: 32, height: 32)
             .background(tint, in: RoundedRectangle(cornerRadius: 9, style: .continuous))

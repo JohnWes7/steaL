@@ -25,7 +25,7 @@ struct DemoSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("DEMO")
-                .font(.system(size: 13, weight: .bold, design: .default))
+                .font(.system(.footnote, weight: .bold))
                 .foregroundStyle(.brandGreen)
 
             Button {
