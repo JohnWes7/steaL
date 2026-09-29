@@ -43,7 +43,7 @@ struct GiveawaysSectionView: View {
     /// 没有 giveaway 在送时的轻量提示 / Lightweight note when no giveaways are active
     private var emptyNote: some View {
         Text("No giveaways right now. Check back later.")
-            .font(.system(size: 14))
+            .font(.subheadline)
             .foregroundStyle(.secondaryText)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -57,12 +57,12 @@ struct GiveawayRowView: View {
     private var textBlock: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(giveaway.displayTitle)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(.callout, weight: .semibold))
                 .foregroundStyle(.primaryText)
                 .lineLimit(2)
 
             Text(shopText)
-                .font(.system(size: 13))
+                .font(.footnote)
                 .foregroundStyle(.secondaryText)
                 .lineLimit(1)
         }
@@ -121,7 +121,7 @@ struct GiveawayRowView: View {
     /// FREE 徽章，绿色胶囊呼应区块的绿色标识 / FREE badge, its green capsule echoing the section accent
     private var freeBadge: some View {
         Text("FREE")
-            .font(.system(size: 10, weight: .heavy, design: .rounded))
+            .font(.system(.caption2, design: .rounded, weight: .heavy))
             .foregroundStyle(Color.onBrandGreen)
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
@@ -134,7 +134,7 @@ struct GiveawayRowView: View {
     private var deadlineChip: some View {
         if let expiryText {
             Text(expiryText)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(.footnote, weight: .semibold))
                 .foregroundStyle(isExpiringSoon ? Color.onBrandGreen : Color.brandGreen)
                 .lineLimit(1)
                 .padding(.horizontal, 12)
