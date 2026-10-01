@@ -23,8 +23,10 @@ final class HotDealsViewModel {
     }
 
     private(set) var dealState: DealLoadState = .loading
-    
     private(set) var nextOffset : Int? = 0
+
+    /// 记录上一次的 region，避免重复请求 / Records the last region to avoid duplicate requests
+    private var loadedRegion: AppRegion?
 
     private func requestBody(region: AppRegion, offset: Int) -> [String: Any] {
         [
@@ -40,6 +42,28 @@ final class HotDealsViewModel {
         ]
     }
     
+    /// 同一地区已经加载过就跳过，否则加载第一页。
+    /// Skips when this region is already loaded; otherwise loads the first page.
+    ///
+    /// `.task` 在页面每次出现时都会跑（从详情页返回也算），重新加载会把列表打回 `.loading`、丢掉已翻的页。
+    /// `.task` runs on every appearance, including coming back from a detail page, and reloading would reset the list
+    /// to `.loading` and lose the loaded pages.
+    ///
+    /// - Parameter region: 商店区域 / The store region.
+    func loadIfNeeded(region: AppRegion) async {
+        guard loadedRegion != region else { return }
+
+        await loadHotDeals(region: region)
+
+        // 中途被取消（页面消失）的不算，下次出现再加载 / A cancelled load does not count; the next appearance loads again
+        guard !Task.isCancelled else { return }
+        loadedRegion = region
+    }
+
+    /// 加载第一页，失败后的重试也走这里。
+    /// Loads the first page; a retry after a failure comes here too.
+    ///
+    /// - Parameter region: 商店区域 / The store region.
     func loadHotDeals(region: AppRegion) async {
         dealState = .loading
 
@@ -65,7 +89,7 @@ final class HotDealsViewModel {
                 guard !Task.isCancelled else { return }
 
                 // applyAppIDs：只更新 uuids 里的这些条目
-                applyAppIDs(appIDByUUID)
+                applyAppIDs(appIDByUUID, to: uuids)
             } catch {
                 if Task.isCancelled { return }
                 // 把这一页还在 .pending 的标成 .failed，loadState 不变
@@ -80,12 +104,12 @@ final class HotDealsViewModel {
         }
     }
 
-    private func applyAppIDs(_ appIDByUUID: [String: Int]) {
+    private func applyAppIDs(_ appIDByUUID: [String: Int], to uuids: [String]) {
         guard case .loaded(let items) = dealState else { return }
 
         dealState = .loaded(items.map { item in
             // 只更新 uuids 里的这些条目 / Only update the items whose uuids are in the dictionary
-            guard appIDByUUID.keys.contains(item.id) else { return item }
+            guard uuids.contains(item.id) else { return item }
 
             var updatedItem = item
 
@@ -113,6 +137,5 @@ final class HotDealsViewModel {
                 return updatedItem
             })
     }
-
 }
 

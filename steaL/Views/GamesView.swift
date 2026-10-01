@@ -13,10 +13,12 @@ struct GamesView: View {
     /// 用户设置单例行，只读区域等偏好 / Singleton user-settings row; read for the region and other preferences
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
+
     /// 登录状态，收藏要用 uid / Sign-in state; favouriting needs the uid
     @Environment(AuthService.self) private var authService
     /// 全 App 共用的 wishlist / The wishlist shared by the whole app
     @Environment(WishlistService.self) private var wishlistService
+    
     /// 列表数据源，负责请求与状态 / Data source for the list; owns fetching and state
     @State private var gamesViewModel = GamesViewModel()
     /// 当前加载任务；区域变化时取消上一个 / The in-flight load task; cancelled when the region changes
