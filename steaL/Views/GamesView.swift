@@ -31,9 +31,12 @@ struct GamesView: View {
     /// `nil` when the user goes back
     @State private var homeDetailItem: GameDetailRoute?
 
-    /// 是否推入全部 Hot Deals 页，区块标题的「See All」置为 `true` /
-    /// Whether the full Hot Deals page is pushed; the section's See All sets it to `true`
-    @State private var isShowingHotDeals = false
+    /// 要推入的全部 Hot Deals 页，区块标题置为非 `nil`，返回时系统置回 `nil`。
+    /// The full Hot Deals page to push; the section title sets it, and the system resets it to `nil` on back.
+    ///
+    /// 用 `item:` 而不是 `isPresented:`：后者推入带 `@Query` 的页面会让导航陷入死循环。
+    /// Uses `item:` rather than `isPresented:`, which loops when the pushed page holds a `@Query`.
+    @State private var hotDealsRoute: HotDealsRoute?
 
     /// 进不了详情页时的提示文案，`non-nil` 即弹出 / Warning text; a `non-nil` value raises the alert
     @State private var warning: String?
@@ -115,10 +118,10 @@ struct GamesView: View {
         } message: {
             Text(warning ?? "")
         }
-        .navigationDestination(item: $homeDetailItem, destination: { route in
+        .navigationDestination(item: $homeDetailItem) { route in
             GameDetailView(route: route)
-        })
-        .navigationDestination(isPresented: $isShowingHotDeals) {
+        }
+        .navigationDestination(item: $hotDealsRoute) { _ in
             HotDealsView()
         }
         .sheet(isPresented: $isShowingSignIn) {
@@ -214,7 +217,7 @@ struct GamesView: View {
     private var hotDealsHeader: some View {
         HStack(spacing: 0) {
             Button {
-                isShowingHotDeals = true
+                hotDealsRoute = HotDealsRoute()
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "flame.fill")
