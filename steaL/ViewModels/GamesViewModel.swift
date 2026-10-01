@@ -107,8 +107,7 @@ final class GamesViewModel {
 
     // MARK: - Steam appID 预取 / Prefetching Steam appIDs
 
-    /// 给列表里每个游戏批量补上 Steam appID（实测 60 个 UUID 一次请求即可）/
-    /// Resolves the Steam appID for every game in the feed, in one batch
+    /// 给列表里每个游戏批量补上 Steam appID / Resolves the Steam appID for every game in the feed, in one batch
     ///
     /// 失败不改 `dealState`：列表是好的，只是进不了详情页 / A failure leaves `dealState` alone
     /// - Parameter region: 商店区域，校验多个候选时用 / The store region, used when checking multiple candidates
@@ -119,43 +118,12 @@ final class GamesViewModel {
         let uuids = items.map(\.id)
 
         do {
-            // 一次请求全部appid, 如果fail了进 catch 全部设置为fail
-            let lookup = try await ITADAPI.lookupShopIDs(uuids: uuids)
+            let appIDByUUID = try await SteamAppIDResolver.resolveAppIDs(uuids: uuids, region: region)
 
             // 请求在飞时可能换了地区或重试，结果已过期 / The region may have changed while this was in flight
             guard !Task.isCancelled else { return }
 
-            // 1. 每个游戏的候选 appID，可能 0 个、1 个或多个 / Each game's candidate appIDs: zero, one or several
-            var candidatesByUUID: [String: [Int]] = [:]
-            for uuid in uuids {
-                candidatesByUUID[uuid] = lookup.appIDs(for: uuid)
-            }
-
-            // 2. 只把多候选游戏的 appID 拿去 Steam 校验；一个都没有就不发请求 /
-            //    Only appIDs from games with several candidates go to Steam; no request when there are none
-            var appIDsToCheck: [Int] = []
-            for candidates in candidatesByUUID.values where candidates.count > 1 {
-                appIDsToCheck.append(contentsOf: candidates)
-            }
-
-            var availability: SteamAppAvailabilityResponse?
-            if !appIDsToCheck.isEmpty {
-                availability = await fetchAvailability(of: appIDsToCheck, region: region)
-                guard !Task.isCancelled else { return }
-            }
-
-            // 3. 每个游戏定一个 appID，选不出的不放进字典 / Pick one appID per game; games without one are left out
-            var appIDByUUID: [String: Int] = [:]
-            for (uuid, candidates) in candidatesByUUID {
-                appIDByUUID[uuid] = Self.pickAppID(from: candidates, availability: availability)
-            }
-
-            // 4. 整批一次写回，避免 N 次数组复制 / Apply the whole batch in one pass
             applyAppIDs(appIDByUUID)
-
-            #if DEBUG
-            Logger.games.debug("Steam appID 预取 / prefetch: \(lookup.trackedCount)/\(uuids.count) 条拿到 appID")
-            #endif
 
         } catch {
             if Task.isCancelled { return }
@@ -165,53 +133,6 @@ final class GamesViewModel {
             // 还挂在 `.pending` 的条目标成 `.failed`，否则卡片永远点不动 / Settle anything still `.pending` as failed
             settlePendingAsFailed()
         }
-    }
-
-    /// 向 Steam 校验候选 appID；请求失败返回 `nil`，调用方退回旧做法 /
-    /// Checks candidate appIDs with Steam; `nil` on failure so the caller falls back to the old behaviour
-    private func fetchAvailability(of appIDs: [Int], region: AppRegion) async -> SteamAppAvailabilityResponse? {
-        do {
-            return try await SteamAPI.fetchAvailability(of: appIDs, region: region)
-        } catch {
-            if !Task.isCancelled {
-                Logger.games.error("appID 校验失败，退回第一个候选 / check failed, using first candidate: \(String(describing: error))")
-            }
-            return nil
-        }
-    }
-
-    /// 从候选里挑一个 appID，`nil` 表示选不出 / Picks one appID from the candidates; `nil` when none fits
-    /// - Parameter candidates: 这个游戏的全部候选 / All of this game's candidates
-    /// - Parameter availability: Steam 校验结果；没校验或校验失败是 `nil` / Steam's check; `nil` when unchecked or failed
-    private static func pickAppID(from candidates: [Int], availability: SteamAppAvailabilityResponse?) -> Int? {
-        // 没有候选：ITAD 没收录，或只有 `sub/` / No candidates: untracked, or only `sub/` entries
-        if candidates.isEmpty {
-            return nil
-        }
-
-        // 只有一个：直接用，它没被拿去 Steam 校验 / A single candidate is used as-is; it was never sent to Steam
-        if candidates.count == 1 {
-            return candidates[0]
-        }
-
-        // 多个但校验失败：退回第一个，和校验前的行为一样 / Several but the check failed: the first, as before
-        guard let availability else {
-            return candidates[0]
-        }
-
-        // 多个：先取第一个有价格的。首页都是在打折的 deal，对的那个一定有价格；只看「存在」会选到 demo（FORM）或无价格的旧页（GTA IV 的 901583）/
-        // Several: the first priced one wins. Every home deal is on sale, so the right one always has a price
-        for appID in candidates where availability.hasPrice(appID) {
-            return appID
-        }
-
-        // 都没价格：取第一个还存在的 / None priced: the first one that still exists
-        for appID in candidates where availability.isAvailable(appID) {
-            return appID
-        }
-
-        // 都不存在：点进去也只会报错 / None exists: the detail page would only fail
-        return nil
     }
 
     /// 按选好的 appID 整批更新列表 / Applies the picked appIDs across the whole feed in one pass

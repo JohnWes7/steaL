@@ -22,7 +22,7 @@ final class HotDealsViewModel {
         case failed(LoadError)
     }
 
-    private(set) var loadState: DealLoadState = .loading
+    private(set) var dealState: DealLoadState = .loading
     
     private(set) var nextOffset : Int? = 0
 
@@ -41,7 +41,7 @@ final class HotDealsViewModel {
     }
     
     func loadHotDeals(region: AppRegion) async {
-        loadState = .loading
+        dealState = .loading
 
         let body = requestBody(region: region, offset: 0)
         
@@ -54,14 +54,65 @@ final class HotDealsViewModel {
             }
 
             let items = response.list.map { deal in HomeDealItem(deal: deal) }
-            loadState = .loaded(items)
+            dealState = .loaded(items)
 
             // fetch steam appIDs for the deals
+            let uuids = items.map(\.id)
+            do {
+                let appIDByUUID = try await SteamAppIDResolver.resolveAppIDs(
+                    uuids: uuids, region: region
+                    )
+                guard !Task.isCancelled else { return }
+
+                // applyAppIDs：只更新 uuids 里的这些条目
+                applyAppIDs(appIDByUUID)
+            } catch {
+                if Task.isCancelled { return }
+                // 把这一页还在 .pending 的标成 .failed，loadState 不变
+                settlePendingAsFailed(uuids)
+                Logger.steam.error("resolveAppIDs failed: \(String(describing: error))")
+            }
+
         } catch {
             if Task.isCancelled { return }
             Logger.games.error("loadHotDeals failed: \(String(describing: error))")
-            loadState = .failed(LoadError.from(error))
+            dealState = .failed(LoadError.from(error))
         }
     }
+
+    private func applyAppIDs(_ appIDByUUID: [String: Int]) {
+        guard case .loaded(let items) = dealState else { return }
+
+        dealState = .loaded(items.map { item in
+            // 只更新 uuids 里的这些条目 / Only update the items whose uuids are in the dictionary
+            guard appIDByUUID.keys.contains(item.id) else { return item }
+
+            var updatedItem = item
+
+            if let appID = appIDByUUID[item.id] {
+                updatedItem.steam = .resolved(appID)
+            } else {
+                updatedItem.steam = .notFound
+            }
+
+            return updatedItem
+        })
+    }
+
+    /// 补 appID 的请求失败时，把这一页还在等待中的条目落定为 `.failed`
+    private func settlePendingAsFailed(_ uuids: [String]) {
+        guard case .loaded(let items) = dealState else { return }
+
+        dealState = .loaded(
+            items.map { item in
+                guard uuids.contains(item.id) else { return item }
+                guard item.steam == .pending else { return item }
+
+                var updatedItem = item
+                updatedItem.steam = .failed
+                return updatedItem
+            })
+    }
+
 }
 
