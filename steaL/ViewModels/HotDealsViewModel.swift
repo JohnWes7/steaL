@@ -47,6 +47,8 @@ final class HotDealsViewModel {
             ],
         ]
     }
+
+    // MARK: - loadIfNeeded
     
     /// 同一地区已经加载过就跳过，否则加载第一页。
     /// Skips when this region is already loaded; otherwise loads the first page.
@@ -100,6 +102,8 @@ final class HotDealsViewModel {
             dealState = .failed(LoadError.from(error))
         }
     }
+
+    // MARK: - loadNextPage
 
     /// 加载下一页并拼到列表后面，由列表底部视图的 `.task(id: nextOffset)` 触发。
     /// Loads the next page and appends it, triggered by the list footer's `.task(id: nextOffset)`.

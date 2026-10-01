@@ -99,13 +99,17 @@ struct HotDealsView: View {
                     ForEach(items) { item in
                         DealGridCardView(
                             deal: item.deal,
-                            isFavorite: false,
+                            isFavorite: isFavorite(item),
                             isFavoriteEnabled: item.appID != nil,
                             onToggleFavorite: {
-                                ToggleFavorite(item)
+                                toggleFavorite(item)
                             }
                         )
                     }
+                }
+
+                if viewModel.nextOffset != nil {
+                    nextPageFooter
                 }
             }
             .padding(.horizontal, 14)
@@ -114,7 +118,28 @@ struct HotDealsView: View {
         }
     }
 
-    private func ToggleFavorite(_ item: HomeDealItem) {
+    @ViewBuilder
+    private var nextPageFooter: some View {
+        Button("load More") {
+            Task {
+                await viewModel.loadNextPage(region: region)
+            }
+        }
+        .tint(.brandBlue)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+    }
+
+    /// MARK: - Favorite
+
+    private func isFavorite(_ item: HomeDealItem) -> Bool {
+        guard let appID = item.appID else {
+            return false
+        }
+        return wishlistService.contains(appID: appID)
+    }
+
+    private func toggleFavorite(_ item: HomeDealItem) {
         guard let appID = item.appID else {
             return
         }
