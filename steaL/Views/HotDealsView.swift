@@ -26,6 +26,14 @@ struct HotDealsView: View {
     /// signin sheet
     @State private var isShowingSignIn: Bool = false
 
+    /// 要推入的详情页，`non-nil` 即跳转，返回时系统置回 `nil`。
+    /// The detail page to push; a `non-nil` value navigates, and the system resets it to `nil` on back.
+    @State private var detailRoute: GameDetailRoute?
+
+    /// 进不了详情页时的提示文案，`non-nil` 即弹出。
+    /// The warning shown when a game can't open its detail page; a `non-nil` value raises the alert.
+    @State private var warning: String?
+
     private var region: AppRegion {
         settings.first?.region ?? .australia
     }
@@ -62,6 +70,27 @@ struct HotDealsView: View {
         .task(id: region) {
             await viewModel.loadIfNeeded(region: region)
         }
+        // 未登录点心形时弹登录，同首页与详情页 / Sign-in for a heart tapped while signed out, as on the home and detail pages
+        .sheet(isPresented: $isShowingSignIn) {
+            SignInSheet()
+        }
+        .navigationDestination(item: $detailRoute) { route in
+            GameDetailView(route: route)
+        }
+        // 进不了详情页时的提示，同首页 / Warning for a game that can't open its detail page, as on the home page
+        .alert(
+            "Can't Open This Game",
+            isPresented: Binding(
+                get: { warning != nil },
+                set: { isPresented in
+                    if !isPresented { warning = nil }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) { warning = nil }
+        } message: {
+            Text(warning ?? "")
+        }
     }
 
     /// 请求成功但列表为空时的提示，附刷新入口。
@@ -97,14 +126,21 @@ struct HotDealsView: View {
                     spacing: 12
                 ) {
                     ForEach(items) { item in
-                        DealGridCardView(
-                            deal: item.deal,
-                            isFavorite: isFavorite(item),
-                            isFavoriteEnabled: item.appID != nil,
-                            onToggleFavorite: {
-                                toggleFavorite(item)
-                            }
-                        )
+                        // 整张卡可点；`.plain` 让卡内心形的点击不被外层吞掉 /
+                        // The whole card is tappable; `.plain` keeps the card's own heart clickable
+                        Button {
+                            handleTap(item)
+                        } label: {
+                            DealGridCardView(
+                                deal: item.deal,
+                                isFavorite: isFavorite(item),
+                                isFavoriteEnabled: item.appID != nil,
+                                onToggleFavorite: {
+                                    toggleFavorite(item)
+                                }
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
 
@@ -130,7 +166,7 @@ struct HotDealsView: View {
         .padding(.vertical, 16)
     }
 
-    /// MARK: - Favorite
+    // MARK: - 收藏 / Favorite
 
     private func isFavorite(_ item: HomeDealItem) -> Bool {
         guard let appID = item.appID else {
@@ -164,6 +200,33 @@ struct HotDealsView: View {
         )
 
         try? wishlistService.add(wishlistItem, uid: uid)
+    }
+
+    // MARK: - 进详情页 / Opening the detail page
+
+    /// 点卡片：按 Steam 关联的四种状态决定跳转还是提示。
+    /// Handles a card tap: the four Steam link states decide between navigating and a warning.
+    ///
+    /// 同首页 `GamesView.handleTap`，只有查失败的提示不同：这一页没有下拉刷新。
+    /// Mirrors the home page's `GamesView.handleTap`, except the failed-lookup message: this page has no pull to refresh.
+    ///
+    /// - Parameter item: 被点的优惠 / The tapped deal.
+    private func handleTap(_ item: HomeDealItem) {
+        switch item.steam {
+        case .pending:
+            // 补 appID 几百毫秒就回来，这期间静默忽略 / The appID lands within a few hundred milliseconds; ignore taps meanwhile
+            break
+
+        case .resolved(let appID):
+            detailRoute = GameDetailRoute(appID: appID, uuid: item.id, title: item.deal.title)
+
+        case .notFound:
+            warning = "“\(item.deal.title)” is not available on Steam, so there is no detail page to show."
+
+        // 查失败不代表 Steam 上没有 / A failed lookup does not mean it is missing
+        case .failed:
+            warning = "Couldn't check “\(item.deal.title)” on Steam. Please try again later."
+        }
     }
 }
 
