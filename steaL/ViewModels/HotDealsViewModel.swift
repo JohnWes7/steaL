@@ -90,23 +90,10 @@ final class HotDealsViewModel {
             let items = response.list.map { deal in HomeDealItem(deal: deal) }
             dealState = .loaded(items)
 
-            // fetch steam appIDs for the deals
             let uuids = items.map(\.id)
-            do {
-                let appIDByUUID = try await SteamAppIDResolver.resolveAppIDs(
-                    uuids: uuids, region: region
-                    )
-                guard !Task.isCancelled else { return }
-
-                // applyAppIDs：只更新 uuids 里的这些条目
-                applyAppIDs(appIDByUUID, to: uuids)
-            } catch {
-                if Task.isCancelled { return }
-                // 把这一页还在 .pending 的标成 .failed，loadState 不变
-                settlePendingAsFailed(uuids)
-                Logger.steam.error("resolveAppIDs failed: \(String(describing: error))")
+            Task {
+                await resolveAppIDs(uuids: uuids, region: region)
             }
-
         } catch {
             if Task.isCancelled { return }
             Logger.games.error("loadHotDeals failed: \(String(describing: error))")
@@ -114,6 +101,14 @@ final class HotDealsViewModel {
         }
     }
 
+    /// 加载下一页并拼到列表后面，由列表底部视图的 `.task(id: nextOffset)` 触发。
+    /// Loads the next page and appends it, triggered by the list footer's `.task(id: nextOffset)`.
+    ///
+    /// 被取消（底部视图离开屏幕）回到 `.idle`，底部视图再出现会自动重新加载；只有请求失败才是 `.failed`。
+    /// A cancellation (the footer left the screen) goes back to `.idle`, so the footer reloads when it reappears;
+    /// only a failed request becomes `.failed`.
+    ///
+    /// - Parameter region: 商店区域 / The store region.
     func loadNextPage(region: AppRegion) async {
         // 没有下一页、或者已经在加载，就不重复请求
         guard let offset = nextOffset else { return }
@@ -151,31 +146,48 @@ final class HotDealsViewModel {
 
             dealState = .loaded(currentItems + newItems)
 
-            // 3. nextPageState = .idle
+            // 3. 这一页已经拼进列表 / This page is in the list now
             nextPageState = .idle
 
-            // 4. 对新这一页的 uuids 补 appID（同第一页，单独的 do / catch）
+            // 4. 补 appID 另开一个 Task：改了 `nextOffset` 后底部视图的 `.task(id:)` 会被取消，跟着它走的话每一页都查不完 /
+            //    Resolve appIDs in a separate Task: changing `nextOffset` cancels the footer's `.task(id:)`,
+            //    so riding along with it would cut off every page's lookup
             let uuids = newItems.map(\.id)
-            do {
-                let appIDByUUID = try await SteamAppIDResolver.resolveAppIDs(
-                    uuids: uuids, region: region
-                )
-                
-                guard !Task.isCancelled else { return }
-                applyAppIDs(appIDByUUID, to: uuids)
-            } catch {
-                if Task.isCancelled { nextPageState = .idle; return }
-                settlePendingAsFailed(uuids)
-                Logger.steam.error("resolveAppIDs failed: \(String(describing: error))")
+            Task {
+                await resolveAppIDs(uuids: uuids, region: region)
             }
         } catch {
             if Task.isCancelled { nextPageState = .idle; return }
-            Logger.games.error(...)
+            Logger.games.error("loadNextPage failed: \(String(describing: error))")
             nextPageState = .failed  // 列表保留，只在底部显示 Retry
         }
     } 
 
-    /// MARK: - Private helpers
+    // MARK: - 私有 / Private helpers
+
+    /// 给一页条目补 Steam appID 并写回列表。
+    /// Resolves Steam appIDs for one page of items and writes them back into the list.
+    ///
+    /// 第一页与下一页共用；请求失败时把这一页还在 `.pending` 的落定为 `.failed`，列表本身不变。
+    /// Shared by the first and later pages; on failure this page's `.pending` items settle as `.failed`
+    /// while the list itself stays.
+    ///
+    /// - Parameters:
+    ///   - uuids: 这一页的 ITAD UUID / This page's ITAD UUIDs.
+    ///   - region: 商店区域，校验多个候选时用 / The store region, used when checking several candidates.
+    private func resolveAppIDs(uuids: [String], region: AppRegion) async {
+        do {
+            let appIDByUUID = try await SteamAppIDResolver.resolveAppIDs(uuids: uuids, region: region)
+            guard !Task.isCancelled else { return }
+
+            applyAppIDs(appIDByUUID, to: uuids)
+        } catch {
+            if Task.isCancelled { return }
+
+            Logger.games.error("resolveAppIDs failed: \(String(describing: error))")
+            settlePendingAsFailed(uuids)
+        }
+    }
 
     private func applyAppIDs(_ appIDByUUID: [String: Int], to uuids: [String]) {
         guard case .loaded(let items) = dealState else { return }
