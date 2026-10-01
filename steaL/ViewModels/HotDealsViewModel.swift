@@ -22,7 +22,13 @@ final class HotDealsViewModel {
         case failed(LoadError)
     }
 
+    enum NextPageState { 
+        case idle, loading, failed 
+    }
+
     private(set) var dealState: DealLoadState = .loading
+    private(set) var nextPageState: NextPageState = .idle
+
     private(set) var nextOffset : Int? = 0
 
     /// 记录上一次的 region，避免重复请求 / Records the last region to avoid duplicate requests
@@ -66,11 +72,15 @@ final class HotDealsViewModel {
     /// - Parameter region: 商店区域 / The store region.
     func loadHotDeals(region: AppRegion) async {
         dealState = .loading
+        nextPageState = .idle
 
         let body = requestBody(region: region, offset: 0)
         
         do {
             let response: ITADDealsResponse = try await ITADAPI.fetchDeals(body: body)
+            // 换了地区或页面消失，旧结果不写回 / A cancelled load (region changed or page gone) does not write back
+            guard !Task.isCancelled else { return }
+
             if response.hasMore {
                 nextOffset = response.nextOffset
             } else {
@@ -103,6 +113,69 @@ final class HotDealsViewModel {
             dealState = .failed(LoadError.from(error))
         }
     }
+
+    func loadNextPage(region: AppRegion) async {
+        // 没有下一页、或者已经在加载，就不重复请求
+        guard let offset = nextOffset else { return }
+        guard nextPageState != .loading else { return }
+        nextPageState = .loading
+
+        do {
+            let body = requestBody(region: region, offset: offset)
+            let response = try await ITADAPI.fetchDeals(body: body)
+            guard !Task.isCancelled else { nextPageState = .idle; return }
+
+            // 1. 更新 nextOffset（同第一页的写法）
+            if response.hasMore {
+                nextOffset = response.nextOffset
+            } else {
+                nextOffset = nil
+            }
+
+            // 2. 在 await 之后重新读列表：请求期间上一页补 appID 的结果可能已经写回 /
+            //    Re-read the list after the await: the previous page's appIDs may have landed meanwhile
+            guard case .loaded(let currentItems) = dealState else {
+                nextPageState = .idle
+                return
+            }
+
+            // 按 ITAD UUID 去重：`-hot` 排序在两次请求之间会变，新一页可能带着已有的游戏 /
+            // Dedupe by ITAD UUID: the `-hot` order shifts between requests, so a new page may repeat games
+            let existingIDs = Set(currentItems.map(\.id))
+            let newDeals = response.list.filter { deal in
+                !existingIDs.contains(deal.id)
+            }
+            let newItems = newDeals.map { deal in
+                HomeDealItem(deal: deal)
+            }
+
+            dealState = .loaded(currentItems + newItems)
+
+            // 3. nextPageState = .idle
+            nextPageState = .idle
+
+            // 4. 对新这一页的 uuids 补 appID（同第一页，单独的 do / catch）
+            let uuids = newItems.map(\.id)
+            do {
+                let appIDByUUID = try await SteamAppIDResolver.resolveAppIDs(
+                    uuids: uuids, region: region
+                )
+                
+                guard !Task.isCancelled else { return }
+                applyAppIDs(appIDByUUID, to: uuids)
+            } catch {
+                if Task.isCancelled { nextPageState = .idle; return }
+                settlePendingAsFailed(uuids)
+                Logger.steam.error("resolveAppIDs failed: \(String(describing: error))")
+            }
+        } catch {
+            if Task.isCancelled { nextPageState = .idle; return }
+            Logger.games.error(...)
+            nextPageState = .failed  // 列表保留，只在底部显示 Retry
+        }
+    } 
+
+    /// MARK: - Private helpers
 
     private func applyAppIDs(_ appIDByUUID: [String: Int], to uuids: [String]) {
         guard case .loaded(let items) = dealState else { return }
