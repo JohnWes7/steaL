@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 @MainActor
 @Observable
@@ -23,12 +24,12 @@ final class HotDealsViewModel {
 
     private(set) var loadState: DealLoadState = .loading
     
-    
+    private(set) var nextOffset : Int? = 0
 
-    private func requestBody(region: AppRegion) -> [String: Any] {
+    private func requestBody(region: AppRegion, offset: Int) -> [String: Any] {
         [
             "country": region.apiRegionCode,
-            "offset": 0,
+            "offset": offset,
             "limit": 20,
             "sort": "-hot",
             "nondeals": false,
@@ -39,18 +40,27 @@ final class HotDealsViewModel {
         ]
     }
     
-    func fetchHotDeals(region: AppRegion) async {
+    func loadHotDeals(region: AppRegion) async {
         loadState = .loading
-        let body = requestBody(region: region)
+
+        let body = requestBody(region: region, offset: 0)
         
         do {
             let response: ITADDealsResponse = try await ITADAPI.fetchDeals(body: body)
-            let items = response.list.map { HomeDealItem(deal: $0) }
+            if response.hasMore {
+                nextOffset = response.nextOffset
+            } else {
+                nextOffset = nil
+            }
+
+            let items = response.list.map { deal in HomeDealItem(deal: deal) }
             loadState = .loaded(items)
 
-
+            // fetch steam appIDs for the deals
         } catch {
-            
+            if Task.isCancelled { return }
+            Logger.games.error("loadHotDeals failed: \(String(describing: error))")
+            loadState = .failed(LoadError.from(error))
         }
     }
 }
