@@ -5,8 +5,8 @@
 //  Created by yijiang on 2026/9/28.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 /// 全部 Hot Deals 的列表页，首页区块标题的「See All」推入。
 /// The full Hot Deals list, pushed from the home section's See All.
@@ -17,8 +17,14 @@ struct HotDealsView: View {
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
     private var settings: [UserSettingModel]
 
+    @Environment(AuthService.self) private var authService
+    @Environment(WishlistService.self) private var wishlistService
+
     /// viewmodel
     @State private var viewModel: HotDealsViewModel = HotDealsViewModel()
+
+    /// signin sheet
+    @State private var isShowingSignIn: Bool = false
 
     private var region: AppRegion {
         settings.first?.region ?? .australia
@@ -29,7 +35,7 @@ struct HotDealsView: View {
             // 背景色 / Background color
             Color.appBackground
                 .ignoresSafeArea()
-            
+
             switch viewModel.dealState {
             case .loading:
                 ProgressView()
@@ -51,7 +57,7 @@ struct HotDealsView: View {
             }
         }
         .navigationTitle("Hot Deals")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         // 换地区时取消旧请求、重新加载 / A region change cancels the old request and reloads
         .task(id: region) {
             await viewModel.loadIfNeeded(region: region)
@@ -84,8 +90,55 @@ struct HotDealsView: View {
     /// - Parameter items: 要显示的优惠 / The deals to show.
     /// - Returns: 列表视图 / The list view.
     private func dealList(_ items: [HomeDealItem]) -> some View {
-        // TODO: 用 DealCardView 显示 / Show with DealCardView
-        EmptyView()
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 12)],
+                    spacing: 12
+                ) {
+                    ForEach(items) { item in
+                        DealGridCardView(
+                            deal: item.deal,
+                            isFavorite: false,
+                            isFavoriteEnabled: item.appID != nil,
+                            onToggleFavorite: {
+                                ToggleFavorite(item)
+                            }
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 16)
+            .padding(.top, 20)
+        }
+    }
+
+    private func ToggleFavorite(_ item: HomeDealItem) {
+        guard let appID = item.appID else {
+            return
+        }
+
+        guard let uid = authService.uid else {
+            isShowingSignIn = true
+            return
+        }
+
+        if wishlistService.contains(appID: appID) {
+            wishlistService.remove(appID: appID, uid: uid)
+            return
+        }
+
+        let wishlistItem = WishlistItem(
+            appID: appID,
+            name: item.deal.title,
+            headerImageURL: item.deal.headerRatioArtworkURL?.absoluteString,
+            itadID: item.deal.id,
+            isComingSoon: nil,
+            releaseCheckedAt: nil,
+        )
+
+        try? wishlistService.add(wishlistItem, uid: uid)
     }
 }
 
