@@ -111,7 +111,7 @@ struct WishlistView: View {
                 description: Text("Tap the heart on any deal to save it here.")
             )
         case .loaded:
-            list
+            gameList
         }
     }
 
@@ -119,7 +119,7 @@ struct WishlistView: View {
     ///
     /// 筛选结果为空时 `List` 仍然留着，空状态盖在上面：查价的 `.task` 和下拉刷新都挂在它上面 /
     /// The `List` stays even when a filter is empty, with the empty state laid over it, since the price `.task` and pull to refresh live on it
-    private var list: some View {
+    private var gameList: some View {
         let visibleItems = viewModel.items(wishlistService.items, matching: filter)
         let visibleAppIDs = visibleItems.map(\.appID)
 
