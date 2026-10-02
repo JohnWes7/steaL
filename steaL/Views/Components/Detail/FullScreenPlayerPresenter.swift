@@ -13,10 +13,12 @@ extension View {
     /// 模态弹出系统全屏播放器，写法同 `fullScreenCover(isPresented:)`。
     /// Presents the system full-screen player modally, in the style of `fullScreenCover(isPresented:)`.
     ///
-    /// 系统播放器直接模态弹出才是真全屏：画面铺满、控件自动隐藏，关闭、投屏、画中画都由它自己提供。
+    /// 系统播放器直接模态弹出才是真全屏：画面铺满、控件自动隐藏，关闭键和播放控件由它自己提供
+    /// （画中画和 AirPlay 还要开 Background Modes 的音频能力，目前没开）。
     /// 放进 `fullScreenCover` 再套导航栏会被导航栏和安全区挤小。
     /// Only a modally presented system player is truly full screen: the picture fills the display, the
-    /// controls hide themselves, and it brings its own close, AirPlay and Picture in Picture buttons.
+    /// controls hide themselves, and it brings its own close button and playback controls (Picture in Picture
+    /// and AirPlay also need the audio Background Mode, which is not enabled).
     /// Wrapping it in a `fullScreenCover` with a navigation bar shrinks it into the safe area.
     ///
     /// - Parameters:
