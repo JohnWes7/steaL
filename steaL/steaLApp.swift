@@ -5,6 +5,7 @@
 //  Created by yijiang on 2026/8/28.
 //
 
+import AVFoundation
 import SwiftData
 import SwiftUI
 import FirebaseCore
@@ -12,6 +13,8 @@ import OSLog
 import TipKit
 
 class AppDelegate: NSObject, UIApplicationDelegate {
+
+    // 在启动时配置 Firebase 和音频会话 / Configures Firebase and the audio session at launch
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -21,18 +24,39 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             // Initialize Firebase
             FirebaseApp.configure()
         }
+        configureAudioSession()
         return true
+    }
+
+    /// 把音频会话设成视频播放类别。
+    /// Sets the audio session to the movie playback category.
+    ///
+    /// 默认类别下静音开关会把预告片的声音也关掉；`.playback` 表示播放媒体是 App 的主要功能，静音开关不再静音。
+    /// 只设类别不会打断别的 App 的音乐，开始播放时才会。
+    /// In the default category the Silent switch also mutes trailers; `.playback` marks media playback as a central
+    /// feature, so the switch no longer silences it. Setting the category alone does not interrupt other apps' audio;
+    /// starting playback does.
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playback, mode: .moviePlayback)
+        } catch {
+            Logger.settings.error("音频会话配置失败 / Audio session configuration failed: \(String(describing: error))")
+        }
     }
 }
 
 @main
 struct steaLApp: App {
+
+    // start in unity next is render
     // register app delegate for Firebase setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
     /// 全 App 共用的 SwiftData 容器 / The SwiftData container shared by the whole app
     private let container: ModelContainer
 
+    // awake in unity
     init() {
         // 图片缓存容量。系统默认只有 500 KB 内存 / 10 MB 磁盘，而一张 ITAD boxart 就有 47 KB，
         // 默认值大概只装得下半个首页。必须在任何请求发出前设置才生效 /
