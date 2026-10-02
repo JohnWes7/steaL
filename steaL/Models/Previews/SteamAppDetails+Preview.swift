@@ -59,6 +59,17 @@ extension SteamMovie {
         dashAV1: nil,
         dashH264: nil
     )
+
+    /// 预览用的坏地址视频，用来看加载失败的样子 / A movie with a dead URL, for previewing the failure state
+    static let previewBrokenSample = SteamMovie(
+        id: 0,
+        name: "Broken Trailer",
+        highlight: false,
+        thumbnail: nil,
+        hlsH264: "https://video.akamai.steamstatic.com/store_trailers/0/missing/hls_264_master.m3u8",
+        dashAV1: nil,
+        dashH264: nil
+    )
 }
 
 #endif

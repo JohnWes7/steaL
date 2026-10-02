@@ -22,19 +22,58 @@ struct TrailerPlayerView: View {
 
             PlayerLayerView(player: trailer.player)
 
-            if trailer.isBuffering {
-                ProgressView()
-                    .tint(.brandGreen)
-            }
+            statusOverlay
         }
         .overlay(alignment: .topLeading) {
             closeButton
         }
         .overlay(alignment: .bottom) {
-            controlBar
+            // 失败时播放、拖动、全屏都没意义 / Play, scrub and full screen mean nothing after a failure
+            if trailer.status != .failed {
+                controlBar
+            }
         }
         // 播放器始终是暗色画面，token 一律按 dark 取 / The player is always a dark surface
         .environment(\.colorScheme, .dark)
+    }
+
+    /// 画面中间：缓冲时转圈，失败时提示加重试。
+    /// The middle of the picture: a spinner while buffering, a message and retry after a failure.
+    @ViewBuilder
+    private var statusOverlay: some View {
+        switch trailer.status {
+        case .buffering:
+            ProgressView()
+                .tint(.brandGreen)
+        case .failed:
+            failurePrompt
+        case .paused, .playing:
+            EmptyView()
+        }
+    }
+
+    /// 加载失败的提示。
+    /// The message shown when the video fails to load.
+    ///
+    /// 重试不用玻璃按钮：点了就会被移除，之后新建的玻璃控件会带着按压放大残留。
+    /// Retry is not a glass button: it disappears on tap, which would leave the next glass controls stuck enlarged.
+    private var failurePrompt: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "play.slash")
+                .font(.system(.title2, weight: .semibold))
+                .foregroundStyle(.secondaryText)
+
+            Text("Couldn't play this trailer.")
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                .foregroundStyle(.primaryText)
+
+            Button("Retry", action: trailer.retry)
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .tint(.brandBlue)
+        }
+        .padding()
     }
 
     /// 回到封面 / Returns to the poster
@@ -212,5 +251,15 @@ private final class PlayerLayerUIView: UIView {
         .aspectRatio(16 / 9, contentMode: .fit)
         .task {
             trailer.play(.previewSample)
+        }
+}
+
+#Preview("加载失败 / Failed") {
+    @Previewable @State var trailer = TrailerPlayer()
+
+    TrailerPlayerView(trailer: trailer)
+        .aspectRatio(16 / 9, contentMode: .fit)
+        .task {
+            trailer.play(.previewBrokenSample)
         }
 }
