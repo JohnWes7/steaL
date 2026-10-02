@@ -8,9 +8,14 @@
 import AVFoundation
 import AVKit
 
-/// 画廊预告片的播放状态：全画廊共用一个 `AVPlayer`，进度条拖动期间 `isScrubbing` 为真，画廊据此锁住翻页 /
-/// Playback state for the gallery trailer; one `AVPlayer` serves the whole gallery, and `isScrubbing`
-/// tells the gallery to lock paging while the scrubber is dragged
+/// 画廊预告片的播放状态，全画廊共用一个 `AVPlayer`。
+/// Playback state for the gallery trailer; one `AVPlayer` serves the whole gallery.
+///
+/// `isScrubbing` 只管拖动期间的显示：进度条变粗，周期回调不覆盖跟手的位置和图标。翻页不靠它锁，
+/// 进度条的拖动手势按下即成立，画廊的横滑就不会开始。
+/// `isScrubbing` only drives what shows during a drag: a thicker bar, and periodic updates that leave the
+/// finger-tracked position and icon alone. Paging is not locked by it; the scrubber's drag is recognised on
+/// touch-down, so the gallery's swipe never begins.
 @MainActor
 @Observable
 final class TrailerPlayer {

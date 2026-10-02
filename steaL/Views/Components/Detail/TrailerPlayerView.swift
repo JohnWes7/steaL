@@ -115,9 +115,12 @@ struct TrailerPlayerView: View {
 
 // MARK: - 进度条 / Scrubber
 
-/// 进度条：可见轨道很细，命中区 44pt 高。手指一按下就开始拖，画廊借此在翻页手势识别之前锁住翻页 /
-/// The scrubber: a thin visible track inside a 44pt hit area. The drag starts on touch-down, which lets
-/// the gallery lock paging before its swipe is recognised
+/// 进度条：可见轨道很细，命中区 44pt 高。
+/// The scrubber: a thin visible track inside a 44pt hit area.
+///
+/// 拖动手势按下即成立，比画廊的横滑（要移动约 10pt）先成立，所以拖进度条不会翻页，画廊也不用 `.scrollDisabled`。
+/// The drag is recognised on touch-down, before the gallery's swipe, which needs about 10pt of travel,
+/// so scrubbing never pages and the gallery needs no `.scrollDisabled`.
 private struct TrailerScrubber: View {
 
     let progress: Double
