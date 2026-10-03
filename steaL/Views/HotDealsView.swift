@@ -154,16 +154,41 @@ struct HotDealsView: View {
         }
     }
 
-    @ViewBuilder
+    /// 列表底部的下一页入口，按 `nextPageState` 显示按钮、转圈或重试。
+    /// The list footer for the next page, showing a button, a spinner, or a retry by `nextPageState`.
+    ///
+    /// 三种状态共用同一个最小高度，切换时下面的内容不会跳动。
+    /// All three states share one minimum height so the layout does not jump between them.
     private var nextPageFooter: some View {
-        Button("load More") {
-            Task {
-                await viewModel.loadNextPage(region: region)
+        Group {
+            switch viewModel.nextPageState {
+            case .idle:
+                Button("Load More") {
+                    loadNextPage()
+                }
+
+            case .loading:
+                ProgressView()
+                    .tint(.brandGreen)
+
+            // 列表保留，只在按钮里提示失败并重试 / The list stays; only the button reports the failure and retries
+            case .failed:
+                Button("Couldn't Load. Try Again", systemImage: "arrow.clockwise") {
+                    loadNextPage()
+                }
             }
         }
         .tint(.brandBlue)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 44)
         .padding(.vertical, 16)
+    }
+
+    /// 加载下一页，「Load More」与失败后的重试共用。
+    /// Loads the next page; shared by Load More and the retry after a failure.
+    private func loadNextPage() {
+        Task {
+            await viewModel.loadNextPage(region: region)
+        }
     }
 
     // MARK: - 收藏 / Favorite

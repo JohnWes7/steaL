@@ -105,8 +105,8 @@ final class HotDealsViewModel {
 
     // MARK: - loadNextPage
 
-    /// 加载下一页并拼到列表后面，由列表底部视图的 `.task(id: nextOffset)` 触发。
-    /// Loads the next page and appends it, triggered by the list footer's `.task(id: nextOffset)`.
+    /// 加载下一页并拼到列表后面，由列表底部的「Load More」/ 重试按钮触发。
+    /// Loads the next page and appends it, triggered by the list footer's Load More or retry button.
     ///
     /// 被取消（底部视图离开屏幕）回到 `.idle`，底部视图再出现会自动重新加载；只有请求失败才是 `.failed`。
     /// A cancellation (the footer left the screen) goes back to `.idle`, so the footer reloads when it reappears;
