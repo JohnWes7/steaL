@@ -52,7 +52,8 @@ final class WishlistService {
 
         let query = collection(for: uid).order(by: "addedAt", descending: true)
         do {
-            // Task 取消时序列结束，SDK 在 onTermination 里移除监听器 / Cancelling the task ends the sequence; the SDK removes the listener on termination
+            // 这个是类似于callback flow的冷流 看一次拿一次数据
+            // Task 取消时序列结束，会自动移除监听
             for try await snapshot in query.snapshots {
                 // 已经轮到下一个账号时，丢掉旧账号迟到的快照 / Drop a late snapshot from the old account once the next one has started
                 guard !Task.isCancelled else { return }
