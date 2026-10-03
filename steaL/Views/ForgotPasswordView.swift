@@ -50,55 +50,66 @@ struct ForgotPasswordView: View {
         return !trimmedEmail.isEmpty
     }
 
-    var body: some View {
-        // 不设导航栏标题，标题写在内容顶部，和登录页一致 / No bar title; the title sits in the content, matching the sign-in page
-        if didSend {
-            sentView
-        } else {
-            form
-        }
+    /// 主按钮能不能点：发送前要填了邮箱，发送后总能点。
+    /// Whether the main button is enabled: before sending it needs an email; after sending it always is.
+    private var isMainButtonEnabled: Bool {
+        didSend || canSend
     }
 
-    // MARK: - 表单 / Form
-
-    /// 说明 + 邮箱 + 发送按钮。
-    /// The explanation, email field and send button.
-    private var form: some View {
+    /// 发送前后是同一个 `Form`，只换头部文字、去掉邮箱框、换按钮文字，排版和主按钮样式不变。
+    /// Before and after sending share one `Form`: only the header text and button title change and the email field goes away, so the layout and main button style stay the same.
+    ///
+    /// 不用 `ContentUnavailableView` 显示发送结果：它是给内容不可用（空列表、无结果）用的，而且小胶囊按钮和登录页的整宽主按钮不一致。
+    /// The result doesn't use `ContentUnavailableView`: it's meant for unavailable content (empty lists, no results), and its small capsule button doesn't match the sign-in page's full-width button.
+    var body: some View {
+        // 不设导航栏标题，标题写在内容顶部，和登录页一致 / No bar title; the title sits in the content, matching the sign-in page
         Form {
-            header
+            if didSend {
+                // Firebase 开了邮箱枚举保护，没注册的邮箱也不报错，所以只能写「如果账号存在」 /
+                // Firebase's email enumeration protection doesn't fail for unregistered emails, so the copy can only say "if an account exists"
+                header(
+                    systemImage: "envelope",
+                    title: "Check Your Email",
+                    message: "If an account exists for \(email), you'll get an email with a link to reset your password. Check your spam folder too."
+                )
+            } else {
+                header(
+                    systemImage: "lock.rotation",
+                    title: "Reset Password",
+                    message: "Enter the email for your account and we'll send you a link to reset your password."
+                )
 
-            Section {
-                TextField("Email", text: $email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($isEmailFocused)
-                    .submitLabel(.send)
-                    .onSubmit { if canSend { send() } }
+                emailSection
             }
 
-            sendSection
+            mainButtonSection
         }
         .listSectionSpacing(.compact)
         .scrollDismissesKeyboard(.interactively)
         .onAppear { isEmailFocused = true }
     }
 
-    /// 图标、标题和一句说明。
-    /// The icon, title and one-line explanation.
-    private var header: some View {
+    // MARK: - 头部 / Header
+
+    /// 图标、标题和一句说明，排版同登录页。
+    /// The icon, title and one-line explanation, laid out like the sign-in page.
+    ///
+    /// - Parameters:
+    ///   - systemImage: SF Symbol 名字 / The SF Symbol name.
+    ///   - title: 大标题 / The large title.
+    ///   - message: 标题下面的说明 / The explanation under the title.
+    private func header(systemImage: String, title: LocalizedStringKey, message: LocalizedStringKey) -> some View {
         Section {
             VStack(spacing: 10) {
-                Image(systemName: "lock.rotation")
+                Image(systemName: systemImage)
                     .font(.system(.largeTitle, weight: .semibold))
                     .foregroundStyle(.brandGreen)
 
-                Text("Reset Password")
+                Text(title)
                     .font(.title.bold())
                     .foregroundStyle(.primaryText)
 
-                Text("Enter the email for your account and we'll send you a link to reset your password.")
+                Text(message)
                     .font(.subheadline)
                     .foregroundStyle(.secondaryText)
             }
@@ -108,44 +119,54 @@ struct ForgotPasswordView: View {
         }
     }
 
-    /// 发送按钮，样式同登录页的提交按钮。
-    /// The send button, styled like the sign-in page's submit button.
-    private var sendSection: some View {
+    // MARK: - 表单 / Form
+
+    /// 邮箱输入框，只在发送前显示。
+    /// The email field, shown only before sending.
+    private var emailSection: some View {
         Section {
-            Button(action: send) {
-                Text("Send Reset Link")
+            TextField("Email", text: $email)
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .focused($isEmailFocused)
+                .submitLabel(.send)
+                .onSubmit { if canSend { send() } }
+        }
+    }
+
+    /// 主按钮：发送前是「Send Reset Link」，发送后是「Back to Sign In」，样式同登录页的提交按钮。
+    /// The main button: "Send Reset Link" before sending and "Back to Sign In" after, styled like the sign-in page's submit button.
+    private var mainButtonSection: some View {
+        let title: LocalizedStringKey = didSend ? "Back to Sign In" : "Send Reset Link"
+        return Section {
+            Button(action: mainButtonTapped) {
+                Text(title)
                     .font(.headline)
-                    .foregroundStyle(canSend ? Color.onBrandGreen : Color.secondary)
+                    // `.onBrandGreen` 只配绿底，禁用时换回灰字 / `.onBrandGreen` only suits the green fill; grey text when disabled
+                    .foregroundStyle(isMainButtonEnabled ? Color.onBrandGreen : Color.secondary)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(!canSend)
+            .disabled(!isMainButtonEnabled)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
         }
     }
 
-    // MARK: - 已发送 / Sent
+    // MARK: - 发送 / Send
 
-    /// 发送后的说明，不说账号是否存在。
-    /// The result after sending, without revealing whether the account exists.
-    ///
-    /// Firebase 开了邮箱枚举保护，邮箱没注册也不报错，所以只能写「如果账号存在」。
-    /// Firebase's email enumeration protection doesn't fail for unregistered emails, so the copy can only say "if an account exists".
-    private var sentView: some View {
-        ContentUnavailableView {
-            Label("Check Your Email", systemImage: "envelope")
-        } description: {
-            Text("If an account exists for \(email), you'll get an email with a link to reset your password. Check your spam folder too.")
-        } actions: {
-            Button("Back to Sign In") { dismiss() }
-                .buttonStyle(.borderedProminent)
-                .foregroundStyle(Color.onBrandGreen)
+    /// 主按钮的动作：发送前发链接，发送后返回登录页。
+    /// The main button's action: sends the link before sending, returns to sign-in after.
+    private func mainButtonTapped() {
+        if didSend {
+            dismiss()
+        } else {
+            send()
         }
     }
-
-    // MARK: - 发送 / Send
 
     /// 发送重置链接（目前只切换到结果，没接 Firebase）。
     /// Sends the reset link (for now only switches to the result; not wired to Firebase).
@@ -173,6 +194,8 @@ struct ForgotPasswordView: View {
         .sheet(isPresented: .constant(true)) {
             NavigationStack {
                 ForgotPasswordView(email: "player@example.com", didSend: true)
+                    // 换个身份，切换预览时 `@State` 才会用新的初始值 / A distinct identity so `@State` takes the new seed when switching previews
+                    .id("sent")
             }
             .tint(.brandGreen)
         }
