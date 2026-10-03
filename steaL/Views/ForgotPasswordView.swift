@@ -50,14 +50,8 @@ struct ForgotPasswordView: View {
         return !trimmedEmail.isEmpty
     }
 
-    /// 主按钮能不能点：发送前要填了邮箱，发送后总能点。
-    /// Whether the main button is enabled: before sending it needs an email; after sending it always is.
-    private var isMainButtonEnabled: Bool {
-        didSend || canSend
-    }
-
-    /// 发送前后是同一个 `Form`，只换头部文字、去掉邮箱框、换按钮文字，排版和主按钮样式不变。
-    /// Before and after sending share one `Form`: only the header text and button title change and the email field goes away, so the layout and main button style stay the same.
+    /// 发送前后是同一个 `Form`，只换头部文字、邮箱框和主按钮，排版和主按钮样式不变。
+    /// Before and after sending share one `Form`: only the header text, email field and main button change, so the layout and main button style stay the same.
     ///
     /// 不用 `ContentUnavailableView` 显示发送结果：它是给内容不可用（空列表、无结果）用的，而且小胶囊按钮和登录页的整宽主按钮不一致。
     /// The result doesn't use `ContentUnavailableView`: it's meant for unavailable content (empty lists, no results), and its small capsule button doesn't match the sign-in page's full-width button.
@@ -72,6 +66,10 @@ struct ForgotPasswordView: View {
                     title: "Check Your Email",
                     message: "If an account exists for \(email), you'll get an email with a link to reset your password. Check your spam folder too."
                 )
+
+                mainButton("Back to Sign In", isEnabled: true) {
+                    dismiss()
+                }
             } else {
                 header(
                     systemImage: "lock.rotation",
@@ -80,9 +78,9 @@ struct ForgotPasswordView: View {
                 )
 
                 emailSection
-            }
 
-            mainButtonSection
+                mainButton("Send Reset Link", isEnabled: canSend, action: send)
+            }
         }
         .listSectionSpacing(.compact)
         .scrollDismissesKeyboard(.interactively)
@@ -136,37 +134,31 @@ struct ForgotPasswordView: View {
         }
     }
 
-    /// 主按钮：发送前是「Send Reset Link」，发送后是「Back to Sign In」，样式同登录页的提交按钮。
-    /// The main button: "Send Reset Link" before sending and "Back to Sign In" after, styled like the sign-in page's submit button.
-    private var mainButtonSection: some View {
-        let title: LocalizedStringKey = didSend ? "Back to Sign In" : "Send Reset Link"
-        return Section {
-            Button(action: mainButtonTapped) {
+    /// 整宽的主按钮，样式同登录页的提交按钮。
+    /// A full-width main button, styled like the sign-in page's submit button.
+    ///
+    /// - Parameters:
+    ///   - title: 按钮文字 / The button title.
+    ///   - isEnabled: 能不能点 / Whether the button can be tapped.
+    ///   - action: 点了做什么 / What tapping does.
+    private func mainButton(_ title: LocalizedStringKey, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+        Section {
+            Button(action: action) {
                 Text(title)
                     .font(.headline)
                     // `.onBrandGreen` 只配绿底，禁用时换回灰字 / `.onBrandGreen` only suits the green fill; grey text when disabled
-                    .foregroundStyle(isMainButtonEnabled ? Color.onBrandGreen : Color.secondary)
+                    .foregroundStyle(isEnabled ? Color.onBrandGreen : Color.secondary)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(!isMainButtonEnabled)
+            .disabled(!isEnabled)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
         }
     }
 
     // MARK: - 发送 / Send
-
-    /// 主按钮的动作：发送前发链接，发送后返回登录页。
-    /// The main button's action: sends the link before sending, returns to sign-in after.
-    private func mainButtonTapped() {
-        if didSend {
-            dismiss()
-        } else {
-            send()
-        }
-    }
 
     /// 发送重置链接（目前只切换到结果，没接 Firebase）。
     /// Sends the reset link (for now only switches to the result; not wired to Firebase).
