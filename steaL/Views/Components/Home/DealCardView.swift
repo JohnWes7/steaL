@@ -204,11 +204,6 @@ struct DealCardView: View {
         priceRowContent
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .overlay(Color.appBackground.opacity(0.4))  // 想更暗就调大
-            }
     }
 
     /// 价格行的内容：平时左价格右商店；辅助功能档位下标题、价格、商店从上到下排。
@@ -286,7 +281,7 @@ struct DealCardView: View {
             .lineLimit(1)
             .padding(.horizontal, 13)
             .padding(.vertical, 8)
-            .background(Color.white.opacity(0.08), in: Capsule())
+            .background(.fill.tertiary, in: Capsule())
     }
 
     // MARK: - 派生数据 / Derived values
