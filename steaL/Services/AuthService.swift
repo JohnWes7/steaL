@@ -101,6 +101,27 @@ final class AuthService {
         try auth.signOut()
     }
 
+    // MARK: - 重置密码 / Password reset
+
+    /// 给邮箱发重置密码的链接。
+    /// Sends a password reset link to the email.
+    ///
+    /// 用户点链接后在 Firebase 托管的网页上设新密码，App 里不用做设新密码的页面。邮箱枚举保护开着时，没注册的邮箱也不报错、只是不发邮件。
+    /// The user sets the new password on a Firebase-hosted page from the link, so the app needs no page for it. With email enumeration protection on, an unregistered email doesn't fail; no email is sent.
+    ///
+    /// - Parameter email: 用户填的邮箱 / The email the user entered.
+    /// - Throws: 邮箱为空时抛 `AuthError.missingFields`，其余是 Firebase 的错误 / `AuthError.missingFields` when empty; Firebase errors otherwise.
+    func sendPasswordReset(email: String) async throws {
+        let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 按钮在 UI 上已禁用，这里只是兜底 / The UI disables the button; this is only a fallback
+        guard !cleanEmail.isEmpty else {
+            throw AuthError.missingFields
+        }
+
+        try await auth.sendPasswordReset(withEmail: cleanEmail)
+    }
+
     // MARK: - 删除账号 / Account deletion
 
     // Firebase 只允许「最近登录过」的用户删号，否则报 `requiresRecentLogin`；删之前总是先重新验证一次 /

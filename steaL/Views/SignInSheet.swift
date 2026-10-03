@@ -149,7 +149,15 @@ struct SignInSheet: View {
                 .onSubmit { if canSubmit { submit() } }
                 
         } footer: {
-            if mode == .createAccount {
+            switch mode {
+            case .signIn:
+                // 在 sheet 里推一层，不另开 sheet（HIG：同一时间只显示一个 sheet）/ Push inside the sheet instead of another sheet (HIG: one sheet at a time)
+                NavigationLink("Forgot Password?") {
+                    ForgotPasswordView(email: email)
+                }
+                .font(.footnote)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            case .createAccount:
                 Text("Password must be at least 6 characters.")
             }
         }
