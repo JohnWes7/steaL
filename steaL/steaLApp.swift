@@ -78,6 +78,11 @@ struct steaLApp: App {
         // TipKit 要在任何提示显示前配置一次；多个提示时每天最多弹一个。
         // TipKit must be configured once before any tip shows; with several tips, at most one appears a day.
         do {
+            #if DEBUG
+            // 调试时每次启动都清空提示记录，失效过的提示能再显示；必须在 configure 之前调用。
+            // In debug builds, clears tip records on every launch so invalidated tips show again; must run before configure.
+            try Tips.resetDatastore()
+            #endif
             try Tips.configure([.displayFrequency(.daily)])
         } catch {
             Logger.settings.error("TipKit 配置失败 / TipKit configuration failed: \(String(describing: error))")

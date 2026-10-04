@@ -125,8 +125,11 @@ struct DealCardView: View {
             Spacer(minLength: 0)
             favoriteButton
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 14)
+        // 心形的 44 pt 可点框比图标大一圈，右、上少留边，看得见的位置和原来一样 /
+        // The heart's 44 pt hit frame is larger than the glyph, so less inset on the trailing and top edges keeps it where it was
+        .padding(.leading, 14)
+        .padding(.trailing, 5)
+        .padding(.top, 5)
     }
 
     /// 折扣徽标。直接使用 API 的 `cut`，不做本地重算，避免与服务端舍入不一致 /
@@ -151,6 +154,10 @@ struct DealCardView: View {
                 .font(.system(.title2, weight: .semibold))
                 .foregroundStyle(isFavorite ? Color.pink : Color.white)
                 .shadow(color: .black.opacity(0.45), radius: 5, y: 1)
+                // 图标只有约 26 pt，可点范围撑到 44 pt，免得点偏进了详情页 /
+                // The glyph is only about 26 pt; widen the hit area to 44 pt so a near-miss doesn't open the detail page
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
         // 变暗而不是隐藏（HIG：不可用的项目保持可见）/ Dimmed rather than hidden (HIG: keep unavailable items visible)
