@@ -132,18 +132,17 @@ struct WishlistView: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                // 默认可以整行划到底直接移除，和「邮件」一致 / Full swipe removes by default, as in Mail
-                .swipeActions(edge: .trailing) {
-                    Button("Remove", systemImage: "trash", role: .destructive) {
-                        remove(item)
-                    }
-                    .tint(.red)
-                }
                 .contextMenu {
                     Button("Remove from Wishlist", systemImage: "trash", role: .destructive) {
                         remove(item)
                     }
                     .tint(.red)
+                }
+            }
+            .onDelete { offsets in
+                let removedItems = offsets.map { index in visibleItems[index] }
+                for item in removedItems {
+                    remove(item)
                 }
             }
         }
