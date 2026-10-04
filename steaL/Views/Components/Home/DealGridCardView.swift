@@ -119,7 +119,7 @@ struct DealGridCardView: View {
     /// 折扣徽标与收藏按钮。徽标颜色和位置与 hero 卡保持一致 /
     /// Discount badge and favourite button, matching the hero card's colour and corner
     private var topBar: some View {
-        HStack(alignment: .top) {
+        HStack {
             discountBadge
             Spacer(minLength: 0)
             favoriteButton

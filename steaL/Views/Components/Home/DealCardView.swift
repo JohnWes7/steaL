@@ -120,7 +120,7 @@ struct DealCardView: View {
 
     /// 图片顶部的折扣徽标与收藏按钮 / Discount badge and favourite button across the top of the artwork
     private var topBar: some View {
-        HStack(alignment: .top) {
+        HStack {
             discountBadge
             Spacer(minLength: 0)
             favoriteButton
