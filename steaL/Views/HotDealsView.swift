@@ -141,6 +141,9 @@ struct HotDealsView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .onAppear {
+                            loadNextPageIfNeeded(appearing: item, in: items)
+                        }
                     }
                 }
 
@@ -183,8 +186,29 @@ struct HotDealsView: View {
         .padding(.vertical, 16)
     }
 
-    /// 加载下一页，「Load More」与失败后的重试共用。
-    /// Loads the next page; shared by Load More and the retry after a failure.
+    /// 倒数第 6 张卡出现时自动加载下一页。
+    /// Loads the next page automatically when the sixth-from-last card appears.
+    ///
+    /// - Parameters:
+    ///   - item: 刚出现的卡片 / The card that just appeared.
+    ///   - items: 当前的完整列表 / The current full list.
+    private func loadNextPageIfNeeded(appearing item: HomeDealItem, in items: [HomeDealItem]) {
+        // 加载中不重复请求；失败后不自动重试，等用户点底部的重试按钮 /
+        // No duplicate request while loading; after a failure, wait for the footer's retry button instead of retrying automatically
+        if viewModel.nextPageState != .idle { return }
+
+        let triggerIndex = max(items.count - 6, 0)
+        let triggerItem = items[triggerIndex]
+        guard item.id == triggerItem.id else { return }
+
+        loadNextPage()
+    }
+
+    /// 加载下一页，自动加载、「Load More」与失败后的重试共用。
+    /// Loads the next page; shared by the automatic load, Load More, and the retry after a failure.
+    ///
+    /// 用不跟视图绑定的 `Task`：触发的卡片滑出屏幕时请求不会被取消。
+    /// Uses a `Task` not tied to a view, so the request survives the trigger card leaving the screen.
     private func loadNextPage() {
         Task {
             await viewModel.loadNextPage(region: region)

@@ -150,13 +150,10 @@ struct DealGridCardView: View {
                 .font(.system(.body, weight: .semibold))
                 .foregroundStyle(isFavorite ? Color.pink : Color.white)
                 .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
-                // 图标只有约 20 pt，可点范围撑到 44 pt，免得点偏进了详情页 /
-                // The glyph is only about 20 pt; widen the hit area to 44 pt so a near-miss doesn't open the detail page
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        // 变暗而不是隐藏（HIG：不可用的项目保持可见）/ Dimmed rather than hidden (HIG: keep unavailable items visible)
         .disabled(!isFavoriteEnabled)
         .opacity(isFavoriteEnabled ? 1 : 0.4)
         .accessibilityLabel(isFavorite ? "Remove from favourites" : "Add to favourites")
