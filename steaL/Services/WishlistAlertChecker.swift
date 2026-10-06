@@ -140,9 +140,6 @@ enum WishlistAlertChecker {
     /// 发一条降价通知，如「ELDEN RING is now A$39.95 (-50%)」。
     /// Sends a price-drop notification, such as "ELDEN RING is now A$39.95 (-50%)".
     ///
-    /// identifier 固定是 `price-<appID>`，同一个游戏的新通知替换旧的。
-    /// The identifier is always `price-<appID>`, so a newer notification for the same game replaces the old one.
-    ///
     /// - Parameters:
     ///   - item: 降价的收藏 / The wishlist item on sale.
     ///   - deal: 这次查到的报价 / The offer just fetched.
@@ -203,9 +200,6 @@ enum WishlistAlertChecker {
     /// 向 Steam 核对还没发售的游戏，发售了就发通知并回写 `isComingSoon = false`。
     /// Checks unreleased games with Steam, notifying and writing back `isComingSoon = false` once released.
     ///
-    /// 只看 `isComingSoon == true` 的行：Wishlist 页先核对到的已经是 `false`，不再提醒。
-    /// Only items with `isComingSoon == true`; ones the wishlist page already found released are `false` and get no alert.
-    ///
     /// - Parameters:
     ///   - items: 当前账号的收藏 / The account's wishlist items.
     ///   - uid: 当前账号 / The current account.
@@ -217,9 +211,38 @@ enum WishlistAlertChecker {
         region: AppRegion,
         wishlistService: WishlistService
     ) async {
-        // TODO: 5a. 只留 isComingSoon == true 的行
-        // TODO: 5b. 每一行 SteamAPI.fetchAppDetails(appID:region:)，失败或查不到就跳过这一行
-        // TODO: 5c. details.isComingSoon == false → 发通知 + wishlistService.updateReleaseStatus(...)
+        // 5a. 只留还没发售的行；nil（不知道）交给 Wishlist 页核对
+        // 5a. Keep only unreleased items; nil (unknown) is left to the wishlist page
+        let upcomingItems = items.filter { item in item.isComingSoon == true }
+
+        for item in upcomingItems {
+            // 5b. 逐个问 Steam；失败或查不到（下架）只跳过这一行
+            // 5b. Ask Steam one by one; a failure or a miss (delisted) only skips this item
+            let details: SteamAppDetails?
+            do {
+                details = try await SteamAPI.fetchAppDetails(appID: item.appID, region: region)
+            } catch {
+                Logger.wishlist.error("alert check: release check failed / failed: \(String(describing: error))")
+                continue
+            }
+            guard let details else { continue }
+
+            // 5c. 还没发售就不动；发售了就通知并回写，Wishlist 页和下次检查都不会再提醒
+            // 5c. Still unreleased: leave it; released: notify and write back, so neither the page nor the next check alerts again
+            guard !details.isComingSoon else { continue }
+
+            await sendReleaseNotification(item: item)
+            wishlistService.updateReleaseStatus(isComingSoon: false, appID: item.appID, uid: uid)
+        }
+    }
+
+    /// 发一条发售通知，如「ELDEN RING is out now」。
+    /// Sends a release notification, such as "ELDEN RING is out now".
+    ///
+    /// - Parameter item: 刚发售的收藏 / The wishlist item that just released.
+    private static func sendReleaseNotification(item: WishlistItem) async {
+        let body = "\(item.name) is out now"
+        await sendNotification(identifier: "release-\(item.appID)", title: "Now Available", body: body)
     }
 
     // MARK: - 通知 / Notifications
