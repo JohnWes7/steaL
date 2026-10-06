@@ -95,9 +95,61 @@ enum WishlistAlertChecker {
         region: AppRegion,
         wishlistService: WishlistService
     ) async {
-        // TODO: 4a. 只留 itadID 不为空的行
-        // TODO: 4b. ITADAPI.fetchPrices(uuids:region:) 查价，失败记日志后 return
-        // TODO: 4c. 每一行：response.entry(for:) → bestSteamDeal → priceDropAction(...) → 按结果发通知 / 回写
+        // 4a. 只留 itadID 不为空的行，没有就不发请求
+        // 4a. Keep only items with an itadID; send no request when there are none
+        let itemsWithItadID = items.filter { item in item.itadID != nil }
+        let uuids = itemsWithItadID.compactMap { item in item.itadID }
+        guard !uuids.isEmpty else { return }
+
+        // 4b. 一次查完；`prices/v3` 一批最多 200 个，wishlist 用不到，不分批
+        // 4b. One request; `prices/v3` takes up to 200 per batch, more than a wishlist needs, so no batching
+        let prices: ITADPricesResponse
+        do {
+            prices = try await ITADAPI.fetchPrices(uuids: uuids, region: region)
+        } catch {
+            Logger.wishlist.error("alert check: prices failed / failed: \(String(describing: error))")
+            return
+        }
+
+        // 4c. 逐行判断；一行出问题只跳过这一行
+        // 4c. Check each item; a problem with one item only skips that item
+        for item in itemsWithItadID {
+            guard let itadID = item.itadID else { continue }
+            // 稀疏数组：没有条目或没有 Steam 能激活的报价就跳过
+            // Sparse response: skip when there is no entry or no Steam-activating offer
+            guard let game = prices.entry(for: itadID) else { continue }
+            guard let deal = game.bestSteamDeal else { continue }
+
+            let action = priceDropAction(item: item, deal: deal, region: region)
+            switch action {
+            case .notify(let knownLow):
+                await sendPriceDropNotification(item: item, deal: deal)
+                do {
+                    try wishlistService.updateKnownLow(knownLow, appID: item.appID, uid: uid)
+                } catch {
+                    Logger.wishlist.error("alert check: save knownLow failed / failed: \(String(describing: error))")
+                }
+            case .clear:
+                wishlistService.clearKnownLow(appID: item.appID, uid: uid)
+            case .keep:
+                break
+            }
+        }
+    }
+
+    /// 发一条降价通知，如「ELDEN RING is now A$39.95 (-50%)」。
+    /// Sends a price-drop notification, such as "ELDEN RING is now A$39.95 (-50%)".
+    ///
+    /// identifier 固定是 `price-<appID>`，同一个游戏的新通知替换旧的。
+    /// The identifier is always `price-<appID>`, so a newer notification for the same game replaces the old one.
+    ///
+    /// - Parameters:
+    ///   - item: 降价的收藏 / The wishlist item on sale.
+    ///   - deal: 这次查到的报价 / The offer just fetched.
+    private static func sendPriceDropNotification(item: WishlistItem, deal: ITADPriceDeal) async {
+        let formattedPrice = deal.price.amount.formatted(.currency(code: deal.price.currency))
+        let body = "\(item.name) is now \(formattedPrice) (-\(deal.cut)%)"
+        await sendNotification(identifier: "price-\(item.appID)", title: "Price Drop", body: body)
     }
 
     /// 只看数据，决定这一行要不要发降价通知。
