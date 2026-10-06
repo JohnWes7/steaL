@@ -132,6 +132,20 @@ final class GameDetailViewModel {
         return initialTitle
     }
 
+    /// 比价里能在 Steam 激活的最低报价；比价还没到手、没收录或失败时是 nil。
+    /// The cheapest Steam-activating offer among the prices; nil while they load, when missing, or after a failure.
+    ///
+    /// 收藏时用来记录用户已经看到的折扣价。
+    /// Used when saving to record the sale price the user has already seen.
+    var bestSteamDeal: ITADPriceDeal? {
+        switch pricesState {
+        case .loaded(let prices), .loadedWithoutHistory(let prices):
+            return prices.bestSteamDeal
+        case .hidden, .loading, .notFound, .failed:
+            return nil
+        }
+    }
+
     /// AI 购买建议的输入；拼不出来是 `nil`，详情页据此决定显不显示 AI 入口 /
     /// The AI purchase advice input; `nil` when it cannot be built, which also hides the AI entry
     ///

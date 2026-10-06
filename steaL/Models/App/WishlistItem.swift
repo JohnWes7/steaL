@@ -45,13 +45,15 @@ struct WishlistItem: Codable, Identifiable {
     /// The wishlist page rechecks at most once a day.
     let releaseCheckedAt: Date?
 
-    /// 上次发降价通知时的价格；nil 表示没通知过，或回到原价后被清空。
-    /// The price at the last price-drop notification; nil means never notified, or cleared after returning to full price.
+    /// 用户已经知道的最低价：收藏时看到的折扣价，或上次降价通知的价格；nil 表示不知道，或回到原价后被清空。
+    /// The lowest price the user already knows about: the sale price seen when saving, or the last price-drop notification;
+    /// nil means none, or cleared after returning to full price.
     ///
-    /// 价格和地区放在一个结构体里，Firestore 里是同一个 map 字段，要么都有、要么都没有。只由提醒检查写入。
-    /// The price and its region share one struct, stored as a single Firestore map field, so they are either both present or both absent.
-    /// Only the alert check writes it.
-    let lastNotifiedLow: NotifiedPrice?
+    /// 降价提醒只在价格低于它时发，用户刚看过的折扣不会再推一次。价格和地区放在一个结构体里，
+    /// Firestore 里是同一个 map 字段，要么都有、要么都没有。
+    /// A price-drop alert fires only below it, so a sale the user just saw isn't pushed again. The price and its region share one struct,
+    /// stored as a single Firestore map field, so they are either both present or both absent.
+    let knownLow: KnownPrice?
 
     /// 加入时间，写入时由服务器填；服务器还没确认的本地快照里是 nil。
     /// When it was added, filled in by the server on write; nil in the local snapshot until the server confirms.
@@ -67,12 +69,12 @@ struct WishlistItem: Codable, Identifiable {
 
 extension WishlistItem {
 
-    /// 一次降价通知时的价格，连同它所在的地区。
-    /// A notified price together with its region.
+    /// 用户已经知道的一个价格，连同它所在的地区。
+    /// A price the user already knows about, together with its region.
     ///
     /// 不同地区的货币不同，换了地区，旧价格就不能拿来比。
     /// Regions use different currencies, so an old price can't be compared once the region changes.
-    struct NotifiedPrice: Codable, Equatable {
+    struct KnownPrice: Codable, Equatable {
 
         /// 以最小货币单位表示的价格，同 `ITADPrice.amountInt`。
         /// The price in the smallest currency unit, as in `ITADPrice.amountInt`.
@@ -81,5 +83,26 @@ extension WishlistItem {
         /// 查到这个价格时的地区。
         /// The region the price was fetched for.
         let region: AppRegion
+    }
+}
+
+extension WishlistItem.KnownPrice {
+
+    /// 收藏时用：在打折就记下现价，没打折返回 nil。
+    /// For saving: records the current price when on sale, or returns nil when not.
+    ///
+    /// 写在扩展里，保留成员初始化器。
+    /// Declared in an extension so the memberwise initializer stays.
+    ///
+    /// - Parameters:
+    ///   - price: 现价 / The current price.
+    ///   - cut: 折扣百分比，0 表示没打折 / The discount percentage; 0 means not on sale.
+    ///   - region: 价格所在的地区 / The region the price belongs to.
+    init?(price: ITADPrice, cut: Int, region: AppRegion) {
+        guard cut > 0 else {
+            return nil
+        }
+        self.amount = price.amountInt
+        self.region = region
     }
 }

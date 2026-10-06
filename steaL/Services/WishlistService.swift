@@ -164,25 +164,25 @@ final class WishlistService {
         collection(for: uid).document(String(appID)).updateData(["itadID": itadID])
     }
 
-    /// 记下这次发降价通知时的价格。
-    /// Records the price this price-drop notification was sent at.
+    /// 记下用户已经知道的最低价，如这次降价通知的价格。
+    /// Records the lowest price the user already knows about, such as the price this price-drop notification was sent at.
     ///
-    /// 用 `Firestore.Encoder` 编码，map 里的键和 `NotifiedPrice` 的 Codable 键保持一致，不手写。
-    /// Encoded with `Firestore.Encoder` so the map keys match `NotifiedPrice`'s Codable keys instead of being written by hand.
+    /// 用 `Firestore.Encoder` 编码，map 里的键和 `KnownPrice` 的 Codable 键保持一致，不手写。
+    /// Encoded with `Firestore.Encoder` so the map keys match `KnownPrice`'s Codable keys instead of being written by hand.
     ///
     /// - Parameters:
-    ///   - notifiedPrice: 通知时的价格与地区 / The price and region at notification time.
+    ///   - knownLow: 价格与地区 / The price and its region.
     ///   - appID: Steam App ID / Steam App ID.
     ///   - uid: 当前账号 / The current account.
     /// - Throws: 编码失败时抛出，固定结构的模型不会发生 / Throws on an encoding failure, which this fixed model never hits.
-    func updateLastNotifiedLow(_ notifiedPrice: WishlistItem.NotifiedPrice, appID: Int, uid: String) throws {
-        let encodedPrice = try Firestore.Encoder().encode(notifiedPrice)
-        let fields: [String: Any] = ["lastNotifiedLow": encodedPrice]
+    func updateKnownLow(_ knownLow: WishlistItem.KnownPrice, appID: Int, uid: String) throws {
+        let encodedPrice = try Firestore.Encoder().encode(knownLow)
+        let fields: [String: Any] = ["knownLow": encodedPrice]
         collection(for: uid).document(String(appID)).updateData(fields)
     }
 
-    /// 清掉上次通知的价格，下次打折还能再提醒。
-    /// Clears the last notified price so the next sale can alert again.
+    /// 清掉已知的最低价，下次打折还能再提醒。
+    /// Clears the known low so the next sale can alert again.
     ///
     /// 删掉字段而不是写 `null`，解码时同样是 nil。
     /// Deletes the field rather than writing `null`; it decodes as nil either way.
@@ -190,8 +190,8 @@ final class WishlistService {
     /// - Parameters:
     ///   - appID: Steam App ID / Steam App ID.
     ///   - uid: 当前账号 / The current account.
-    func clearLastNotifiedLow(appID: Int, uid: String) {
-        let fields: [String: Any] = ["lastNotifiedLow": FieldValue.delete()]
+    func clearKnownLow(appID: Int, uid: String) {
+        let fields: [String: Any] = ["knownLow": FieldValue.delete()]
         collection(for: uid).document(String(appID)).updateData(fields)
     }
 

@@ -21,7 +21,7 @@ extension WishlistItem {
             itadID: nil,
             isComingSoon: false,
             releaseCheckedAt: nil,
-            lastNotifiedLow: nil,
+            knownLow: nil,
             addedAt: .now
         ),
         WishlistItem(
@@ -31,7 +31,7 @@ extension WishlistItem {
             itadID: nil,
             isComingSoon: false,
             releaseCheckedAt: nil,
-            lastNotifiedLow: nil,
+            knownLow: nil,
             addedAt: .now.addingTimeInterval(-86_400)
         ),
         WishlistItem(
@@ -41,7 +41,7 @@ extension WishlistItem {
             itadID: nil,
             isComingSoon: false,
             releaseCheckedAt: nil,
-            lastNotifiedLow: nil,
+            knownLow: nil,
             addedAt: .now.addingTimeInterval(-86_400 * 12)
         ),
         WishlistItem(
@@ -51,7 +51,7 @@ extension WishlistItem {
             itadID: nil,
             isComingSoon: false,
             releaseCheckedAt: nil,
-            lastNotifiedLow: nil,
+            knownLow: nil,
             addedAt: .now.addingTimeInterval(-86_400 * 400)
         ),
         WishlistItem(
@@ -61,7 +61,7 @@ extension WishlistItem {
             itadID: nil,
             isComingSoon: true,
             releaseCheckedAt: nil,
-            lastNotifiedLow: nil,
+            knownLow: nil,
             addedAt: nil
         ),
     ]

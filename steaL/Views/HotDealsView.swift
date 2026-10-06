@@ -239,6 +239,11 @@ struct HotDealsView: View {
             return
         }
 
+        // 用户正看着这个折扣，记成已知低价，提醒就不会再推同一次打折
+        // The user is looking at this sale, so it becomes the known low and the alert won't push the same sale again
+        let dealInfo = item.deal.deal
+        let knownLow = WishlistItem.KnownPrice(price: dealInfo.price, cut: dealInfo.cut, region: region)
+
         let wishlistItem = WishlistItem(
             appID: appID,
             name: item.deal.title,
@@ -246,7 +251,7 @@ struct HotDealsView: View {
             itadID: item.deal.id,
             isComingSoon: nil,
             releaseCheckedAt: nil,
-            lastNotifiedLow: nil,
+            knownLow: knownLow,
         )
 
         try? wishlistService.add(wishlistItem, uid: uid)

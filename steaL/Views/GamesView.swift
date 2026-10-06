@@ -154,6 +154,10 @@ struct GamesView: View {
         if wishlistService.contains(appID: appID) {
             wishlistService.remove(appID: appID, uid: uid)
         } else {
+            // 用户正看着这个折扣，记成已知低价，提醒就不会再推同一次打折
+            // The user is looking at this sale, so it becomes the known low and the alert won't push the same sale again
+            let dealInfo = item.deal.deal
+            let knownLow = WishlistItem.KnownPrice(price: dealInfo.price, cut: dealInfo.cut, region: region)
             let wishlistItem = WishlistItem(
                 appID: appID,
                 name: item.deal.title,
@@ -164,7 +168,7 @@ struct GamesView: View {
                 // The home page only has ITAD's deal, not Steam's release status; the wishlist page checks and writes it back
                 isComingSoon: nil,
                 releaseCheckedAt: nil,
-                lastNotifiedLow: nil
+                knownLow: knownLow
             )
             // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /
             // Only encoding errors can throw, which this fixed model never hits; server rejections are rolled back by the listener

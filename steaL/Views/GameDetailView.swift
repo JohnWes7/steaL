@@ -297,6 +297,13 @@ struct GameDetailView: View {
         if wishlistService.contains(appID: appID) {
             wishlistService.remove(appID: appID, uid: uid)
         } else {
+            // 比价已经到手、Steam 能激活的最低价在打折，就记成已知低价；还在查或没有就算了
+            // When prices are in and the best Steam deal is on sale, it becomes the known low; otherwise skip it
+            let bestDeal = gameDetailViewModel.bestSteamDeal
+            var knownLow: WishlistItem.KnownPrice?
+            if let bestDeal {
+                knownLow = WishlistItem.KnownPrice(price: bestDeal.price, cut: bestDeal.cut, region: region)
+            }
             let wishlistItem = WishlistItem(
                 appID: appID,
                 // `title` 已经优先用 Steam 的名字，缺了才用路由带来的 / `title` prefers Steam's name, falling back to the route's
@@ -309,7 +316,7 @@ struct GameDetailView: View {
                 isComingSoon: details.isComingSoon,
                 // 刚拿到 Steam 详情，等于刚核对过 / Steam details just arrived, so this counts as a fresh check
                 releaseCheckedAt: .now,
-                lastNotifiedLow: nil
+                knownLow: knownLow
             )
             // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /
             // Only encoding errors can throw, which this fixed model never hits; server rejections are rolled back by the listener
