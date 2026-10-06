@@ -36,27 +36,27 @@ enum WishlistAlertChecker {
         wishlistService: WishlistService
     ) async {
         // 第 1 步：两个开关都关着就 return
-        if !notifyPriceDrops && !notifyReleases { return }
+        guard notifyPriceDrops || notifyReleases else { return }
 
-        // TODO: 第 2 步：没有通知权限就 return（调 isAuthorized()）
+        // 第 2 步：没有通知权限就 return
         let isAllowed = await isAuthorized()
         guard isAllowed else { return }
 
-        // TODO: 第 3 步：wishlistService.fetchItems(uid:) 读一次 wishlist，失败记日志后 return
-        var items: [WishlistItem] = []
+        // 第 3 步：读一次 wishlist，失败记日志后 return
+        let items: [WishlistItem]
         do {
             items = try await wishlistService.fetchItems(uid: uid)
         } catch {
-            Logger.wishlist.error("Failed to fetch wishlist items for uid \(uid, privacy: .private): \(error.localizedDescription, privacy: .public)")
+            Logger.wishlist.error("alert check: fetch wishlist for \(uid, privacy: .private) failed / failed: \(String(describing: error))")
             return
         }
-        
-        // TODO: 第 4 步：开了降价通知就 await checkPriceDrops(...)
+
+        // 第 4 步：开了降价通知就查降价
         if notifyPriceDrops {
             await checkPriceDrops(items: items, uid: uid, region: region, wishlistService: wishlistService)
         }
 
-        // TODO: 第 5 步：开了发售通知就 await checkReleases(...)
+        // 第 5 步：开了发售通知就查发售
         if notifyReleases {
             await checkReleases(items: items, uid: uid, region: region, wishlistService: wishlistService)
         }
@@ -113,7 +113,36 @@ enum WishlistAlertChecker {
         deal: ITADPriceDeal,
         region: AppRegion
     ) -> PriceDropAction {
-        // TODO: 第 4 步的核心判断，见讲解
+        // 没打折：有旧记录就清掉（包括别的地区留下的），下次打折还能提醒
+        // Not on sale: clear any known low (including one from another region) so the next sale can alert again
+        if deal.cut == 0 {
+            if item.knownLow != nil {
+                return .clear
+            }
+            return .keep
+        }
+
+        // 已知低价只在同一个地区才能比，别的地区当作没有
+        // A known low is comparable only within the same region; another region's counts as none
+        var lastAmount: Int?
+        if let knownLow = item.knownLow, knownLow.region == region {
+            lastAmount = knownLow.amount
+        }
+
+        let currentAmount = deal.price.amountInt
+        let newKnownLow = WishlistItem.KnownPrice(amount: currentAmount, region: region)
+
+        // 在打折、又没有已知低价：用户还不知道这次打折
+        // On sale with no known low: the user hasn't heard about this sale
+        guard let lastAmount else {
+            return .notify(newKnownLow)
+        }
+
+        // 比已知低价更低才提醒，持平或回涨都不打扰
+        // Alert only below the known low; equal or higher stays quiet
+        if currentAmount < lastAmount {
+            return .notify(newKnownLow)
+        }
         return .keep
     }
 
@@ -176,13 +205,15 @@ enum WishlistAlertChecker {
         let request = UNNotificationRequest(
             identifier: identifier,
             content: content,
-            trigger: nil // 立即发 / Send right away
+            // 立即发
+            // Send right away
+            trigger: nil
         )
 
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            Logger.wishlist.error("Failed to send notification \(identifier, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            Logger.wishlist.error("send notification \(identifier, privacy: .public) failed / failed: \(String(describing: error))")
         }
     }
 }
