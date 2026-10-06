@@ -308,7 +308,8 @@ struct GameDetailView: View {
                 // Not `gameKind == .unreleased`: an unreleased demo counts as `.demo`, not `.unreleased`; the wishlist check uses `isComingSoon` too
                 isComingSoon: details.isComingSoon,
                 // 刚拿到 Steam 详情，等于刚核对过 / Steam details just arrived, so this counts as a fresh check
-                releaseCheckedAt: .now
+                releaseCheckedAt: .now,
+                lastNotifiedLow: nil
             )
             // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /
             // Only encoding errors can throw, which this fixed model never hits; server rejections are rolled back by the listener

@@ -163,7 +163,8 @@ struct GamesView: View {
                 // 首页只有 ITAD 的 deal，拿不到 Steam 的发售状态；Wishlist 页会核对后回写 /
                 // The home page only has ITAD's deal, not Steam's release status; the wishlist page checks and writes it back
                 isComingSoon: nil,
-                releaseCheckedAt: nil
+                releaseCheckedAt: nil,
+                lastNotifiedLow: nil
             )
             // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /
             // Only encoding errors can throw, which this fixed model never hits; server rejections are rolled back by the listener

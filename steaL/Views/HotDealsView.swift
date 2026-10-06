@@ -246,6 +246,7 @@ struct HotDealsView: View {
             itadID: item.deal.id,
             isComingSoon: nil,
             releaseCheckedAt: nil,
+            lastNotifiedLow: nil,
         )
 
         try? wishlistService.add(wishlistItem, uid: uid)
