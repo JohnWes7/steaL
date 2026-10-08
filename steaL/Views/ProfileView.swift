@@ -9,6 +9,7 @@ import FirebaseCore
 import OSLog
 import SwiftData
 import SwiftUI
+import UserNotifications
 
 struct ProfileView: View {
 
@@ -38,6 +39,18 @@ struct ProfileView: View {
     /// 和首次启动是同一张 sheet，这里只是再看一遍，不改设置里的标记。
     /// The same sheet as on first launch; this is only for viewing it again and doesn't touch the flag in settings.
     @State private var isShowingWelcome = false
+
+    /// 系统设置里本 App 的通知权限。
+    /// The app's notification permission in system Settings.
+    ///
+    /// 用户随时可能在设置里改，所以页面出现和每次回到前台都重新读。
+    /// The user can change it in Settings at any time, so it's re-read on appearance and whenever the app becomes active.
+    @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+
+    /// App 是否在前台，回到前台时重读通知权限 / Whether the app is active; the notification permission is re-read on return
+    @Environment(\.scenePhase) private var scenePhase
+    /// 打开系统设置里本 App 的通知页 / Opens the app's notification page in system Settings
+    @Environment(\.openURL) private var openURL
 
     /// 用户设置单例行，偏好分组读它的真实值 / Singleton user-settings row; the preferences group reads its real values
     @Query(filter: #Predicate<UserSettingModel> { $0.id == "main" })
@@ -126,6 +139,8 @@ struct ProfileView: View {
                 }
 
                 Section("Notifications") {
+                    notificationRow
+
                     Toggle(isOn: $settings.isPriceDropAlertsEnabled) {
                         HStack(spacing: 12) {
                             IconTileView(icon: "bell.fill", tint: .brandBlue)
@@ -191,7 +206,7 @@ struct ProfileView: View {
                         Spacer(minLength: 12)
 
                         Image(systemName: "chevron.right")
-                            .font(.system(.subheadline, weight: .semibold))
+                            .font(.system(.footnote, weight: .semibold))
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -258,6 +273,12 @@ struct ProfileView: View {
             .sheet(isPresented: $isShowingWelcome) {
                 OnboardingSheet()
             }
+            // 第一次出现和每次回到前台都会跑到这里。
+            // Runs on first appearance and every time the app becomes active.
+            .task(id: scenePhase) {
+                guard scenePhase == .active else { return }
+                await refreshNotificationStatus()
+            }
             .alert(
                 "Sign Out Failed",
                 isPresented: Binding(
@@ -297,6 +318,74 @@ struct ProfileView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
+    }
+
+    // MARK: - 通知权限 / Notification permission
+
+    /// 显示系统通知权限、点了跳到系统设置的一行。
+    /// The row that shows the system notification permission and opens system Settings when tapped.
+    ///
+    /// 权限只能在系统设置里改，App 里只显示当前状态并提供入口。
+    /// The permission can only be changed in system Settings, so the app just shows the current state and links there.
+    private var notificationRow: some View {
+        Button {
+            openNotificationSettings()
+        } label: {
+            LabeledContent {
+                HStack {
+                    Text(notificationStatusText)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(.footnote, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    IconTileView(icon: "bell.badge.fill", tint: .brandBlue)
+
+                    // 按钮里当前色是 tint，写固定的 `Color.primary` 才是正文色。
+                    // Inside a button the current colour is the tint, so the fixed `Color.primary` keeps body text colour.
+                    Text("Notifications")
+                        .foregroundStyle(Color.primary)
+                }
+            }
+            // 撑满整行、空白也可点，同欢迎页那一行。
+            // Fills the row so the blank area is tappable too, like the welcome row.
+            .contentShape(Rectangle())
+        }
+    }
+
+    /// 通知行右侧显示的文字。
+    /// The text shown on the right of the Notifications row.
+    private var notificationStatusText: String {
+        switch notificationStatus {
+        case .authorized, .ephemeral:
+            return String(localized: "On")
+        case .provisional:
+            return String(localized: "Deliver Quietly")
+        case .denied:
+            return String(localized: "Off")
+        case .notDetermined:
+            return String(localized: "Not Set")
+        @unknown default:
+            return String(localized: "Unknown")
+        }
+    }
+
+    /// 从系统读取当前的通知权限。
+    /// Reads the current notification permission from the system.
+    private func refreshNotificationStatus() async {
+        let center = UNUserNotificationCenter.current()
+        let notificationSettings = await center.notificationSettings()
+        notificationStatus = notificationSettings.authorizationStatus
+    }
+
+    /// 打开系统设置里本 App 的通知页。
+    /// Opens the app's notification page in system Settings.
+    private func openNotificationSettings() {
+        let settingsURL = URL(string: UIApplication.openNotificationSettingsURLString)
+        guard let settingsURL else { return }
+        openURL(settingsURL)
     }
 
     // MARK: - 身份卡 / Identity card
