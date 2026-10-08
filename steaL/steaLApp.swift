@@ -14,7 +14,11 @@ import TipKit
 
 class AppDelegate: NSObject, UIApplicationDelegate {
 
-    // 在启动时配置 Firebase 和音频会话 / Configures Firebase and the audio session at launch
+    /// 通知中心的 delegate；center 只弱引用它，由这里持有。
+    /// The notification center's delegate; the center holds it weakly, so it is kept here.
+    private let notificationDelegate = NotificationDelegate()
+
+    // 在启动时配置 Firebase、音频会话和通知 delegate / Configures Firebase, the audio session and the notification delegate at launch
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -25,17 +29,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             FirebaseApp.configure()
         }
         configureAudioSession()
+
+        // 必须在启动完成前赋值，否则点通知冷启动时可能漏掉
+        // Must be assigned before launch finishes, or a notification that cold-launches the app may be missed
+        UNUserNotificationCenter.current().delegate = notificationDelegate
         return true
     }
 
     /// 把音频会话设成视频播放类别。
     /// Sets the audio session to the movie playback category.
-    ///
-    /// 默认类别下静音开关会把预告片的声音也关掉；`.playback` 表示播放媒体是 App 的主要功能，静音开关不再静音。
-    /// 只设类别不会打断别的 App 的音乐，开始播放时才会。
-    /// In the default category the Silent switch also mutes trailers; `.playback` marks media playback as a central
-    /// feature, so the switch no longer silences it. Setting the category alone does not interrupt other apps' audio;
-    /// starting playback does.
     private func configureAudioSession() {
         let session = AVAudioSession.sharedInstance()
         do {
@@ -43,6 +45,25 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         } catch {
             Logger.settings.error("音频会话配置失败 / Audio session configuration failed: \(String(describing: error))")
         }
+    }
+}
+
+/// 决定通知在 App 里怎么显示。
+/// Decides how notifications are presented inside the app.
+final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+
+    /// App 在前台时也显示横幅并留在通知中心（系统默认前台不显示）。
+    /// Shows a banner and keeps it in Notification Center while the app is in the foreground, where the system shows nothing by default.
+    ///
+    /// - Parameters:
+    ///   - center: 通知中心 / The notification center.
+    ///   - notification: 送达的通知 / The delivered notification.
+    /// - Returns: 显示方式 / How to present it.
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        return [.banner, .list]
     }
 }
 
