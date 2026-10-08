@@ -39,7 +39,7 @@ enum WishlistAlertChecker {
         guard notifyPriceDrops || notifyReleases else { return }
 
         // 第 2 步：没有通知权限就 return
-        let isAllowed = await isAuthorized()
+        let isAllowed = await NotificationPermission.isAuthorized()
         guard isAllowed else { return }
 
         // 第 3 步：读一次 wishlist，失败记日志后 return
@@ -246,23 +246,6 @@ enum WishlistAlertChecker {
     }
 
     // MARK: - 通知 / Notifications
-
-    /// 是否有发通知的权限。
-    /// Whether the app may send notifications.
-    ///
-    /// - Returns: 用户允许了返回 `true` / `true` when the user has allowed them.
-    private static func isAuthorized() async -> Bool {
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-
-        switch settings.authorizationStatus {
-        case .authorized, .provisional:
-            return true
-        case .denied, .notDetermined, .ephemeral:
-            return false
-        @unknown default:
-            return false
-        }
-    }
 
     /// 立即发一条本地通知；同一个 identifier 会替换旧的。
     /// Sends a local notification right away; the same identifier replaces an earlier one.

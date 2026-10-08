@@ -36,4 +36,6 @@ extension Logger {
     nonisolated static let gameDetail = Logger(subsystem: subsystem, category: "GameDetail")
     /// Wishlist 页 / The wishlist page
     nonisolated static let wishlist = Logger(subsystem: subsystem, category: "Wishlist")
+    /// 通知权限 / Notification permission
+    nonisolated static let notifications = Logger(subsystem: subsystem, category: "Notifications")
 }

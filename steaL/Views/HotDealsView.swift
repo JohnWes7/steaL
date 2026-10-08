@@ -255,6 +255,12 @@ struct HotDealsView: View {
         )
 
         try? wishlistService.add(wishlistItem, uid: uid)
+
+        // 第一次收藏时请求通知权限，这时用户看得懂提醒是干什么用的
+        // Asks for notification permission on the first favourite, when the purpose of alerts is clear
+        Task {
+            await NotificationPermission.requestIfNeeded()
+        }
     }
 
     // MARK: - 进详情页 / Opening the detail page

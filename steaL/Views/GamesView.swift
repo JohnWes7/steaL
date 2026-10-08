@@ -173,6 +173,12 @@ struct GamesView: View {
             // 只会抛编码错误，固定结构的模型不会发生；服务器拒绝由监听器回滚 /
             // Only encoding errors can throw, which this fixed model never hits; server rejections are rolled back by the listener
             try? wishlistService.add(wishlistItem, uid: uid)
+
+            // 第一次收藏时请求通知权限，这时用户看得懂提醒是干什么用的
+            // Asks for notification permission on the first favourite, when the purpose of alerts is clear
+            Task {
+                await NotificationPermission.requestIfNeeded()
+            }
         }
     }
 

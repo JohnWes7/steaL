@@ -375,9 +375,7 @@ struct ProfileView: View {
     /// 从系统读取当前的通知权限。
     /// Reads the current notification permission from the system.
     private func refreshNotificationStatus() async {
-        let center = UNUserNotificationCenter.current()
-        let notificationSettings = await center.notificationSettings()
-        notificationStatus = notificationSettings.authorizationStatus
+        notificationStatus = await NotificationPermission.status()
     }
 
     /// 打开系统设置里本 App 的通知页。
