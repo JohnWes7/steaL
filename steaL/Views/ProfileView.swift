@@ -42,9 +42,6 @@ struct ProfileView: View {
 
     /// 系统设置里本 App 的通知权限。
     /// The app's notification permission in system Settings.
-    ///
-    /// 用户随时可能在设置里改，所以页面出现和每次回到前台都重新读。
-    /// The user can change it in Settings at any time, so it's re-read on appearance and whenever the app becomes active.
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
 
     /// App 是否在前台，回到前台时重读通知权限 / Whether the app is active; the notification permission is re-read on return
@@ -335,7 +332,7 @@ struct ProfileView: View {
                 HStack {
                     Text(notificationStatusText)
 
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "arrow.up.forward")
                         .font(.system(.footnote, weight: .semibold))
                         .foregroundStyle(.tertiary)
                 }

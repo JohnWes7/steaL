@@ -21,6 +21,10 @@ struct RootView: View {
     /// 全 App 共用的 wishlist / The wishlist shared by the whole app
     @State private var wishlistService = WishlistService()
 
+    /// App 是否在前台；回到前台时跑一次提醒检查。
+    /// Whether the app is active; an alert check runs on each return to the foreground.
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         MainTabView()
             // nil 代表跟随系统 / nil means follow system
@@ -32,6 +36,11 @@ struct RootView: View {
             .task(id: authService.uid) {
                 await wishlistService.listen(uid: authService.uid)
             }
+            // 每次回到前台检查一次降价与发售；离开前台时 task 被取消，下次回来再查。
+            // Checks for price drops and releases on every return to the foreground; leaving cancels the task, and the next return checks again.
+            .task(id: scenePhase) {
+                await runAlertCheck()
+            }
             // 首次启动盖在主界面上，关掉后主界面已经在下面。
             // Covers the main interface on first launch, which is already there underneath once it closes.
             .sheet(isPresented: isShowingOnboarding) {
@@ -40,6 +49,27 @@ struct RootView: View {
                     // Closes only through Continue, so it's seen at least once.
                     .interactiveDismissDisabled()
             }
+    }
+
+    // MARK: - 提醒检查 / Alert check
+
+    /// 在前台、已登录、设置行已就绪时跑一次提醒检查。
+    /// Runs one alert check when the app is active, signed in, and the settings row is ready.
+    ///
+    /// 暂时每次回到前台都查，方便在模拟器里验证；之后再加 12 小时间隔。
+    /// For now it checks on every return so it's easy to verify in the simulator; the 12-hour interval comes later.
+    private func runAlertCheck() async {
+        guard scenePhase == .active else { return }
+        guard let uid = authService.uid else { return }
+        guard let currentSettings = settings.first else { return }
+
+        await WishlistAlertChecker.run(
+            uid: uid,
+            region: currentSettings.region,
+            notifyPriceDrops: currentSettings.isPriceDropAlertsEnabled,
+            notifyReleases: currentSettings.isGameReleaseAlertsEnabled,
+            wishlistService: wishlistService
+        )
     }
 
     // MARK: - 欢迎页 / Onboarding
