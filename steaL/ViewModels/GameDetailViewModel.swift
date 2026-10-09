@@ -105,6 +105,17 @@ final class GameDetailViewModel {
     /// ITAD 请求用的游戏 UUID / The game UUID used for ITAD requests
     private(set) var uuid: String?
 
+    /// 当前比价是什么时候查到的；没查过是 `nil`。
+    /// When the current prices were fetched; `nil` before any fetch.
+    ///
+    /// 只给 `refreshPricesIfStale` 判断是否过期，界面不读，所以不参与观察。
+    /// Only `refreshPricesIfStale` reads it to judge staleness; the view never does, so it is not observed.
+    @ObservationIgnored private var pricesFetchedAt: Date?
+
+    /// 比价超过多久算过期，回到前台时会静默重查。
+    /// How old the prices may get before a return to the foreground quietly refetches them.
+    static let pricesMaxAge: TimeInterval = 30 * 60
+
     /// 上一次完整加载用的区域，没被取消才记。
     /// The region of the last load that finished without being cancelled.
     @ObservationIgnored private var loadedRegion: AppRegion?
@@ -280,6 +291,7 @@ final class GameDetailViewModel {
             async let info = fetchInfoState(uuid: resolvedUUID)
 
             pricesState = await prices
+            pricesFetchedAt = .now
             infoState = await info
 
         } catch {
@@ -316,6 +328,45 @@ final class GameDetailViewModel {
         let newState = await fetchPricesState(uuid: resolvedUUID, region: region, kind: details.gameKind)
         guard !Task.isCancelled else { return }
         pricesState = newState
+        pricesFetchedAt = .now
+    }
+
+    /// 比价已显示且超过 `pricesMaxAge` 没查过，就静默重查一次。
+    /// Quietly refetches the prices once when they are showing and older than `pricesMaxAge`.
+    ///
+    /// 页面回到前台时调用。重查期间旧价格留在屏幕上，不切到 `.loading`；失败就保留旧价格，
+    /// 也不更新时间，下次回到前台再试。只有查到了才算数，`.failed` 之类交给 Retry。
+    /// Called when the page returns to the foreground. The old prices stay on screen during the
+    /// refetch instead of switching to `.loading`; a failure keeps them and leaves the timestamp alone,
+    /// so the next return tries again. Only shown prices count; `.failed` and the like belong to Retry.
+    ///
+    /// - Parameter region: 商店区域，决定货币 / The store region, which drives the currency.
+    func refreshPricesIfStale(region: AppRegion) async {
+        guard case .loaded(let details) = state else { return }
+
+        let isShowingPrices: Bool
+        switch pricesState {
+        case .loaded, .loadedWithoutHistory:
+            isShowingPrices = true
+        case .hidden, .loading, .notFound, .failed:
+            isShowingPrices = false
+        }
+        guard isShowingPrices else { return }
+
+        // 比价到手说明 UUID 已经查到 / Shown prices mean the UUID is already resolved
+        guard let uuid, let fetchedAt = pricesFetchedAt else { return }
+
+        let age = Date.now.timeIntervalSince(fetchedAt)
+        guard age >= Self.pricesMaxAge else { return }
+
+        let newState = await fetchPricesState(uuid: uuid, region: region, kind: details.gameKind)
+        guard !Task.isCancelled else { return }
+
+        // 静默刷新失败不打掉旧价格 / A failed quiet refresh must not wipe the old prices
+        guard newState != .failed else { return }
+
+        pricesState = newState
+        pricesFetchedAt = .now
     }
 
     /// 查一次 ITAD 游戏信息，必要时先按 appID 查 UUID / Fetches the ITAD game info, resolving the UUID when needed

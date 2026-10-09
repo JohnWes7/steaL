@@ -25,6 +25,10 @@ struct GameDetailView: View {
     /// 当前账号的 wishlist，用来判断心形是否已收藏 / The current account's wishlist, for the heart's filled state
     @Environment(WishlistService.self) private var wishlistService
 
+    /// 所在场景的前后台状态，回到前台时检查比价是否过期。
+    /// The enclosing scene's phase; a return to the foreground checks whether the prices are stale.
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var gameDetailViewModel: GameDetailViewModel
 
     @State private var aiAdviceViewModel: AIAdviceViewModel = AIAdviceViewModel()
@@ -88,6 +92,12 @@ struct GameDetailView: View {
         // `.task(id:)` re-runs on a parameter change and cancels on disappear; reappearing does not reload
         .task(id: reloadKey) {
             await gameDetailViewModel.loadIfNeeded(region: region, language: language)
+        }
+        // 回到前台（以及页面重新出现）时，比价过期就静默重查；没过期、没显示比价都什么都不做 /
+        // On a return to the foreground (or a reappearance), quietly refetch stale prices; otherwise do nothing
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await gameDetailViewModel.refreshPricesIfStale(region: region)
         }
         .toolbar(.visible, for: .navigationBar)
         .navigationTitle(navigationTitle)
