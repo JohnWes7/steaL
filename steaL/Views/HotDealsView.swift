@@ -34,6 +34,10 @@ struct HotDealsView: View {
     /// The warning shown when a game can't open its detail page; a `non-nil` value raises the alert.
     @State private var warning: String?
 
+    /// 选中的游戏大类，`nil` 表示全部。
+    /// The selected genre; `nil` means all genres.
+    @State private var genre: DealGenre?
+
     private var region: AppRegion {
         settings.first?.region ?? .australia
     }
@@ -66,6 +70,11 @@ struct HotDealsView: View {
         }
         .navigationTitle("Hot Deals")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                genreMenu
+            }
+        }
         // 换地区时取消旧请求、重新加载 / A region change cancels the old request and reloads
         .task(id: region) {
             await viewModel.loadIfNeeded(region: region)
@@ -90,6 +99,28 @@ struct HotDealsView: View {
             Button("OK", role: .cancel) { warning = nil }
         } message: {
             Text(warning ?? "")
+        }
+    }
+
+    /// 导航栏上选游戏大类的菜单，选中某一类后图标变成实心。
+    /// The navigation bar menu for choosing a genre; the icon turns filled once a genre is chosen.
+    private var genreMenu: some View {
+        let symbolName = genre == nil
+            ? "line.3.horizontal.decrease.circle"
+            : "line.3.horizontal.decrease.circle.fill"
+
+        return Menu {
+            Picker("Genre", selection: $genre) {
+                Text("All Genres")
+                    .tag(nil as DealGenre?)
+
+                ForEach(DealGenre.allCases) { genre in
+                    Text(genre.title)
+                        .tag(Optional(genre))
+                }
+            }
+        } label: {
+            Label("Filter by Genre", systemImage: symbolName)
         }
     }
 
