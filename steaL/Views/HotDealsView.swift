@@ -42,6 +42,12 @@ struct HotDealsView: View {
         settings.first?.region ?? .australia
     }
 
+    /// 当前的请求条件，地区或大类变了 `.task(id:)` 就重新加载。
+    /// The current request conditions; a new region or genre makes `.task(id:)` reload.
+    private var request: HotDealsRequest {
+        HotDealsRequest(region: region, genre: genre)
+    }
+
     var body: some View {
         ZStack {
             // 背景色 / Background color
@@ -56,7 +62,7 @@ struct HotDealsView: View {
             case .failed(let error):
                 LoadErrorView(error: error) {
                     Task {
-                        await viewModel.loadHotDeals(region: region)
+                        await viewModel.loadHotDeals(request: request)
                     }
                 }
 
@@ -75,9 +81,9 @@ struct HotDealsView: View {
                 genreMenu
             }
         }
-        // 换地区时取消旧请求、重新加载 / A region change cancels the old request and reloads
-        .task(id: region) {
-            await viewModel.loadIfNeeded(region: region)
+        // 换地区或大类时取消旧请求、重新加载 / A new region or genre cancels the old request and reloads
+        .task(id: request) {
+            await viewModel.loadIfNeeded(request: request)
         }
         // 未登录点心形时弹登录，同首页与详情页 / Sign-in for a heart tapped while signed out, as on the home and detail pages
         .sheet(isPresented: $isShowingSignIn) {
@@ -124,23 +130,37 @@ struct HotDealsView: View {
         }
     }
 
-    /// 请求成功但列表为空时的提示，附刷新入口。
-    /// The note for a successful but empty list, with a refresh action.
+    /// 请求成功但列表为空时的提示：选了大类时给「显示全部」，否则给刷新入口。
+    /// The note for a successful but empty list: Show All Genres when a genre is chosen, otherwise a refresh action.
     ///
-    /// 文案与样式同首页 `DealsSectionView` 的空状态。
-    /// The copy and style match the home page's `DealsSectionView` empty state.
+    /// 没选大类时文案与样式同首页 `DealsSectionView` 的空状态。
+    /// Without a genre, the copy and style match the home page's `DealsSectionView` empty state.
+    @ViewBuilder
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Deals Found", systemImage: "tag.slash")
-        } description: {
-            Text("There are no discounted games to show right now. Try again later.")
-        } actions: {
-            Button("Refresh") {
-                Task {
-                    await viewModel.loadHotDeals(region: region)
+        if let genre {
+            ContentUnavailableView {
+                Label("No \(genre.title) Deals", systemImage: "tag.slash")
+            } description: {
+                Text("There are no discounted \(genre.title) games right now.")
+            } actions: {
+                Button("Show All Genres") {
+                    self.genre = nil
                 }
+                .tint(.brandBlue)
             }
-            .tint(.brandBlue)
+        } else {
+            ContentUnavailableView {
+                Label("No Deals Found", systemImage: "tag.slash")
+            } description: {
+                Text("There are no discounted games to show right now. Try again later.")
+            } actions: {
+                Button("Refresh") {
+                    Task {
+                        await viewModel.loadHotDeals(request: request)
+                    }
+                }
+                .tint(.brandBlue)
+            }
         }
     }
 
@@ -242,7 +262,7 @@ struct HotDealsView: View {
     /// Uses a `Task` not tied to a view, so the request survives the trigger card leaving the screen.
     private func loadNextPage() {
         Task {
-            await viewModel.loadNextPage(region: region)
+            await viewModel.loadNextPage(request: request)
         }
     }
 
