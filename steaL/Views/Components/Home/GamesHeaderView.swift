@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// 主页顶部栏内容：品牌标题 + 通知入口；内边距自带，页面只管放进 `safeAreaBar` /
-/// Top bar content: brand title and notification entry; owns its padding, pages only place it in `safeAreaBar`
+/// 主页顶部栏内容：品牌标题（通知入口暂时注释掉）；内边距自带，页面只管放进 `safeAreaBar` /
+/// Top bar content: brand title (notification entry commented out for now); owns its padding, pages only place it in `safeAreaBar`
 struct GamesHeaderView: View {
 
     var body: some View {
@@ -21,7 +21,7 @@ struct GamesHeaderView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// 品牌标题区：左侧标语与 steaL 字样，右侧通知入口 / Brand header: tagline and steaL wordmark on the left, notification entry on the right
+    /// 品牌标题区：左侧标语与 steaL 字样（右侧通知入口暂时注释掉） / Brand header: tagline and steaL wordmark on the left (notification entry commented out for now)
     @ViewBuilder
     private var header: some View {
         HStack(alignment: .bottom) {
@@ -41,34 +41,36 @@ struct GamesHeaderView: View {
                 .font(.system(size: 44, weight: .bold, design: .default))
             }
 
-            Spacer()
-
-            notificationButton
+            // 通知只做 mock up，铃铛先隐藏，以后做通知页再放回来
+            // Notifications are a mock-up only; the bell is hidden until a notifications page exists
+            // Spacer()
+            //
+            // notificationButton
         }
     }
 
-    /// 右上角通知按钮，附带未读小红点 / Notification button in the top-right, with an unread badge
-    @ViewBuilder
-    private var notificationButton: some View {
-        Button {
-            // 打开通知页面
-        } label: {
-            Image(systemName: "bell.fill")
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(.primaryText)
-                .frame(width: 56, height: 56)
-                // .background(Color.surfaceElevated)
-                // .clipShape(Circle())
-                .glassEffect(.regular.interactive(), in: .circle)
-                .overlay(alignment: .topTrailing) {
-                    Circle()
-                        .fill(Color.brandBlue)
-                        .frame(width: 11, height: 11)
-                        .offset(x: -8, y: 8)
-                }
-        }
-        .accessibilityLabel("Notifications")
-    }
+    // /// 右上角通知按钮，附带未读小红点 / Notification button in the top-right, with an unread badge
+    // @ViewBuilder
+    // private var notificationButton: some View {
+    //     Button {
+    //         // 打开通知页面
+    //     } label: {
+    //         Image(systemName: "bell.fill")
+    //             .font(.system(size: 21, weight: .semibold))
+    //             .foregroundStyle(.primaryText)
+    //             .frame(width: 56, height: 56)
+    //             // .background(Color.surfaceElevated)
+    //             // .clipShape(Circle())
+    //             .glassEffect(.regular.interactive(), in: .circle)
+    //             .overlay(alignment: .topTrailing) {
+    //                 Circle()
+    //                     .fill(Color.brandBlue)
+    //                     .frame(width: 11, height: 11)
+    //                     .offset(x: -8, y: 8)
+    //             }
+    //     }
+    //     .accessibilityLabel("Notifications")
+    // }
 }
 
 #Preview {
