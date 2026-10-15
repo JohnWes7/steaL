@@ -34,6 +34,9 @@ struct DealGridCardView: View {
 
     var body: some View {
         artwork
+            // 整张卡读成一句，心形合并后成为卡片的自定义操作 / The card reads as one sentence; once combined, the heart becomes a custom action
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(accessibilitySummary)
     }
 
     // MARK: - 图片区 / Artwork
@@ -156,7 +159,7 @@ struct DealGridCardView: View {
         .buttonStyle(.plain)
         .disabled(!isFavoriteEnabled)
         .opacity(isFavoriteEnabled ? 1 : 0.4)
-        .accessibilityLabel(isFavorite ? "Remove from favourites" : "Add to favourites")
+        .accessibilityLabel(isFavorite ? "Remove from Wishlist" : "Add to Wishlist")
     }
 
     // MARK: - 底部叠加 / Bottom overlay
@@ -226,6 +229,26 @@ struct DealGridCardView: View {
             .foregroundStyle(.secondaryText)
             .lineLimit(1)
             .minimumScaleFactor(0.65)
+    }
+
+    // MARK: - 无障碍 / Accessibility
+
+    /// VoiceOver 读的整张卡：标题、折扣、现价、商店，与卡面显示的内容一致。
+    /// What VoiceOver reads for the card: title, discount, price and shop, matching what the card shows.
+    ///
+    /// 标题放最前面，滑过卡片时先听到是哪个游戏；折扣写成「75% off」，不按徽标读成「minus 75 percent」。
+    /// The title comes first so a swipe tells you which game it is; the discount reads "75% off" rather than the badge's "minus 75 percent".
+    private var accessibilitySummary: String {
+        let info = deal.deal
+        var parts: [String] = [deal.title]
+
+        if info.cut > 0 {
+            parts.append("\(info.cut)% off")
+        }
+
+        parts.append(info.price.spokenText)
+        parts.append(info.shop.name)
+        return parts.joined(separator: ", ")
     }
 }
 

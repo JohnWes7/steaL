@@ -285,7 +285,7 @@ struct GameDetailView: View {
             toggleFavorite(details)
         } label: {
             Label(
-                isFavorite ? "Remove from favourites" : "Add to favourites",
+                isFavorite ? "Remove from Wishlist" : "Add to Wishlist",
                 systemImage: isFavorite ? "heart.fill" : "heart"
             )
         }

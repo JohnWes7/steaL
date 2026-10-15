@@ -38,6 +38,9 @@ struct DealCardView: View {
         }
         .background(Color.surfaceElevated)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        // 整张卡读成一句，心形合并后成为卡片的自定义操作 / The card reads as one sentence; once combined, the heart becomes a custom action
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilitySummary)
     }
 
     // MARK: - 图片区 / Artwork
@@ -163,7 +166,7 @@ struct DealCardView: View {
         // 变暗而不是隐藏（HIG：不可用的项目保持可见）/ Dimmed rather than hidden (HIG: keep unavailable items visible)
         .disabled(!isFavoriteEnabled)
         .opacity(isFavoriteEnabled ? 1 : 0.4)
-        .accessibilityLabel(isFavorite ? "Remove from favourites" : "Add to favourites")
+        .accessibilityLabel(isFavorite ? "Remove from Wishlist" : "Add to Wishlist")
     }
 
     /// 图片底部的质量标签与标题 / Quality tag and title pinned over the bottom of the artwork
@@ -311,6 +314,34 @@ struct DealCardView: View {
         }
 
         return nil
+    }
+
+    /// VoiceOver 读的整张卡：标题、质量标签、折扣、现价、原价、商店。
+    /// What VoiceOver reads for the card: title, quality tag, discount, price, regular price and shop.
+    ///
+    /// 标题放最前面，滑过卡片时先听到是哪个游戏；折扣写成「75% off」，不按徽标读成「minus 75 percent」。
+    /// The title comes first so a swipe tells you which game it is; the discount reads "75% off" rather than the badge's "minus 75 percent".
+    private var accessibilitySummary: String {
+        let info = deal.deal
+        var parts: [String] = [deal.title]
+
+        if let qualityLabel {
+            parts.append(qualityLabel.capitalized)
+        }
+
+        if info.cut > 0 {
+            parts.append("\(info.cut)% off")
+        }
+
+        parts.append(info.price.spokenText)
+
+        // 与界面一致：只有原价确实更高才读 / Matches the screen: only read when the regular price is actually higher
+        if info.regular.amountInt > info.price.amountInt {
+            parts.append("was \(info.regular.spokenText)")
+        }
+
+        parts.append(info.shop.name)
+        return parts.joined(separator: ", ")
     }
 }
 

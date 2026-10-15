@@ -142,6 +142,21 @@ struct ITADPrice: Codable, Hashable, Sendable {
     let currency: String
 }
 
+extension ITADPrice {
+
+    /// 读给 VoiceOver 的价格：金额为 0 是 `Free`，其余按币种格式化。
+    /// The price as VoiceOver reads it: `Free` for zero, otherwise formatted in its currency.
+    ///
+    /// 卡片和行把几段文字合成一句 label 时要用字符串，规则与界面上的价格文字一致。
+    /// Cards and rows need a string when they merge their text into one label, following the same rule as the on-screen price.
+    var spokenText: String {
+        if amountInt == 0 {
+            return "Free"
+        }
+        return amount.formatted(.currency(code: currency))
+    }
+}
+
 // MARK: - 选图 / Artwork selection
 
 extension ITADAssets {

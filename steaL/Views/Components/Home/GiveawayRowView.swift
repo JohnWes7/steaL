@@ -41,6 +41,7 @@ struct GiveawayRowView: View {
             row
         }
         .buttonStyle(GiveawayRowButtonStyle())
+        .accessibilityLabel(accessibilitySummary)
     }
 
     // MARK: - 行内容 / Row content
@@ -252,6 +253,37 @@ struct GiveawayRowView: View {
     private var isExpiringSoon: Bool {
         guard let expiryDate = giveaway.expiryDate else { return false }
         return expiryDate.timeIntervalSinceNow <= 48 * 60 * 60
+    }
+
+    // MARK: - 无障碍 / Accessibility
+
+    /// VoiceOver 读的整行：免费、标题、商店、截止时间。
+    /// What VoiceOver reads for the row: free, title, shop and deadline.
+    ///
+    /// 界面上的「3d left」缩写读出来是「3 d left」，这里换成完整说法。
+    /// The on-screen "3d left" is read as "3 d left", so the deadline is spelled out here.
+    private var accessibilitySummary: String {
+        var parts: [String] = ["Free", giveaway.displayTitle, shopText]
+
+        if let spokenExpiryText {
+            parts.append(spokenExpiryText)
+        }
+
+        return parts.joined(separator: ", ")
+    }
+
+    /// 读给 VoiceOver 的截止时间，规则同 `expiryText`，缩写换成完整说法。
+    /// The deadline as VoiceOver reads it: the same rules as `expiryText`, with the abbreviations spelled out.
+    private var spokenExpiryText: String? {
+        guard let expiryDate = giveaway.expiryDate else { return nil }
+
+        let days = Calendar.current.dateComponents([.day], from: .now, to: expiryDate).day ?? 0
+        if days <= 0 { return "ends today" }
+        if days == 1 { return "1 day left" }
+        if days <= 7 { return "\(days) days left" }
+
+        let dateText = expiryDate.formatted(.dateTime.month(.wide).day())
+        return "ends \(dateText)"
     }
 
     // MARK: - 操作 / Actions

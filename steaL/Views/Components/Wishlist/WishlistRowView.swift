@@ -54,6 +54,9 @@ struct WishlistRowView: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 4)
         .contentShape(Rectangle())
+        // 整行读成一句 / The row reads as one sentence
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilitySummary)
     }
 
     // MARK: - 长条 / Leading bar
@@ -191,6 +194,45 @@ struct WishlistRowView: View {
             return Text("Free")
         }
         return Text(value.amount, format: .currency(code: value.currency))
+    }
+
+    // MARK: - 无障碍 / Accessibility
+
+    /// VoiceOver 读的整行：名称在前，再按价格状态读折扣与价格。
+    /// What VoiceOver reads for the row: the name first, then the discount and price for the price state.
+    ///
+    /// 不合并时会先读左上角的折扣徽标、两个价格也分不清哪个是原价，所以按「名称、折扣、现价、原价」重排。
+    /// Left alone it reads the corner badge first and gives two prices without saying which is the regular one, so it is reordered as name, discount, price and regular price.
+    private var accessibilitySummary: String {
+        let priceText = spokenPrice
+        return "\(item.name), \(priceText)"
+    }
+
+    /// 按价格状态读的价格部分，与 `priceLine` 显示的内容一致。
+    /// The price part for each price state, matching what `priceLine` shows.
+    private var spokenPrice: String {
+        switch price {
+        case .loading:
+            return "Loading price"
+        case .noPrice:
+            return "No price"
+        case .failed:
+            return "Couldn't load price"
+        case .loaded(let deal):
+            let isOnSale = deal.regular.amountInt > deal.price.amountInt
+            if !isOnSale {
+                return deal.regular.spokenText
+            }
+
+            let currentText = deal.price.spokenText
+            let regularText = deal.regular.spokenText
+            let saleText = "\(currentText), was \(regularText)"
+            // 徽标只在 `cut > 0` 时显示，读的时候同样 / The badge only shows when `cut > 0`, and so does the spoken discount
+            if deal.cut <= 0 {
+                return saleText
+            }
+            return "\(deal.cut)% off, \(saleText)"
+        }
     }
 }
 
