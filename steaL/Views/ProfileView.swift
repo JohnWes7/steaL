@@ -195,16 +195,14 @@ struct ProfileView: View {
                     }
 
                     // 右侧箭头表示以后会推入一页 / The chevron marks a row that will push a page later
-                    HStack(spacing: 12) {
-                        IconTileView(icon: "person.text.rectangle.fill", tint: .secondaryText)
+                    NavigationLink{
 
-                        Text("About Me")
+                    } label: {
+                        HStack(spacing: 12) {
+                            IconTileView(icon: "person.text.rectangle.fill", tint: .secondaryText)
 
-                        Spacer(minLength: 12)
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(.footnote, weight: .semibold))
-                            .foregroundStyle(.tertiary)
+                            Text("About Me")
+                        }
                     }
                 }
 
