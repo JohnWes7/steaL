@@ -263,13 +263,16 @@ struct GamesView: View {
     private var giveawayHeader: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
+                // 装饰图标，只读标题，同 Hot Deals / Decorative; only the title is read, as with Hot Deals
                 Image(systemName: "gift.fill")
                     .font(.title2)
                     .foregroundStyle(.brandGreen)
+                    .accessibilityHidden(true)
 
                 Text("Giveaways")
                     .font(.system(.title, weight: .bold))
                     .foregroundStyle(.primaryText)
+                    .accessibilityAddTraits(.isHeader)
 
                 Spacer(minLength: 0)
             }

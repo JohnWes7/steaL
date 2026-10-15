@@ -24,6 +24,8 @@ struct PageHeaderView: View {
             Text(title)
                 .font(.system(size: 44, weight: .bold, design: .default))
                 .foregroundStyle(.primaryText)
+                // 导航栏隐藏了，这里代替导航栏标题当页面标题 / The navigation bar is hidden, so this stands in as the page heading
+                .accessibilityAddTraits(.isHeader)
         }
         .padding(.horizontal, 14)
         .padding(.top, 2)

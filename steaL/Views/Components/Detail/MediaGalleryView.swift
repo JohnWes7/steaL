@@ -201,6 +201,8 @@ struct MediaGalleryView: View {
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
         .accessibilityLabel("Play trailer")
+        // 开始播放后 VoiceOver 不再说话，不盖住预告片的声音 / VoiceOver stays quiet once playback starts, so it doesn't talk over the trailer
+        .accessibilityAddTraits(.startsMediaSession)
     }
 }
 

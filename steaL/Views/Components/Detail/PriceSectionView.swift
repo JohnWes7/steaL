@@ -87,6 +87,7 @@ struct PriceSectionView: View {
         Text("PRICES")
             .font(.system(.footnote, weight: .bold))
             .foregroundStyle(.brandGreen)
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// 区块标题与三档历史低价；都没有就退成一行说明 /
@@ -106,6 +107,7 @@ struct PriceSectionView: View {
             Text("PRICE HISTORY")
                 .font(.system(.footnote, weight: .bold))
                 .foregroundStyle(.brandGreen)
+                .accessibilityAddTraits(.isHeader)
 
             if lows.isEmpty {
                 Text("No historical price data")
@@ -140,6 +142,7 @@ struct PriceSectionView: View {
                     Text("CURRENT OFFERS")
                         .font(.system(.footnote, weight: .bold))
                         .foregroundStyle(.brandGreen)
+                        .accessibilityAddTraits(.isHeader)
 
                 }
 
@@ -238,6 +241,9 @@ struct PriceSectionView: View {
                 + "\(offer.price.amount.formatted(.currency(code: offer.price.currency)))"
         )
         .accessibilityHint("Opens this store's page outside steaL")
+        // 打开外部网页，VoiceOver 读成 link 而不是 button / Opens a web page outside the app, so VoiceOver says link rather than button
+        .accessibilityRemoveTraits(.isButton)
+        .accessibilityAddTraits(.isLink)
     }
 
     /// 报价左栏：商店、BEST 徽标、折扣与 DRM / The left column: shop, BEST badge, discount and DRM

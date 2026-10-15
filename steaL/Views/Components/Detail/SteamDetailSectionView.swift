@@ -41,6 +41,7 @@ struct SteamDetailSectionView: View {
                 Text("GAME DETAIL")
                     .font(.system(.footnote, weight: .bold))
                     .foregroundStyle(.brandGreen)
+                    .accessibilityAddTraits(.isHeader)
 
                 if isExpanded {
                     if let description = details.shortDescription {

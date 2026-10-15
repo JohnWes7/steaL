@@ -100,6 +100,9 @@ struct TrailerPlayerView: View {
             .buttonStyle(.glass)
             .buttonBorderShape(.circle)
             .accessibilityLabel(trailer.isPlaying ? "Pause" : "Play")
+            // 只有「播放」会开始播放；VoiceOver 随后不说话，不盖住预告片的声音 /
+            // Only Play starts playback; VoiceOver then stays quiet so it doesn't talk over the trailer
+            .accessibilityAddTraits(trailer.isPlaying ? [] : .startsMediaSession)
 
             TrailerScrubber(
                 progress: trailer.progress,
@@ -114,6 +117,8 @@ struct TrailerPlayerView: View {
                 .font(.system(.caption, design: .rounded, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(.primaryText)
+                // 进度条的 value 已经读出同样的时间 / The scrubber's value already reads the same time
+                .accessibilityHidden(true)
 
             Button {
                 trailer.isFullScreen = true
@@ -204,6 +209,8 @@ private struct TrailerScrubber: View {
             .accessibilityElement()
             .accessibilityLabel("Playback position")
             .accessibilityValue(valueText)
+            // 播放时 value 每秒都在变 / The value changes every second during playback
+            .accessibilityAddTraits(.updatesFrequently)
             .accessibilityAdjustableAction { direction in
                 switch direction {
                 case .increment:

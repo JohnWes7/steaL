@@ -23,6 +23,7 @@ struct FullGameSectionView: View {
             Text("FULL GAME")
                 .font(.system(.footnote, weight: .bold))
                 .foregroundStyle(.brandGreen)
+                .accessibilityAddTraits(.isHeader)
 
             Button(action: open) {
                 HStack(spacing: 12) {

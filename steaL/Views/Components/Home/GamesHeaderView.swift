@@ -39,6 +39,10 @@ struct GamesHeaderView: View {
                         .foregroundStyle(.brandBlue)
                 }
                 .font(.system(size: 44, weight: .bold, design: .default))
+                // 两段颜色不同的字合成一个「steaL」，当页面标题 / The two coloured runs read as one "steaL", serving as the page heading
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("steaL")
+                .accessibilityAddTraits(.isHeader)
             }
 
             // 通知只做 mock up，铃铛先隐藏，以后做通知页再放回来

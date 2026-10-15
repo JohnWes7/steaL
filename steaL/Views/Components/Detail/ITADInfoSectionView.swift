@@ -29,6 +29,7 @@ struct ITADInfoSectionView: View {
             Text("ITAD DETAILS")
                 .font(.system(.footnote, weight: .bold))
                 .foregroundStyle(.brandGreen)
+                .accessibilityAddTraits(.isHeader)
 
             switch state {
             case .loading:

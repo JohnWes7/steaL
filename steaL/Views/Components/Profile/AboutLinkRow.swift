@@ -64,6 +64,9 @@ struct AboutLinkRow: View {
             .contentShape(Rectangle())
         }
         .accessibilityHint("Opens outside steaL")
+        // 打开外部网页，VoiceOver 读成 link 而不是 button / Opens a web page outside the app, so VoiceOver says link rather than button
+        .accessibilityRemoveTraits(.isButton)
+        .accessibilityAddTraits(.isLink)
     }
 }
 

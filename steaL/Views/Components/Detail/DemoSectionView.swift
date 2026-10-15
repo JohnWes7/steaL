@@ -27,6 +27,7 @@ struct DemoSectionView: View {
             Text("DEMO")
                 .font(.system(.footnote, weight: .bold))
                 .foregroundStyle(.brandGreen)
+                .accessibilityAddTraits(.isHeader)
 
             Button {
                 // 退役的试玩版会被 Steam 重定向回本体，拼 appid 就够了 / Retired demos redirect to the base game
@@ -77,6 +78,9 @@ struct DemoSectionView: View {
             // label 只说是什么，点了会怎样写在 hint / The label says what it is; the hint says what happens
             .accessibilityLabel(name)
             .accessibilityHint("Opens the Steam store page outside steaL")
+            // 打开外部网页，VoiceOver 读成 link 而不是 button / Opens a web page outside the app, so VoiceOver says link rather than button
+            .accessibilityRemoveTraits(.isButton)
+            .accessibilityAddTraits(.isLink)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
