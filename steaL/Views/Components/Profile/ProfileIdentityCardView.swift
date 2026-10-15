@@ -150,8 +150,10 @@ struct ProfileIdentityCardView: View {
                 .foregroundStyle(.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        // 名称不变、数字会变：分成 label 和 value / The name is fixed and the number changes, so they split into label and value
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label), \(value)")
+        .accessibilityLabel(label)
+        .accessibilityValue(value.formatted())
     }
 
     // MARK: - 登录按钮 / Sign-in button

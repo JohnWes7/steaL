@@ -38,9 +38,11 @@ struct DealCardView: View {
         }
         .background(Color.surfaceElevated)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        // 整张卡读成一句，心形合并后成为卡片的自定义操作 / The card reads as one sentence; once combined, the heart becomes a custom action
+        // 整张卡合成一个元素，心形合并后成为卡片的自定义操作；label 是不变的标题，value 是会变的优惠与收藏状态 /
+        // The card is one element and the heart becomes its custom action; the label is the fixed title, the value the changing deal and wishlist state
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilitySummary)
+        .accessibilityLabel(deal.title)
+        .accessibilityValue(accessibilityValueText)
     }
 
     // MARK: - 图片区 / Artwork
@@ -316,14 +318,14 @@ struct DealCardView: View {
         return nil
     }
 
-    /// VoiceOver 读的整张卡：标题、质量标签、折扣、现价、原价、商店。
-    /// What VoiceOver reads for the card: title, quality tag, discount, price, regular price and shop.
+    /// VoiceOver 在标题之后读的值：质量标签、折扣、现价、原价、商店，已收藏时再加 `In Wishlist`。
+    /// The value VoiceOver reads after the title: quality tag, discount, price, regular price and shop, plus `In Wishlist` when saved.
     ///
-    /// 标题放最前面，滑过卡片时先听到是哪个游戏；折扣写成「75% off」，不按徽标读成「minus 75 percent」。
-    /// The title comes first so a swipe tells you which game it is; the discount reads "75% off" rather than the badge's "minus 75 percent".
-    private var accessibilitySummary: String {
+    /// 这些都会随优惠和收藏变化，所以放 value，标题留在 label；折扣写成「75% off」，不按徽标读成「minus 75 percent」。
+    /// All of these change with the deal and the wishlist, so they go in the value and the title stays in the label; the discount reads "75% off" rather than the badge's "minus 75 percent".
+    private var accessibilityValueText: String {
         let info = deal.deal
-        var parts: [String] = [deal.title]
+        var parts: [String] = []
 
         if let qualityLabel {
             parts.append(qualityLabel.capitalized)
@@ -341,6 +343,11 @@ struct DealCardView: View {
         }
 
         parts.append(info.shop.name)
+
+        if isFavorite {
+            parts.append("In Wishlist")
+        }
+
         return parts.joined(separator: ", ")
     }
 }

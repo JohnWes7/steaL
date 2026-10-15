@@ -348,6 +348,9 @@ struct ProfileView: View {
             // Fills the row so the blank area is tappable too, like the welcome row.
             .contentShape(Rectangle())
         }
+        // 权限会在系统设置里被改，读成 label + value，同系统设置的行 / The permission changes in Settings, so it reads as label plus value, like a Settings row
+        .accessibilityLabel("Notifications")
+        .accessibilityValue(notificationStatusText)
         .accessibilityHint("Opens steaL's notification settings in the Settings app")
     }
 

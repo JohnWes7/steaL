@@ -54,9 +54,11 @@ struct WishlistRowView: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 4)
         .contentShape(Rectangle())
-        // 整行读成一句 / The row reads as one sentence
+        // 整行合成一个元素：label 是不变的名称，value 是会变的价格状态 /
+        // The row is one element: the label is the fixed name, the value the changing price state
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilitySummary)
+        .accessibilityLabel(item.name)
+        .accessibilityValue(spokenPrice)
     }
 
     // MARK: - 长条 / Leading bar
@@ -198,18 +200,12 @@ struct WishlistRowView: View {
 
     // MARK: - 无障碍 / Accessibility
 
-    /// VoiceOver 读的整行：名称在前，再按价格状态读折扣与价格。
-    /// What VoiceOver reads for the row: the name first, then the discount and price for the price state.
+    /// VoiceOver 在名称之后读的 value：按价格状态读折扣与价格，与 `priceLine` 显示的内容一致。
+    /// The value VoiceOver reads after the name: the discount and price for the price state, matching what `priceLine` shows.
     ///
-    /// 不合并时会先读左上角的折扣徽标、两个价格也分不清哪个是原价，所以按「名称、折扣、现价、原价」重排。
-    /// Left alone it reads the corner badge first and gives two prices without saying which is the regular one, so it is reordered as name, discount, price and regular price.
-    private var accessibilitySummary: String {
-        let priceText = spokenPrice
-        return "\(item.name), \(priceText)"
-    }
-
-    /// 按价格状态读的价格部分，与 `priceLine` 显示的内容一致。
-    /// The price part for each price state, matching what `priceLine` shows.
+    /// 价格先显示占位、加载完才有，会变，所以放 value；不合并时会先读左上角的折扣徽标、两个价格也分不清哪个是原价，所以按「折扣、现价、原价」重排。
+    /// The price starts as a placeholder and arrives later, so it goes in the value; left alone the row reads the corner badge first
+    /// and gives two prices without saying which is the regular one, so it is reordered as discount, price and regular price.
     private var spokenPrice: String {
         switch price {
         case .loading:

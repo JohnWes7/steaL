@@ -122,6 +122,7 @@ struct HotDealsView: View {
         let symbolName = genre == nil
             ? "line.3.horizontal.decrease.circle"
             : "line.3.horizontal.decrease.circle.fill"
+        let selectedGenreName = genre?.title ?? "All Genres"
 
         return Menu {
             Picker("Genre", selection: $genre) {
@@ -136,6 +137,9 @@ struct HotDealsView: View {
         } label: {
             Label("Filter by Genre", systemImage: symbolName)
         }
+        // 图标实心与否只有看得见才知道，VoiceOver 读出当前选的大类 /
+        // Only sighted users can tell the filled icon apart, so VoiceOver reads the chosen genre
+        .accessibilityValue(selectedGenreName)
     }
 
     /// 请求成功但列表为空时的提示：选了大类时给「显示全部」，否则给刷新入口。

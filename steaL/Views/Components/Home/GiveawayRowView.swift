@@ -41,7 +41,8 @@ struct GiveawayRowView: View {
             row
         }
         .buttonStyle(GiveawayRowButtonStyle())
-        .accessibilityLabel(accessibilitySummary)
+        .accessibilityLabel(accessibilityLabelText)
+        .accessibilityValue(accessibilityValueText)
         .accessibilityHint("Opens the giveaway page outside steaL")
     }
 
@@ -258,19 +259,21 @@ struct GiveawayRowView: View {
 
     // MARK: - 无障碍 / Accessibility
 
-    /// VoiceOver 读的整行：免费、标题、商店、截止时间。
-    /// What VoiceOver reads for the row: free, title, shop and deadline.
+    /// VoiceOver 读的 label：免费、标题、商店，这几项不会变。
+    /// The label VoiceOver reads: free, title and shop, none of which change.
+    private var accessibilityLabelText: String {
+        let parts: [String] = ["Free", giveaway.displayTitle, shopText]
+        return parts.joined(separator: ", ")
+    }
+
+    /// VoiceOver 读的 value：剩余时间，每天都在变；没有截止时间时为空，VoiceOver 不读。
+    /// The value VoiceOver reads: the time left, which changes daily; empty without a deadline, so VoiceOver skips it.
     ///
     /// 界面上的「3d left」缩写读出来是「3 d left」，这里换成完整说法。
     /// The on-screen "3d left" is read as "3 d left", so the deadline is spelled out here.
-    private var accessibilitySummary: String {
-        var parts: [String] = ["Free", giveaway.displayTitle, shopText]
-
-        if let spokenExpiryText {
-            parts.append(spokenExpiryText)
-        }
-
-        return parts.joined(separator: ", ")
+    private var accessibilityValueText: String {
+        guard let spokenExpiryText else { return "" }
+        return spokenExpiryText
     }
 
     /// 读给 VoiceOver 的截止时间，规则同 `expiryText`，缩写换成完整说法。
