@@ -48,6 +48,14 @@ struct HotDealsView: View {
         HotDealsRequest(region: region, genre: genre)
     }
 
+    private var navTitle : String {
+        var title = "Hot Deals" 
+        if let genre {
+            title += " - \(genre.title)"
+        }
+        return title
+    }
+
     var body: some View {
         ZStack {
             // 背景色 / Background color
@@ -74,7 +82,7 @@ struct HotDealsView: View {
                 }
             }
         }
-        .navigationTitle("Hot Deals")
+        .navigationTitle(navTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
