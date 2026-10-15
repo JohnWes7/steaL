@@ -163,6 +163,16 @@ struct AboutView: View {
                     Text("Course")
                 }
             }
+
+            // 打开「邮件」写信，离开 App，所以也用外链行。
+            // Opens Mail to write a message, which leaves the app, so it uses the external link row too.
+            AboutLinkRow(
+                title: "Contact",
+                subtitle: "yluo0117@student.monash.edu",
+                icon: "envelope.fill",
+                tint: .secondaryText,
+                urlString: "mailto:yluo0117@student.monash.edu"
+            )
         } header: {
             Text("Developer")
         } footer: {

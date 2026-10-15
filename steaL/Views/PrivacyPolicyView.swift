@@ -65,6 +65,10 @@ struct PrivacyPolicyView: View {
                     Text("You can remove an AI provider and its key in Profile › AI Model. Settings and cached images are removed when you delete the app.")
                 }
 
+                PolicySection(title: "Contact") {
+                    Text("Questions about this policy or your data? Email [yluo0117@student.monash.edu](mailto:yluo0117@student.monash.edu).")
+                }
+
                 PolicySection(title: "Changes") {
                     Text("If this policy changes, the date at the top of this page will be updated.")
                 }

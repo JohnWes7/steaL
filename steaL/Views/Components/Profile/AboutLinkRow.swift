@@ -29,7 +29,7 @@ struct AboutLinkRow: View {
     /// 要打开的网址 / The address to open.
     let urlString: String
 
-    /// 用系统浏览器打开网址 / Opens the address in the system browser.
+    /// 交给系统打开网址（网页进浏览器，`mailto:` 进邮件）/ Hands the address to the system (web pages open in the browser, `mailto:` in Mail).
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -63,7 +63,7 @@ struct AboutLinkRow: View {
             // Fills the row so the blank area is tappable too, like Profile's button rows.
             .contentShape(Rectangle())
         }
-        .accessibilityHint("Opens in your browser")
+        .accessibilityHint("Opens outside steaL")
     }
 }
 
