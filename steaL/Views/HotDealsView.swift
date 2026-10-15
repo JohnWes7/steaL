@@ -200,6 +200,7 @@ struct HotDealsView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityHint("Shows game details")
                         .onAppear {
                             loadNextPageIfNeeded(appearing: item, in: items)
                         }

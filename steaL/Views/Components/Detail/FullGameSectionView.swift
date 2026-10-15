@@ -62,7 +62,9 @@ struct FullGameSectionView: View {
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(name), opens in this app")
+            // label 只说是什么，点了会怎样写在 hint / The label says what it is; the hint says what happens
+            .accessibilityLabel(name)
+            .accessibilityHint("Shows the full game's details")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

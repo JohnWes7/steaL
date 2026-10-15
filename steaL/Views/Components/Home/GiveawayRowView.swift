@@ -42,6 +42,7 @@ struct GiveawayRowView: View {
         }
         .buttonStyle(GiveawayRowButtonStyle())
         .accessibilityLabel(accessibilitySummary)
+        .accessibilityHint("Opens the giveaway page outside steaL")
     }
 
     // MARK: - 行内容 / Row content

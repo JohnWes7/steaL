@@ -223,6 +223,7 @@ struct GameDetailView: View {
                     // (a known issue on the Apple forums); `.plain` ignores tint, so the colour comes from `foregroundStyle`.
                     .buttonStyle(.plain)
                     .foregroundStyle(.brandBlue)
+                    .accessibilityHint("Suggests whether to buy now or wait, based on prices and reviews")
                     .popoverTip(aiAdviceTip)
                 }
             }

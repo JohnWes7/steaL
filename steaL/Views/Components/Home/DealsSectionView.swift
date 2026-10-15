@@ -125,6 +125,7 @@ struct DealsSectionView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityHint("Shows game details")
     }
 
     /// 一条优惠的网格小卡，整张卡可点。
@@ -146,6 +147,7 @@ struct DealsSectionView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityHint("Shows game details")
     }
 }
 

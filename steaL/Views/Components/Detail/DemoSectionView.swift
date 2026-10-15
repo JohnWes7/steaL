@@ -74,7 +74,9 @@ struct DemoSectionView: View {
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Download \(name), opens the Steam store page")
+            // label 只说是什么，点了会怎样写在 hint / The label says what it is; the hint says what happens
+            .accessibilityLabel(name)
+            .accessibilityHint("Opens the Steam store page outside steaL")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

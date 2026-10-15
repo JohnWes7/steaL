@@ -237,6 +237,7 @@ struct PriceSectionView: View {
             "\(offer.shop.name), \(drmNames.isEmpty ? "DRM unavailable" : drmNames), "
                 + "\(offer.price.amount.formatted(.currency(code: offer.price.currency)))"
         )
+        .accessibilityHint("Opens this store's page outside steaL")
     }
 
     /// 报价左栏：商店、BEST 徽标、折扣与 DRM / The left column: shop, BEST badge, discount and DRM

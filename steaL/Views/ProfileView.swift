@@ -348,6 +348,7 @@ struct ProfileView: View {
             // Fills the row so the blank area is tappable too, like the welcome row.
             .contentShape(Rectangle())
         }
+        .accessibilityHint("Opens steaL's notification settings in the Settings app")
     }
 
     /// 通知行右侧显示的文字。
@@ -439,6 +440,7 @@ struct ProfileView: View {
             .contentShape(Rectangle())
         }
         .disabled(isDeletingAccount)
+        .accessibilityHint("Asks for your password, then permanently deletes your account and wishlist")
         // 删之前 Firebase 要求重新验证，所以确认和输密码放在同一个 alert 里，一步完成 /
         // Firebase needs a fresh sign-in before deleting, so confirming and entering the password happen in one alert
         .alert("Delete Account?", isPresented: $isConfirmingDelete) {
