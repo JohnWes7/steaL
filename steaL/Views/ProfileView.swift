@@ -194,14 +194,14 @@ struct ProfileView: View {
                         }
                     }
 
-                    // 右侧箭头表示以后会推入一页 / The chevron marks a row that will push a page later
-                    NavigationLink{
-
+                    // 推入关于页：数据来源、隐私政策、致谢 / Pushes the About page: data sources, privacy policy, acknowledgements
+                    NavigationLink {
+                        AboutView()
                     } label: {
                         HStack(spacing: 12) {
                             IconTileView(icon: "person.text.rectangle.fill", tint: .secondaryText)
 
-                            Text("About Me")
+                            Text("About steaL")
                         }
                     }
                 }
