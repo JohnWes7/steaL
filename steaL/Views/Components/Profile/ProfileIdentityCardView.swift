@@ -121,22 +121,21 @@ struct ProfileIdentityCardView: View {
 
     // MARK: - 统计 / Stats
 
-    /// 统计行，目前只有 Tracking。
-    /// The stats row, which only shows Tracking for now.
+    /// 统计行：Tracking 与 Alerts sent。
+    /// The stats row: Tracking and Alerts sent.
     ///
-    /// Alerts sent 还没有数据源，写死 0 算占位内容，暂时注释掉；有了发送记录后取消注释即可放回。
-    /// Alerts sent has no data source yet and a hard-coded 0 counts as placeholder content, so it's commented out
-    /// for now; uncomment it once sent alerts are recorded.
+    /// Alerts sent 还没有数据源，先写死 0；有了发送记录后换成真实数量。
+    /// Alerts sent has no data source yet, so it's a hard-coded 0; swap in the real count once sent alerts are recorded.
     private var statsRow: some View {
         HStack(spacing: 0) {
             stat(value: trackingCount, label: "Tracking", tint: .brandGreen)
 
-            // 暂时注释掉：没有数据源 / Commented out for now: no data source
-            // Divider()
-            //     .frame(height: 34)
-            //     .padding(.horizontal, 16)
-            //
-            // stat(value: 0, label: "Alerts sent", tint: .brandBlue)
+            Divider()
+                .frame(height: 34)
+                .padding(.horizontal, 16)
+
+            // 没有数据源，先写死 0 / No data source yet, so 0 for now
+            stat(value: 0, label: "Alerts sent", tint: .brandBlue)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
