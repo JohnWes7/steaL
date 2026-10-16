@@ -49,7 +49,7 @@ struct PrivacyPolicyView: View {
                 }
 
                 PolicySection(title: "Notifications") {
-                    Text("If you turn on Price Drop Alerts or Game Release Alerts, steaL checks your wishlist in the background and posts notifications from this device. Nothing is sent through a notification server. You can turn them off in Profile or in iOS Settings at any time.")
+                    Text("If you turn on Price Drop Alerts or Game Release Alerts, steaL checks your wishlist each time you open the app and posts notifications from this device. Nothing is sent through a notification server. You can turn them off in Profile or in iOS Settings at any time.")
                 }
 
                 PolicySection(title: "What steaL Doesn't Do") {
@@ -87,7 +87,7 @@ struct PrivacyPolicyView: View {
     /// The last-updated date and a short summary.
     private var intro: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Last updated 15 October 2026")
+            Text("Last updated 16 October 2026")
                 .font(.footnote)
                 .foregroundStyle(.secondaryText)
 

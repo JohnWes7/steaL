@@ -10,9 +10,5 @@
 	<string>$(LLM_API_URL)</string>
 	<key>LLMModel</key>
 	<string>$(LLM_MODEL)</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-	</array>
 </dict>
 </plist>
