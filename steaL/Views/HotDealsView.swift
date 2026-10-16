@@ -38,6 +38,10 @@ struct HotDealsView: View {
     /// The selected genre; `nil` means all genres.
     @State private var genre: DealGenre?
 
+    /// 当前的文字大小，辅助功能档位下网格换成单列大卡，同首页。
+    /// The current text size; accessibility sizes swap the grid for a single column of large cards, as on the home page.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     private var region: AppRegion {
         settings.first?.region ?? .australia
     }
@@ -179,34 +183,27 @@ struct HotDealsView: View {
     /// 已加载的优惠列表。
     /// The loaded list of deals.
     ///
+    /// 辅助功能档位下两列放不下放大的文字，改用 hero 卡排成单列，同首页 `DealsSectionView`。
+    /// At accessibility sizes two columns can't fit the enlarged text, so hero cards go in one column, as in the home page's `DealsSectionView`.
+    ///
     /// - Parameter items: 要显示的优惠 / The deals to show.
     /// - Returns: 列表视图 / The list view.
     private func dealList(_ items: [HomeDealItem]) -> some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 12)],
-                    spacing: 12
-                ) {
+                if dynamicTypeSize.isAccessibilitySize {
+                    // 单列 hero 卡，直接放在外层 `LazyVStack` 里，翻页的 `.onAppear` 仍按需触发 /
+                    // One column of hero cards, placed straight in the outer `LazyVStack` so paging's `.onAppear` stays lazy
                     ForEach(items) { item in
-                        // 整张卡可点；`.plain` 让卡内心形的点击不被外层吞掉 /
-                        // The whole card is tappable; `.plain` keeps the card's own heart clickable
-                        Button {
-                            handleTap(item)
-                        } label: {
-                            DealGridCardView(
-                                deal: item.deal,
-                                isFavorite: isFavorite(item),
-                                isFavoriteEnabled: item.appID != nil,
-                                onToggleFavorite: {
-                                    toggleFavorite(item)
-                                }
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("Shows game details")
-                        .onAppear {
-                            loadNextPageIfNeeded(appearing: item, in: items)
+                        heroCard(for: item, in: items)
+                    }
+                } else {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 12)],
+                        spacing: 12
+                    ) {
+                        ForEach(items) { item in
+                            gridCard(for: item, in: items)
                         }
                     }
                 }
@@ -218,6 +215,62 @@ struct HotDealsView: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 16)
             .padding(.top, 20)
+        }
+    }
+
+    /// 一条优惠的 hero 大卡，整张卡可点，辅助功能档位用。
+    /// A large hero card for one deal, used at accessibility sizes; the whole card is tappable.
+    ///
+    /// - Parameters:
+    ///   - item: 要显示的优惠 / The deal to show.
+    ///   - items: 当前的完整列表，判断是否该加载下一页 / The current full list, for deciding when to load the next page.
+    /// - Returns: 包着 `DealCardView` 的按钮 / A button wrapping `DealCardView`.
+    private func heroCard(for item: HomeDealItem, in items: [HomeDealItem]) -> some View {
+        // `.plain` 让卡内心形的点击不被外层吞掉 / `.plain` keeps the card's own heart clickable
+        Button {
+            handleTap(item)
+        } label: {
+            DealCardView(
+                deal: item.deal,
+                isFavorite: isFavorite(item),
+                isFavoriteEnabled: item.appID != nil,
+                onToggleFavorite: {
+                    toggleFavorite(item)
+                }
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Shows game details")
+        .onAppear {
+            loadNextPageIfNeeded(appearing: item, in: items)
+        }
+    }
+
+    /// 一条优惠的网格小卡，整张卡可点。
+    /// A compact grid card for one deal; the whole card is tappable.
+    ///
+    /// - Parameters:
+    ///   - item: 要显示的优惠 / The deal to show.
+    ///   - items: 当前的完整列表，判断是否该加载下一页 / The current full list, for deciding when to load the next page.
+    /// - Returns: 包着 `DealGridCardView` 的按钮 / A button wrapping `DealGridCardView`.
+    private func gridCard(for item: HomeDealItem, in items: [HomeDealItem]) -> some View {
+        // `.plain` 让卡内心形的点击不被外层吞掉 / `.plain` keeps the card's own heart clickable
+        Button {
+            handleTap(item)
+        } label: {
+            DealGridCardView(
+                deal: item.deal,
+                isFavorite: isFavorite(item),
+                isFavoriteEnabled: item.appID != nil,
+                onToggleFavorite: {
+                    toggleFavorite(item)
+                }
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Shows game details")
+        .onAppear {
+            loadNextPageIfNeeded(appearing: item, in: items)
         }
     }
 
