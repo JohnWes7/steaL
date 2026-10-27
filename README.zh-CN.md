@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="steaL/Assets.xcassets/AppIconImage.imageset/AppIconImage.png" width="120" alt="steaL 图标">
+  <img src="iosApp/steaL/Assets.xcassets/AppIconImage.imageset/AppIconImage.png" width="120" alt="steaL 图标">
 </p>
 
 <h1 align="center">steaL</h1>
@@ -82,10 +82,10 @@ Models      ITAD / Steam / Chat Completions 的 Codable DTO、SwiftData 模型�
 
 **环境要求**：Xcode 26，带 iOS 26.5 SDK。
 
-1. 克隆仓库，打开 `steaL.xcodeproj`。
+1. 克隆仓库，打开 `iosApp/steaL.xcodeproj`。
 2. 复制密钥模板并填入你的 key：
    ```sh
-   cp Secrets.example.xcconfig Secrets.xcconfig
+   cp iosApp/Secrets.example.xcconfig iosApp/Secrets.xcconfig
    ```
    | Key | 是否必需 | 获取方式 |
    | --- | --- | --- |
@@ -94,7 +94,7 @@ Models      ITAD / Steam / Chat Completions 的 Codable DTO、SwiftData 模型�
 
    `.xcconfig` 里 `//` 是注释，网址要写成 `https:/$()/example.com`。
    也可以不配内置模型，在 App 里的 **Profile → AI** 添加自己的服务商。
-3. **Firebase（可选）**：`steaL/GoogleService-Info.plist` 指向作者的 Firebase 项目。想用自己的，就新建一个 Firebase 项目，开启 Email/Password 登录和 Firestore，再替换这个文件。愿望单存在 `users/{uid}/wishlist/{appID}`。
+3. **Firebase（可选）**：`iosApp/steaL/GoogleService-Info.plist` 指向作者的 Firebase 项目。想用自己的，就新建一个 Firebase 项目，开启 Email/Password 登录和 Firestore，再替换这个文件。愿望单存在 `users/{uid}/wishlist/{appID}`。
 4. 在 iOS 26.5 模拟器或真机上运行。
 
 没有 `Secrets.xcconfig` 也能编译，但在填好 ITAD key 之前，折扣和价格都会加载失败。
@@ -102,14 +102,16 @@ Models      ITAD / Steam / Chat Completions 的 Codable DTO、SwiftData 模型�
 ## 目录结构
 
 ```
-steaL/
-├── Config/          读取 Info.plist 的配置、Logger 分类
-├── Models/          ITAD/、Steam/、AI/、App/、Settings/、Previews/
-├── Services/        API 客户端、登录、愿望单、Keychain、通知
-├── ViewModels/      每个页面一个
-└── Views/           页面，以及按使用页面分组的 Components/
-email-templates/     Firebase 重设密码邮件的 HTML 正文
-icon/                Liquid Glass App 图标的 Icon Composer 源文件
+iosApp/                  iOS App（Xcode 工程、xcconfig、SwiftLint 配置）
+└── steaL/
+    ├── Config/          读取 Info.plist 的配置、Logger 分类
+    ├── Models/          ITAD/、Steam/、AI/、App/、Settings/、Previews/
+    ├── Services/        API 客户端、登录、愿望单、Keychain、通知
+    ├── ViewModels/      每个页面一个
+    └── Views/           页面，以及按使用页面分组的 Components/
+firebase/
+└── email-templates/     Firebase 重设密码邮件的 HTML 正文
+icon/                    Liquid Glass App 图标的 Icon Composer 源文件
 ```
 
 ## 已知限制

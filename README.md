@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="steaL/Assets.xcassets/AppIconImage.imageset/AppIconImage.png" width="120" alt="steaL app icon">
+  <img src="iosApp/steaL/Assets.xcassets/AppIconImage.imageset/AppIconImage.png" width="120" alt="steaL app icon">
 </p>
 
 <h1 align="center">steaL</h1>
@@ -99,10 +99,10 @@ Some design decisions:
 
 **Requirements:** Xcode 26 with the iOS 26.5 SDK.
 
-1. Clone the repository and open `steaL.xcodeproj`.
+1. Clone the repository and open `iosApp/steaL.xcodeproj`.
 2. Copy the secrets template and fill in your keys:
    ```sh
-   cp Secrets.example.xcconfig Secrets.xcconfig
+   cp iosApp/Secrets.example.xcconfig iosApp/Secrets.xcconfig
    ```
    | Key | Required | Where to get it |
    | --- | --- | --- |
@@ -111,7 +111,7 @@ Some design decisions:
 
    In an `.xcconfig` file, `//` starts a comment, so write URLs as `https:/$()/example.com`.
    You can also skip the built-in model and add your own provider in **Profile → AI** inside the app.
-3. **Firebase (optional).** `steaL/GoogleService-Info.plist` points to the author's Firebase project.
+3. **Firebase (optional).** `iosApp/steaL/GoogleService-Info.plist` points to the author's Firebase project.
    To use your own, create a Firebase project with Email/Password Auth and Firestore, then replace the
    file. The wishlist is stored at `users/{uid}/wishlist/{appID}`.
 4. Build and run on an iOS 26.5 simulator or device.
@@ -122,14 +122,16 @@ set.
 ## Project Structure
 
 ```
-steaL/
-├── Config/          Info.plist-backed configuration, Logger categories
-├── Models/          ITAD/, Steam/, AI/, App/, Settings/, Previews/
-├── Services/        API clients, Auth, Wishlist, Keychain, notifications
-├── ViewModels/      One per screen
-└── Views/           Screens, plus Components/ grouped by the screen that uses them
-email-templates/     HTML body for the Firebase password-reset email
-icon/                Icon Composer sources for the Liquid Glass app icon
+iosApp/                  The iOS app (Xcode project, xcconfig files, SwiftLint config)
+└── steaL/
+    ├── Config/          Info.plist-backed configuration, Logger categories
+    ├── Models/          ITAD/, Steam/, AI/, App/, Settings/, Previews/
+    ├── Services/        API clients, Auth, Wishlist, Keychain, notifications
+    ├── ViewModels/      One per screen
+    └── Views/           Screens, plus Components/ grouped by the screen that uses them
+firebase/
+└── email-templates/     HTML body for the Firebase password-reset email
+icon/                    Icon Composer sources for the Liquid Glass app icon
 ```
 
 ## Known Limitations

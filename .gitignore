@@ -30,3 +30,15 @@ DerivedData/
 
 # API keys（模板 Secrets.example.xcconfig 要提交）
 Secrets.xcconfig
+
+# Python（backend/）
+__pycache__/
+*.py[cod]
+.venv/
+.env
+
+# Terraform（backend/infra/）
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
