@@ -1,0 +1,22 @@
+{
+  "events": [
+    {"section": "seasonalSale", "name": "Winter Sale 2026", "startDate": "2026-12-17", "endDate": "2027-01-04"},
+    {"section": "seasonalSale", "name": "Spring Sale 2027", "startDate": "2027-03-18", "endDate": "2027-03-25"},
+    {"section": "seasonalSale", "name": "Summer Sale 2027", "startDate": "2027-06-24", "endDate": "2027-07-08"},
+    {"section": "themedFest", "name": "Steam Scream V", "startDate": "2026-10-26", "endDate": "2026-11-02"},
+    {"section": "themedFest", "name": "Auto-Battler RPG Fest", "startDate": "2026-11-16", "endDate": "2026-11-23"},
+    {"section": "themedFest", "name": "Desktop Companion Fest", "startDate": "2027-01-14", "endDate": "2027-01-18"},
+    {"section": "themedFest", "name": "Shop Keeper Fest", "startDate": "2027-01-25", "endDate": "2027-02-01"},
+    {"section": "themedFest", "name": "Sheep Fest", "startDate": "2027-02-04", "endDate": "2027-02-08"},
+    {"section": "themedFest", "name": "Couch Co-Op Fest", "startDate": "2027-02-08", "endDate": "2027-02-15"},
+    {"section": "themedFest", "name": "Rhythm Fest", "startDate": "2027-03-08", "endDate": "2027-03-15"},
+    {"section": "themedFest", "name": "Dinos vs. Robots Fest", "startDate": "2027-03-29", "endDate": "2027-04-05"},
+    {"section": "themedFest", "name": "Racing Fest", "startDate": "2027-04-12", "endDate": "2027-04-19"},
+    {"section": "themedFest", "name": "Witch Fest", "startDate": "2027-04-22", "endDate": "2027-04-26"},
+    {"section": "themedFest", "name": "Fighting Fest", "startDate": "2027-04-26", "endDate": "2027-05-03"},
+    {"section": "themedFest", "name": "Real-Time Strategy Fest", "startDate": "2027-05-10", "endDate": "2027-05-17"},
+    {"section": "themedFest", "name": "Mountaineering Fest", "startDate": "2027-05-31", "endDate": "2027-06-03"},
+    {"section": "nextFest", "name": "Next Fest", "startDate": "2027-02-22", "endDate": "2027-03-01"},
+    {"section": "nextFest", "name": "Next Fest", "startDate": "2027-06-14", "endDate": "2027-06-21"}
+  ]
+}

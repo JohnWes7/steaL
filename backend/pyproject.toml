@@ -1,0 +1,27 @@
+[project]
+name = "steal-backend"
+version = "0.1.0"
+description = "steaL backend: OCI Functions for sale events"
+authors = [
+    { name = "Yijiang", email = "yluo0117@student.monash.edu" }
+]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "httpx>=0.28.1",
+    "openai>=3.42.0",
+    "pydantic>=2.14.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "python-dotenv>=1.2.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
