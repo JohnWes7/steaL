@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from steal_backend.sale_events import steam
-from steal_backend.sale_events.models import ExtractionResult
+from sale_events import steam
+from sale_events.models import ExtractionResult
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PAGE_PATH = FIXTURES / "steamworks_upcoming_events_2026-11-01.html"

@@ -1,7 +1,7 @@
 [project]
-name = "steal-backend"
+name = "sale-events"
 version = "0.1.0"
-description = "steaL backend: OCI Functions for sale events"
+description = "steaL sale events: fetch, extract and validate store event dates"
 authors = [
     { name = "Yijiang", email = "yluo0117@student.monash.edu" }
 ]

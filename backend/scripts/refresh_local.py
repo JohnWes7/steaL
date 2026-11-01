@@ -3,11 +3,14 @@ Runs one Steam refresh locally, without touching the cloud.
 
 用法 / Usage（在 `backend/` 里 / from `backend/`）:
 
-    uv run python -m steal_backend.sale_events.cli --text-only   # 只看预处理结果，不调 AI / reduced text only, no AI
-    uv run python -m steal_backend.sale_events.cli               # 完整刷新，写 .data/ / full refresh into .data/
+    uv run python scripts/refresh_local.py --text-only   # 只看预处理结果，不调 AI / reduced text only, no AI
+    uv run python scripts/refresh_local.py               # 完整刷新，写 .data/ / full refresh into .data/
 
 DeepSeek key 从 `backend/.env` 的 `DEEPSEEK_API_KEY` 读（模板见 `.env.example`）。
 The DeepSeek key is read from `DEEPSEEK_API_KEY` in `backend/.env` (see `.env.example`).
+
+只在本地用，不进 `sale_events` 包，也不会被打包上云。
+Local only: it is not part of the `sale_events` package and is never deployed.
 """
 
 import argparse
@@ -19,12 +22,12 @@ from pathlib import Path
 
 import httpx
 
-from . import steam
-from .extraction import DEFAULT_BASE_URL, DEFAULT_MODEL, DeepSeekExtractor
-from .refresh import refresh_steam
-from .storage import LocalEventStore
+from sale_events import steam
+from sale_events.extraction import DEFAULT_BASE_URL, DEFAULT_MODEL, DeepSeekExtractor
+from sale_events.refresh import refresh_steam
+from sale_events.storage import LocalEventStore
 
-BACKEND_ROOT = Path(__file__).resolve().parents[3]
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> int:

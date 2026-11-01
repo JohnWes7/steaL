@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from steal_backend.sale_events.extraction import DeepSeekExtractor, ExtractionError, parse_extraction
+from sale_events.extraction import DeepSeekExtractor, ExtractionError, parse_extraction
 
 VALID_OUTPUT = '{"events": [{"section": "nextFest", "name": "Next Fest", "startDate": "2027-02-22", "endDate": "2027-03-01"}]}'
 

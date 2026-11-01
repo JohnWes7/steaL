@@ -1,8 +1,8 @@
 from datetime import UTC, datetime, timedelta
 
-from steal_backend.sale_events import steam
-from steal_backend.sale_events.models import ExtractionResult, SaleEvent
-from steal_backend.sale_events.validation import validate_events
+from sale_events import steam
+from sale_events.models import ExtractionResult, SaleEvent
+from sale_events.validation import validate_events
 
 from .conftest import FIXTURE_NOW
 

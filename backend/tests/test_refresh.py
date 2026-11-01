@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 
-from steal_backend.sale_events.extraction import ExtractionError
-from steal_backend.sale_events.models import ExtractionResult
-from steal_backend.sale_events.refresh import refresh_steam
-from steal_backend.sale_events.storage import LocalEventStore
+from sale_events.extraction import ExtractionError
+from sale_events.models import ExtractionResult
+from sale_events.refresh import refresh_steam
+from sale_events.storage import LocalEventStore
 
 from .conftest import FIXTURE_NOW
 

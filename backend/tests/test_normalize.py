@@ -1,6 +1,6 @@
 from datetime import date
 
-from steal_backend.sale_events.normalize import make_event_id, slugify
+from sale_events.normalize import make_event_id, slugify
 
 
 def test_slugify_replaces_punctuation_and_spaces() -> None:

@@ -2,8 +2,8 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from steal_backend.sale_events import steam
-from steal_backend.sale_events.models import ExtractedEvent
+from sale_events import steam
+from sale_events.models import ExtractedEvent
 
 
 def test_extract_text_keeps_all_sections(page_text: str) -> None:
