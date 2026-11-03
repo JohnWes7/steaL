@@ -2,8 +2,10 @@
 One refresh of one store: fetch → reduce → AI extraction → apply times → validate → replace the whole store.
 
 Steam 的页面和 Epic 的季度指南都是完整的日程表，没出现就是不存在了，所以整份替换（改期、取消都能自动处理）。
+itch.io 读的是最近的全部官方帖子，也整份替换，只是空列表是正常的（没有促销的时候）。
 The Steam page and Epic's quarterly guides are complete schedules, so anything missing no longer exists;
-each store's data is replaced as a whole.
+each store's data is replaced as a whole. itch.io reads all recent official posts and is also replaced as a whole,
+except that an empty list is normal (when no sale is running).
 """
 
 import logging
@@ -14,7 +16,7 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
-from . import epic, steam
+from . import epic, itchio, steam
 from .extraction import ExtractionError
 from .models import SaleEvent, SaleEventList
 from .storage import EventStore
@@ -134,6 +136,62 @@ def refresh_epic(
     return validate_and_write(epic.STORE, events, ai_outputs, page_text, store, now)
 
 
+def refresh_itchio(
+    fetch_posts: Callable[[], list[itchio.ItchioPost]],
+    extract: Extract,
+    store: EventStore,
+    now: datetime,
+) -> RefreshReport:
+    """刷新 itch.io 的全站促销；每篇帖子各提取一次，合起来校验，不过就不覆盖。
+    Refreshes itch.io's site-wide sales; each post is extracted separately and validated together; on failure
+    nothing is overwritten.
+
+    同一场促销可能先发「下周开始」、再发「已开始 / 延长」，id 相同时以新帖子为准。
+    A sale may be announced ahead and then again when live or extended; for the same id the newer post wins.
+
+    - Parameters:
+      - fetch_posts: 返回最近的官方帖子，新的在前 / Returns recent official posts, newest first.
+      - extract: 把正文交给 AI，返回抄出来的活动 / Sends the text to the AI and returns the copied events.
+      - store: 读写数据的存储 / The storage to read and write.
+      - now: 当前时刻（UTC）/ The current time (UTC).
+    - Returns: 这次刷新的结果 / The result of this refresh.
+    - Raises: 抓取失败或页面结构变了时照常抛出 / Fetch failures and layout changes propagate.
+    """
+    # 1. 抓帖子：读官方博客 RSS，下载最近 45 天的帖子正文（没有就是空的）。
+    posts = fetch_posts()
+
+    post_texts = []
+    ai_outputs = []
+    events = []
+    seen_ids = set()
+    for post in posts:
+        # 2. 预处理：每篇转成纯文本，开头是标题和发布日期。
+        post_text = itchio.extract_text(post)
+        post_texts.append(post_text)
+        logger.info("itch.io post %r reduced to %d characters", post.title, len(post_text))
+
+        # 3. AI 提取：一篇一次，AI 判断是不是全站促销；任何一篇失败都整次作废，不覆盖旧数据。
+        try:
+            extraction = extract(itchio.SYSTEM_PROMPT, post_text, itchio.ItchioExtraction)
+        except ExtractionError as error:
+            return reject_extraction(itchio.STORE, error, post_text, store, now)
+        ai_output = extraction.model_dump(mode="json", by_alias=True)
+        ai_outputs.append(ai_output)
+
+        # 4. 补时刻：帖子写了太平洋时间就用，没写用 10:00；id 已经出现过（更新的帖子写过）就跳过。
+        post_events = [itchio.to_sale_event(extracted, post) for extracted in extraction.events]
+        for event in post_events:
+            if event.id in seen_ids:
+                logger.info("itch.io: %s already announced by a newer post, skipped", event.id)
+                continue
+            seen_ids.add(event.id)
+            events.append(event)
+
+    # 5、6. 校验、整份替换：空列表不算失败，也不比上一份的条数，见 `validate_and_write`。
+    page_text = "\n\n".join(post_texts)
+    return validate_and_write(itchio.STORE, events, ai_outputs, page_text, store, now, complete_schedule=False)
+
+
 def reject_extraction(
     store_name: str,
     error: ExtractionError,
@@ -161,6 +219,7 @@ def validate_and_write(
     page_text: str,
     store: EventStore,
     now: datetime,
+    complete_schedule: bool = True,
 ) -> RefreshReport:
     """校验一个商店的全部活动，通过就整份替换写入，不过就存进 rejected。
     Validates all events of one store; writes them as a whole if they pass, otherwise saves them to rejected.
@@ -172,15 +231,18 @@ def validate_and_write(
       - page_text: 发给 AI 的正文 / The text sent to the AI.
       - store: 读写数据的存储 / The storage to read and write.
       - now: 当前时刻（UTC）/ The current time (UTC).
+      - complete_schedule: 来源是不是完整日程表；是的话空列表和条数骤降都算失败 /
+        Whether the source is a complete schedule; if so, an empty list or a sudden drop counts as a failure.
     - Returns: 这次刷新的结果 / The result of this refresh.
     """
-    # 5. 校验：先读上一份的条数（判断条数骤降用），再逐条检查；不过就存进 rejected，不覆盖旧数据。
-    previous = store.read(store_name)
+    # 5. 校验：完整日程表先读上一份的条数（判断条数骤降用），再逐条检查；不过就存进 rejected，不覆盖旧数据。
     previous_count = None
-    if previous is not None:
-        previous_count = len(previous.events)
+    if complete_schedule:
+        previous = store.read(store_name)
+        if previous is not None:
+            previous_count = len(previous.events)
 
-    outcome = validate_events(events, page_text, previous_count, now)
+    outcome = validate_events(events, page_text, previous_count, now, require_events=complete_schedule)
     if not outcome.passed:
         logger.error("%s validation failed: %s", store_name, outcome.errors)
         payload = {

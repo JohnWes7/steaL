@@ -42,15 +42,21 @@ def validate_events(
     page_text: str,
     previous_count: int | None,
     now: datetime,
+    require_events: bool = True,
 ) -> ValidationOutcome:
     """按规则校验一个商店的全部活动。
     Validates all events of one store against the rules.
+
+    「至少 1 条」只对完整日程表（Steam、Epic）有意义；itch.io 这种只在促销期间有公告的来源，空是正常的。
+    "At least one event" only makes sense for complete schedules (Steam, Epic); for sources such as itch.io that
+    only announce sales while they run, empty is normal.
 
     - Parameters:
       - events: 已经补好时刻的活动 / Events with times already applied.
       - page_text: 发给 AI 的正文，用来查名字是不是编的 / The text sent to the AI, used to catch invented names.
       - previous_count: 上一份同商店的条数，没有就是 `None` / The previous count for this store, or `None`.
       - now: 当前时刻（UTC），用来丢掉已结束的 / The current time (UTC), used to drop ended events.
+      - require_events: 一条都没有算不算失败 / Whether having no events counts as a failure.
     - Returns: 校验结果 / The validation outcome.
     """
     outcome = ValidationOutcome()
@@ -86,7 +92,7 @@ def validate_events(
         outcome.kept.append(event)
 
     kept_count = len(outcome.kept)
-    if kept_count == 0:
+    if require_events and kept_count == 0:
         outcome.errors.append("no upcoming events left")
 
     # 条数骤降多半是页面改版或预处理切错了。

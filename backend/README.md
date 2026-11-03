@@ -11,7 +11,7 @@ steaL 的「促销活动日历」后端：定期抓各商店官方公布的全�
 cp .env.example .env                                   # 填 DEEPSEEK_API_KEY
 uv run python scripts/refresh_local.py --text-only     # 只看预处理后的正文，不调 AI
 uv run python scripts/refresh_local.py                 # 刷新全部商店，写进 .data/sale-events/
-uv run python scripts/refresh_local.py --store epic    # 只刷新一个商店（steam / epic）
+uv run python scripts/refresh_local.py --store epic    # 只刷新一个商店（steam / epic / itchio）
 uv run python scripts/serve_local.py                   # http://127.0.0.1:8000/v1/sale-events
 uv run pytest                                          # 测试不联网、不调 AI
 ```
@@ -22,7 +22,9 @@ uv run pytest                                          # 测试不联网、不�
 src/sale_events/        刷新逻辑（一个包）
   steam.py              Steam：抓页面、预处理、prompt、补时刻
   epic.py               Epic：找季度指南、预处理、prompt、补时刻
+  itchio.py             itch.io：读官方博客 RSS、预处理、prompt、补时刻
   extraction.py         通用的 DeepSeek 调用（prompt 和输出结构由商店模块传入）
+  html_text.py          通用的 HTML 转纯文本（Epic、itch.io 共用）
   validation.py         校验规则
   storage.py            存储接口 + 本地文件实现
   refresh.py            每个商店一次刷新的编排
@@ -39,6 +41,8 @@ tests/                  pytest；fixtures/ 是存下来的真实页面
 
 AI 只负责抄日期；时区、id、来源网址都由代码处理。任何一步校验不通过，这次结果整份作废，旧数据保留，
 AI 的输出存进 `.data/sale-events/rejected/`，方便排查。
+
+Steam 和 Epic 是完整的日程表，一条都没有、或比上一份少一半以上，都算出错；itch.io 只在促销期间有公告，空列表是正常的。
 
 ## 数据来源
 
@@ -66,6 +70,19 @@ Epic 员工每个季度会在开发者论坛发一篇「`YYYY Qn Promotional Gui
 2025 年 Holiday Sale 指南写 12/11 – 1/8，Epic 日本官方新闻稿写日本时间 12/12 凌晨 1 点 – 1/9 凌晨 1 点，换算正好是两天的 8:00 PST。
 
 Epic 的活动不分类，`kind` 都是 `sale`。
+
+### itch.io
+
+读 itch.io 官方博客的 RSS [`itch.io/blog.rss`](https://itch.io/blog.rss)，里面只有 itch.io 自己的帖子，
+全站促销（Summer / Halloween / Winter / Black Friday 等）都在这里公告，一般在开始当天或提前几天发。没有提前公布的日程。
+
+1. 读 RSS，取最近 45 天发的帖子（不按标题筛，交给 AI 判断是不是促销）；
+2. 下载每篇帖子页，只取正文 `section.post_body`（不含评论）；
+3. 每篇开头加上标题和发布日期，交给 DeepSeek，**只收 itch.io 官方办的全站促销**，Creator Day、合集包、个人开发者的促销都不收；
+4. 同一场促销被两篇帖子提到时（预告、开始、延长），以新帖子为准。
+
+时刻：帖子写了太平洋时间（如 `10:00 AM PT`）就照抄；没写就用 10:00 PT。文章说「现在已开始」但没写开始日期时，用发布日期。
+`kind` 都是 `sale`。
 
 ## 接口
 
@@ -103,3 +120,5 @@ Epic 的活动不分类，`kind` 都是 `sale`。
 - **校验只核对名字，不核对日期**：名字必须原样出现在正文里，防止 AI 编造活动；日期抄错但看起来合理（结束晚于开始、不超过 31 天）时拦不住。
   Epic 指南写了天数（`| 14 Days`），以后可以拿来核对。
 - **Epic 的时刻是推断的**，见上面「时刻」。
+- **itch.io 只能看到正在进行或几天后开始的促销**；帖子没写时刻时用 10:00 PT，往年也出现过 11am PT，可能差一小时。
+  开始日期缺失时用发布日期，促销实际可能早一两天开始。

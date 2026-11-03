@@ -15,8 +15,9 @@ from zoneinfo import ZoneInfo
 import httpx
 from bs4 import BeautifulSoup
 
+from .html_text import element_to_text
 from .models import CamelModel, ExtractedEvent, SaleEvent
-from .normalize import collapse_spaces, local_moment_to_utc, make_event_id
+from .normalize import local_moment_to_utc, make_event_id
 
 STORE = "epic"
 KIND = "sale"
@@ -181,37 +182,7 @@ def extract_text(guide: EpicGuide) -> str:
     for image_wrapper in soup.select("div.lightbox-wrapper"):
         image_wrapper.decompose()
 
-    for line_break in soup.find_all("br"):
-        line_break.replace_with("\n")
-
-    for row in soup.find_all("tr"):
-        cells = row.find_all(["th", "td"])
-        cell_texts = [collapse_spaces(cell.get_text()) for cell in cells]
-        non_empty_cells = [text for text in cell_texts if text != ""]
-        if len(non_empty_cells) == 0:
-            row.decompose()
-            continue
-        row_text = " | ".join(cell_texts)
-        row.replace_with(f"| {row_text} |\n")
-
-    for heading in soup.find_all(["h1", "h2", "h3", "h4"]):
-        heading_text = collapse_spaces(heading.get_text())
-        heading.replace_with(f"\n## {heading_text}\n")
-
-    for block in soup.find_all(["p", "li"]):
-        block_lines = block.get_text().split("\n")
-        collapsed_lines = [collapse_spaces(line) for line in block_lines]
-        block_text = "\n".join(collapsed_lines)
-        block.replace_with(f"{block_text}\n")
-
-    raw_text = soup.get_text()
-    lines = raw_text.splitlines()
-    stripped_lines = [line.strip() for line in lines]
-    joined = "\n".join(stripped_lines)
-    # 连续空行压成一个。
-    # Collapse runs of blank lines into one.
-    collapsed = re.sub(r"\n{3,}", "\n\n", joined)
-    body = collapsed.strip()
+    body = element_to_text(soup)
     return f"# {guide.title}\n\n{body}"
 
 

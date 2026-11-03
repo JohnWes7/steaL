@@ -1,11 +1,11 @@
-"""本地跑一次刷新（Steam、Epic 或两个都跑），不碰云。
-Runs one refresh locally (Steam, Epic or both), without touching the cloud.
+"""本地跑一次刷新（Steam、Epic、itch.io，或全部），不碰云。
+Runs one refresh locally (Steam, Epic, itch.io, or all of them), without touching the cloud.
 
 用法 / Usage（在 `backend/` 里 / from `backend/`）:
 
     uv run python scripts/refresh_local.py --text-only           # 只看预处理结果，不调 AI / reduced text only, no AI
-    uv run python scripts/refresh_local.py                       # 两个商店都刷新，写 .data/ / refresh both into .data/
-    uv run python scripts/refresh_local.py --store epic          # 只刷新 Epic / refresh Epic only
+    uv run python scripts/refresh_local.py                       # 全部商店都刷新，写 .data/ / refresh all into .data/
+    uv run python scripts/refresh_local.py --store epic          # 只刷新一个商店 / refresh one store only
 
 DeepSeek key 从 `backend/.env` 的 `DEEPSEEK_API_KEY` 读（模板见 `.env.example`）。
 The DeepSeek key is read from `DEEPSEEK_API_KEY` in `backend/.env` (see `.env.example`).
@@ -23,13 +23,13 @@ from pathlib import Path
 
 import httpx
 
-from sale_events import epic, steam
+from sale_events import epic, itchio, steam
 from sale_events.extraction import DEFAULT_BASE_URL, DEFAULT_MODEL, DeepSeekExtractor
-from sale_events.refresh import RefreshReport, refresh_epic, refresh_steam
+from sale_events.refresh import RefreshReport, refresh_epic, refresh_itchio, refresh_steam
 from sale_events.storage import LocalEventStore
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-STORE_CHOICES = ["steam", "epic", "all"]
+STORE_CHOICES = ["steam", "epic", "itchio", "all"]
 
 
 def main() -> int:
@@ -51,6 +51,8 @@ def main() -> int:
     http_client = httpx.Client()
     run_steam = arguments.store in ("steam", "all")
     run_epic = arguments.store in ("epic", "all")
+    run_itchio = arguments.store in ("itchio", "all")
+    now = datetime.now(UTC)
 
     if arguments.text_only:
         if run_steam:
@@ -62,6 +64,11 @@ def main() -> int:
             for guide in guides:
                 print(f"\n----- {guide.url}\n")
                 print(epic.extract_text(guide))
+        if run_itchio:
+            posts = itchio.fetch_posts(http_client, now)
+            for post in posts:
+                print(f"\n----- {post.url}\n")
+                print(itchio.extract_text(post))
         return 0
 
     # python-dotenv 只是本地开发依赖，上云后 key 从云的 secret 服务读。
@@ -78,7 +85,6 @@ def main() -> int:
     base_url = os.environ.get("DEEPSEEK_BASE_URL", DEFAULT_BASE_URL)
     extractor = DeepSeekExtractor(api_key=api_key, model=model, base_url=base_url)
     store = LocalEventStore(arguments.out)
-    now = datetime.now(UTC)
 
     exit_code = 0
     if run_steam:
@@ -100,6 +106,17 @@ def main() -> int:
             now=now,
         )
         succeeded = print_report(epic.STORE, report, arguments.out)
+        if not succeeded:
+            exit_code = 1
+
+    if run_itchio:
+        report = refresh_itchio(
+            fetch_posts=lambda: itchio.fetch_posts(http_client, now),
+            extract=extractor.extract,
+            store=store,
+            now=now,
+        )
+        succeeded = print_report(itchio.STORE, report, arguments.out)
         if not succeeded:
             exit_code = 1
 
