@@ -150,6 +150,15 @@ terraform plan                                # 先看会建什么
 terraform apply
 ```
 
+已部署（2026-11-04）：`https://1gfwpsgqnc.execute-api.ap-east-1.amazonaws.com/v1/sale-events`。
+
+手动刷新一个商店：
+
+```sh
+aws lambda invoke --profile steal --region ap-east-1 --function-name steal-sale-events-refresh \
+  --cli-binary-format raw-in-base64-out --payload '{"store":"steam"}' --cli-read-timeout 700 out.json
+```
+
 定时器默认关闭（`schedules_enabled = false`）。先手动调用一次 refresh，确认数据写进 S3，再在 `terraform.tfvars` 里打开。
 刷新失败目前只记在 CloudWatch Logs 里（还没有邮件通知）。
 
