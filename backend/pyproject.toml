@@ -25,3 +25,6 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# func.py 是单独部署的单文件，不在包里，测试从它的目录导入。
+# func.py is a standalone deployed file outside the package; tests import it from its folder.
+pythonpath = ["functions/sale_events_api"]
