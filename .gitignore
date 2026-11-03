@@ -37,6 +37,8 @@ __pycache__/
 .venv/
 .env
 backend/.data/
+# Lambda 打包产物（scripts/build_refresh_lambda.sh 生成）
+backend/build/
 .pytest_cache/
 
 # Terraform（backend/infra/）

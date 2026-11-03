@@ -19,12 +19,14 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "boto3>=1.43.123",
+    "moto[s3]>=5.2.5",
     "pytest>=9.2.0",
     "python-dotenv>=1.2.4",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# func.py 是单独部署的单文件，不在包里，测试从它的目录导入。
-# func.py is a standalone deployed file outside the package; tests import it from its folder.
-pythonpath = ["functions/sale_events_api"]
+# 两个 Lambda 的入口文件不在包里，测试从各自的目录导入（文件名互不相同，不会冲突）。
+# The two Lambdas' entry files live outside the package; tests import them from their folders (names never clash).
+pythonpath = ["functions/sale_events_api", "functions/sale_events_refresh"]

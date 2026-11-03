@@ -23,13 +23,14 @@ from pathlib import Path
 
 import httpx
 
-from sale_events import agent, epic, gog, itchio, steam
-from sale_events.extraction import DEFAULT_BASE_URL, DEFAULT_MODEL, DeepSeekExtractor
-from sale_events.refresh import RefreshReport, refresh_epic, refresh_itchio, refresh_steam, refresh_with_agent
+from sale_events import epic, itchio, steam
+from sale_events.extraction import DEFAULT_BASE_URL, DEFAULT_MODEL
+from sale_events.refresh import RefreshReport
+from sale_events.runner import STORES, DeepSeekSettings, run_store
 from sale_events.storage import LocalEventStore
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-STORE_CHOICES = ["steam", "epic", "itchio", "gog", "all"]
+STORE_CHOICES = [*STORES, "all"]
 
 
 def main() -> int:
@@ -86,53 +87,15 @@ def main() -> int:
 
     model = os.environ.get("DEEPSEEK_MODEL", DEFAULT_MODEL)
     base_url = os.environ.get("DEEPSEEK_BASE_URL", DEFAULT_BASE_URL)
-    extractor = DeepSeekExtractor(api_key=api_key, model=model, base_url=base_url)
+    settings = DeepSeekSettings(api_key=api_key, model=model, base_url=base_url)
     store = LocalEventStore(arguments.out)
 
     exit_code = 0
-    if run_steam:
-        report = refresh_steam(
-            fetch_html=lambda: steam.fetch_page(http_client),
-            extract=extractor.extract,
-            store=store,
-            now=now,
-        )
-        succeeded = print_report(steam.STORE, report, arguments.out)
-        if not succeeded:
-            exit_code = 1
-
-    if run_epic:
-        report = refresh_epic(
-            fetch_guides=lambda: epic.fetch_guides(http_client),
-            extract=extractor.extract,
-            store=store,
-            now=now,
-        )
-        succeeded = print_report(epic.STORE, report, arguments.out)
-        if not succeeded:
-            exit_code = 1
-
-    if run_itchio:
-        report = refresh_itchio(
-            fetch_posts=lambda: itchio.fetch_posts(http_client, now),
-            extract=extractor.extract,
-            store=store,
-            now=now,
-        )
-        succeeded = print_report(itchio.STORE, report, arguments.out)
-        if not succeeded:
-            exit_code = 1
-
-    if run_gog:
-        chat = agent.DeepSeekChat(api_key=api_key, model=model, base_url=base_url)
-        web_tools = agent.DeepSeekWebTools(api_key=api_key, client=http_client, base_url=base_url)
-        report = refresh_with_agent(
-            source=gog.SOURCE,
-            run_agent=lambda: agent.run_agent(gog.SOURCE, chat, web_tools, now),
-            store=store,
-            now=now,
-        )
-        succeeded = print_report(gog.SOURCE.store, report, arguments.out)
+    for store_name in STORES:
+        if arguments.store not in (store_name, "all"):
+            continue
+        report = run_store(store_name, settings, http_client, store, now)
+        succeeded = print_report(store_name, report, arguments.out)
         if not succeeded:
             exit_code = 1
 

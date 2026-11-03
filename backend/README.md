@@ -13,7 +13,8 @@ uv run python scripts/refresh_local.py --text-only     # 只看预处理后的�
 uv run python scripts/refresh_local.py                 # 刷新全部商店，写进 .data/sale-events/
 uv run python scripts/refresh_local.py --store epic    # 只刷新一个商店（steam / epic / itchio / gog）
 uv run python scripts/serve_local.py                   # http://127.0.0.1:8000/v1/sale-events
-uv run pytest                                          # 测试不联网、不调 AI
+uv run pytest                                          # 测试不联网、不调 AI、不碰真 AWS（S3 用 moto 模拟）
+scripts/build_refresh_lambda.sh                        # 打包 refresh Lambda（Linux arm64）到 build/refresh/
 ```
 
 ## 目录
@@ -30,8 +31,12 @@ src/sale_events/        刷新逻辑（一个包）
   validation.py         校验规则
   storage.py            存储接口 + 本地文件实现
   refresh.py            每个商店一次刷新的编排
+  runner.py             按商店名接好抓取 / AI / 存储，本地脚本与 Lambda 共用
   models.py / normalize.py   数据模型、时区换算与 id
 functions/sale_events_api/func.py   读接口：只用标准库，与云无关
+functions/sale_events_api/api_lambda.py          AWS 专用：Lambda 入口，从 S3 读文件交给 func.py
+functions/sale_events_refresh/refresh_lambda.py  AWS 专用：Lambda 入口，每次刷新事件里的一个商店，没写成就抛错
+functions/sale_events_refresh/s3_store.py        AWS 专用：EventStore 的 S3 实现
 scripts/                本地入口（不打包上云）
 tests/                  pytest；fixtures/ 是存下来的真实页面
 ```
@@ -130,6 +135,13 @@ GOG 没有提前公布的日程，官方新闻只在促销开始时发，也没�
 - 时刻都是 UTC，`end` 是结束的那一刻（不含）。
 - 还没有任何数据或读不到存储时返回 503，数据损坏返回 500，错误体是 RFC 9457 `application/problem+json`。
 - 接口还在原型阶段，字段可能会变，等稳定后再写 OpenAPI 文件。
+
+## 部署（AWS，进行中）
+
+部署到 AWS 香港（`ap-east-1`）：API Gateway HTTP API → `sale_events_api` Lambda 读 S3；EventBridge Scheduler 每个商店一个定时器
+（Steam / Epic 每周、itch.io / GOG 每天）→ `sale_events_refresh` Lambda 写 S3；刷新失败经 SNS 发邮件。Terraform 将放在 `infra/`（还没写）。
+
+为了不绑定某一家云：`sale_events` 包和 `func.py` 不依赖任何云 SDK，AWS 专用的只有上面三个文件。换云时只换它们和 Terraform。
 
 ## 已知限制
 
