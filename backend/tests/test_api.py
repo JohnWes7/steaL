@@ -1,7 +1,7 @@
 import json
 from datetime import UTC, datetime
 
-import func
+import api_core
 
 NOW = datetime(2026, 11, 3, tzinfo=UTC)
 
@@ -36,33 +36,33 @@ GOG_FILE = make_file(
 
 
 def test_merge_drops_ended_and_sorts_across_stores() -> None:
-    merged = func.merge_store_files([STEAM_FILE, GOG_FILE], NOW)
+    merged = api_core.merge_store_files([STEAM_FILE, GOG_FILE], NOW)
     ids = [event["id"] for event in merged["events"]]
     assert ids == ["gog-autumn", "steam-winter"]
 
 
 def test_merge_uses_earliest_refreshed_at() -> None:
-    merged = func.merge_store_files([STEAM_FILE, GOG_FILE], NOW)
+    merged = api_core.merge_store_files([STEAM_FILE, GOG_FILE], NOW)
     assert merged["refreshedAt"] == "2026-10-30T00:00:00Z"
 
 
 def test_ok_response_has_cache_header() -> None:
-    response = func.list_sale_events(lambda: [STEAM_FILE], NOW)
+    response = api_core.list_sale_events(lambda: [STEAM_FILE], NOW)
     assert response.status == 200
     assert response.headers["Content-Type"] == "application/json"
-    assert response.headers["Cache-Control"] == func.CACHE_CONTROL
+    assert response.headers["Cache-Control"] == api_core.CACHE_CONTROL
     body = json.loads(response.body)
     assert [event["id"] for event in body["events"]] == ["steam-winter"]
 
 
 def test_all_ended_is_ok_and_empty() -> None:
-    response = func.list_sale_events(lambda: [STEAM_FILE], datetime(2027, 2, 1, tzinfo=UTC))
+    response = api_core.list_sale_events(lambda: [STEAM_FILE], datetime(2027, 2, 1, tzinfo=UTC))
     assert response.status == 200
     assert json.loads(response.body)["events"] == []
 
 
 def test_no_files_is_503() -> None:
-    response = func.list_sale_events(lambda: [], NOW)
+    response = api_core.list_sale_events(lambda: [], NOW)
     assert response.status == 503
     assert response.headers["Content-Type"] == "application/problem+json"
     assert json.loads(response.body)["status"] == 503
@@ -72,11 +72,11 @@ def test_unreadable_storage_is_503() -> None:
     def broken_reader() -> list[str]:
         raise PermissionError("denied")
 
-    response = func.list_sale_events(broken_reader, NOW)
+    response = api_core.list_sale_events(broken_reader, NOW)
     assert response.status == 503
 
 
 def test_corrupted_file_is_500() -> None:
-    response = func.list_sale_events(lambda: ["{not json"], NOW)
+    response = api_core.list_sale_events(lambda: ["{not json"], NOW)
     assert response.status == 500
     assert response.headers["Content-Type"] == "application/problem+json"

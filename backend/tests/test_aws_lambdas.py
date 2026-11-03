@@ -3,10 +3,10 @@ from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any
 
-import api_lambda
+import api_handler
 import boto3
 import pytest
-import refresh_lambda
+import refresh_handler
 from moto import mock_aws
 from s3_store import S3EventStore
 
@@ -89,8 +89,8 @@ def test_refresh_handler_runs_only_the_named_store(
         calls.append((store_name, settings.api_key, event_store.bucket))
         return RefreshReport(written=True, dropped_unverified=["Mega Sale: quote is not on the source page"])
 
-    monkeypatch.setattr(refresh_lambda, "run_store", fake_run_store)
-    summary = refresh_lambda.handler({"store": "gog"}, None)
+    monkeypatch.setattr(refresh_handler, "run_store", fake_run_store)
+    summary = refresh_handler.handler({"store": "gog"}, None)
 
     assert calls == [("gog", "test-key", BUCKET)]
     assert summary["store"] == "gog"
@@ -103,14 +103,14 @@ def test_refresh_handler_raises_when_store_was_not_written(
     def failing_run_store(*arguments: Any) -> RefreshReport:
         return RefreshReport(written=False, errors=["no upcoming events left"])
 
-    monkeypatch.setattr(refresh_lambda, "run_store", failing_run_store)
-    with pytest.raises(refresh_lambda.RefreshFailedError, match="no upcoming events left"):
-        refresh_lambda.handler({"store": "steam"}, None)
+    monkeypatch.setattr(refresh_handler, "run_store", failing_run_store)
+    with pytest.raises(refresh_handler.RefreshFailedError, match="no upcoming events left"):
+        refresh_handler.handler({"store": "steam"}, None)
 
 
 def test_refresh_handler_rejects_unknown_store(refresh_env: None) -> None:
     with pytest.raises(ValueError):
-        refresh_lambda.handler({"store": "humble"}, None)
+        refresh_handler.handler({"store": "humble"}, None)
 
 
 # MARK: - API Lambda
@@ -119,7 +119,7 @@ def test_refresh_handler_rejects_unknown_store(refresh_env: None) -> None:
 @pytest.fixture
 def api_env(s3_client: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setenv("BUCKET_NAME", BUCKET)
-    monkeypatch.setattr(api_lambda, "get_s3_client", lambda: s3_client)
+    monkeypatch.setattr(api_handler, "get_s3_client", lambda: s3_client)
     return s3_client
 
 
@@ -128,7 +128,7 @@ def test_api_handler_merges_store_files_and_skips_rejected(api_env: Any) -> None
     store.write("steam", make_event_list("steam-winter", datetime(2099, 1, 4, 18, tzinfo=UTC)))
     store.write_rejected("steam", datetime(2026, 11, 4, tzinfo=UTC), {"errors": ["x"]})
 
-    response = api_lambda.handler({}, None)
+    response = api_handler.handler({}, None)
 
     assert response["statusCode"] == 200
     assert response["headers"]["Cache-Control"] == "public, max-age=3600"
@@ -138,12 +138,12 @@ def test_api_handler_merges_store_files_and_skips_rejected(api_env: Any) -> None
 
 
 def test_api_handler_is_503_before_first_refresh(api_env: Any) -> None:
-    response = api_lambda.handler({}, None)
+    response = api_handler.handler({}, None)
     assert response["statusCode"] == 503
     assert response["headers"]["Content-Type"] == "application/problem+json"
 
 
 def test_api_handler_is_503_when_bucket_is_unreadable(api_env: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BUCKET_NAME", "missing-bucket")
-    response = api_lambda.handler({}, None)
+    response = api_handler.handler({}, None)
     assert response["statusCode"] == 503

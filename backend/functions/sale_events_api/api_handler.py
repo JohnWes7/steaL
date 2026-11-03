@@ -1,6 +1,6 @@
-"""AWS 专用：API Lambda 的入口。从 S3 读各商店的文件，交给与云无关的 `func.list_sale_events`，转成 HTTP API 的响应。
+"""AWS 专用：API Lambda 的入口。从 S3 读各商店的文件，交给与云无关的 `api_core.list_sale_events`，转成 HTTP API 的响应。
 AWS only: the API Lambda's entry point. Reads each store's file from S3, hands them to the cloud-neutral
-`func.list_sale_events`, and converts the result to an HTTP API response.
+`api_core.list_sale_events`, and converts the result to an HTTP API response.
 
 API Gateway HTTP API 只把 `GET /v1/sale-events` 路由到这里，其他路径由网关直接返回 404。
 API Gateway HTTP API only routes `GET /v1/sale-events` here; other paths get a 404 from the gateway itself.
@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import boto3
-import func
+import api_core
 from botocore.exceptions import BotoCoreError, ClientError
 
 PREFIX = "sale-events/"
@@ -34,8 +34,8 @@ def make_reader(client: Any, bucket: str) -> Callable[[], list[str]]:
     """返回一个读取 `sale-events/*.json`（不含 `rejected/`）的函数。
     Returns a function that reads `sale-events/*.json` (excluding `rejected/`).
 
-    读不到存储时抛 `OSError`，`func.list_sale_events` 会把它转成 503。
-    Unreadable storage raises `OSError`, which `func.list_sale_events` turns into a 503.
+    读不到存储时抛 `OSError`，`api_core.list_sale_events` 会把它转成 503。
+    Unreadable storage raises `OSError`, which `api_core.list_sale_events` turns into a 503.
     """
 
     def read_store_files() -> list[str]:
@@ -57,7 +57,7 @@ def make_reader(client: Any, bucket: str) -> Callable[[], list[str]]:
     return read_store_files
 
 
-def to_http_api_response(response: func.Response) -> dict[str, Any]:
+def to_http_api_response(response: api_core.Response) -> dict[str, Any]:
     """把与云无关的 `Response` 转成 HTTP API（payload 2.0）要的格式。
     Converts the cloud-neutral `Response` into the HTTP API (payload 2.0) format.
     """
@@ -75,5 +75,5 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     reader = make_reader(get_s3_client(), os.environ["BUCKET_NAME"])
     now = datetime.now(UTC)
-    response = func.list_sale_events(reader, now)
+    response = api_core.list_sale_events(reader, now)
     return to_http_api_response(response)

@@ -1,5 +1,9 @@
-"""sale_events_api：读各商店的活动文件，合并成 `GET /v1/sale-events` 的响应。
-sale_events_api: reads each store's event file and merges them into the `GET /v1/sale-events` response.
+"""sale_events_api 的核心逻辑（不是入口）：读各商店的活动文件，合并成 `GET /v1/sale-events` 的响应。
+The core logic of sale_events_api (not the entry point): reads each store's event file and merges them into the
+`GET /v1/sale-events` response.
+
+入口：AWS 是 `api_handler.py`，本地是 `scripts/serve_local.py`。
+Entry points: `api_handler.py` on AWS, `scripts/serve_local.py` locally.
 
 只用标准库、不 import `sale_events`：文件内容当字典处理，包小、冷启动快。
 Standard library only and no `sale_events` import: file contents are handled as dicts, keeping the package small and cold starts fast.

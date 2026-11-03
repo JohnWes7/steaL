@@ -46,9 +46,9 @@ uv pip install . \
     --python-platform "$PYTHON_PLATFORM" \
     --quiet
 
-# 4. 入口文件放在 zip 根目录，handler 写 refresh_lambda.handler。
-# 4. Entry files go at the zip root; the handler is refresh_lambda.handler.
-cp functions/sale_events_refresh/refresh_lambda.py functions/sale_events_refresh/s3_store.py "$PACKAGE_DIR/"
+# 4. 入口文件放在 zip 根目录，handler 写 refresh_handler.handler。
+# 4. Entry files go at the zip root; the handler is refresh_handler.handler.
+cp functions/sale_events_refresh/refresh_handler.py functions/sale_events_refresh/s3_store.py "$PACKAGE_DIR/"
 
 # 去掉运行时用不到的缓存。
 # Drop caches the runtime does not need.

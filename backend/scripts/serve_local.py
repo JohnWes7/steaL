@@ -21,10 +21,10 @@ from urllib.parse import urlsplit
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 API_DIR = BACKEND_ROOT / "functions" / "sale_events_api"
 
-# func.py 是单独部署的单文件，不在 sale_events 包里，所以把它的目录加进 import 路径。
-# func.py is a standalone deployed file outside the sale_events package, so its folder is added to the import path.
+# api_core.py 是单独部署的单文件，不在 sale_events 包里，所以把它的目录加进 import 路径。
+# api_core.py is a standalone deployed file outside the sale_events package, so its folder is added to the import path.
 sys.path.insert(0, str(API_DIR))
-import func  # noqa: E402
+import api_core  # noqa: E402
 
 API_PATH = "/v1/sale-events"
 
@@ -48,8 +48,8 @@ def make_file_reader(data_root: Path):
 
 
 def make_handler(read_store_files):
-    """生成处理请求的类，把读文件的函数交给 `func.list_sale_events`。
-    Builds the request handler class, passing the file reader to `func.list_sale_events`.
+    """生成处理请求的类，把读文件的函数交给 `api_core.list_sale_events`。
+    Builds the request handler class, passing the file reader to `api_core.list_sale_events`.
     """
 
     class SaleEventsHandler(BaseHTTPRequestHandler):
@@ -59,12 +59,12 @@ def make_handler(read_store_files):
             request_path = urlsplit(self.path).path
             if request_path == API_PATH:
                 now = datetime.now(UTC)
-                response = func.list_sale_events(read_store_files, now)
+                response = api_core.list_sale_events(read_store_files, now)
             else:
-                response = func.problem_response(404, "Not Found", f"Only {API_PATH} exists.")
+                response = api_core.problem_response(404, "Not Found", f"Only {API_PATH} exists.")
             self.send_api_response(response)
 
-        def send_api_response(self, response: func.Response) -> None:
+        def send_api_response(self, response: api_core.Response) -> None:
             body = response.body.encode("utf-8")
             self.send_response(response.status)
             for name, value in response.headers.items():
