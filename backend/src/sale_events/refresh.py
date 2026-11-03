@@ -52,10 +52,14 @@ def refresh_steam(
     - Raises: 抓取失败或页面结构变了时照常抛出（没有 AI 输出可存）/
       Fetch failures and layout changes propagate (there is no AI output to save).
     """
+    # 1. 抓页面：下载 Steamworks「Upcoming Steam Events」页的 HTML。
     page_html = fetch_html()
+
+    # 2. 预处理：只留正文、去掉标签，标题写成 `## 标题`、表格行写成 `| a | b |`。
     page_text = steam.extract_text(page_html)
     logger.info("Steam page reduced to %d characters", len(page_text))
 
+    # 3. AI 提取：把正文交给 AI 抄出活动日期；没给出能用的 JSON 就存进 rejected，不覆盖旧数据。
     try:
         extraction = extract(page_text)
     except ExtractionError as error:
@@ -68,8 +72,10 @@ def refresh_steam(
         store.write_rejected(steam.STORE, now, payload)
         return RefreshReport(written=False, errors=[str(error)])
 
+    # 4. 补时刻：按 Steam 规则给每个日期补上太平洋时间 10 点，换成 UTC，生成 id。
     events = [steam.to_sale_event(extracted) for extracted in extraction.events]
 
+    # 5. 校验：先读上一份的条数（判断条数骤降用），再逐条检查；不过就存进 rejected，不覆盖旧数据。
     previous = store.read(steam.STORE)
     previous_count = None
     if previous is not None:
@@ -87,6 +93,7 @@ def refresh_steam(
         store.write_rejected(steam.STORE, now, payload)
         return RefreshReport(written=False, errors=outcome.errors)
 
+    # 6. 整份替换：留下的活动按开始时间排序，整份覆盖写入。
     sorted_events = sorted(outcome.kept, key=lambda event: event.start)
     event_list = SaleEventList(refreshed_at=now, events=sorted_events)
     store.write(steam.STORE, event_list)
