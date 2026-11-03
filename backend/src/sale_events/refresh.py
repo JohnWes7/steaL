@@ -253,17 +253,25 @@ def refresh_with_agent(
         payload = {"errors": dropped, "aiOutput": ai_output, "openedURLs": opened_urls, "log": run.log}
         store.write_rejected(source.store, now, payload)
 
-    # 6. 按条更新：旧数据里还没结束的留着，这次的同 id 覆盖、新的加进来，整份写回。
-    events_by_id = {}
+    # 6. 按条更新：旧数据里还没结束的留着，这次的按结束日期覆盖同一场、新的加进来，整份写回。
+    # AI 每次给的名字可能不同（id 跟着变），结束日期核对过、最稳定，所以同一商店同一天结束的算同一场。
+    # The AI's name can change between runs (and the id with it); the verified end date is the most stable,
+    # so events of one store ending on the same UTC day count as the same event.
+    events_by_end_day = {}
     previous = store.read(source.store)
     if previous is not None:
         for previous_event in previous.events:
             if previous_event.end > now:
-                events_by_id[previous_event.id] = previous_event
+                end_day = previous_event.end.date()
+                events_by_end_day[end_day] = previous_event
     for new_event in outcome.kept:
-        events_by_id[new_event.id] = new_event
+        end_day = new_event.end.date()
+        replaced = events_by_end_day.get(end_day)
+        if replaced is not None and replaced.id != new_event.id:
+            logger.info("%s: %s replaces %s (same end day)", source.store, new_event.id, replaced.id)
+        events_by_end_day[end_day] = new_event
 
-    sorted_events = sorted(events_by_id.values(), key=lambda event: event.start)
+    sorted_events = sorted(events_by_end_day.values(), key=lambda event: event.start)
     event_list = SaleEventList(refreshed_at=now, events=sorted_events)
     store.write(source.store, event_list)
     logger.info("%s: wrote %d events (%d from this run)", source.store, len(sorted_events), len(outcome.kept))

@@ -228,3 +228,25 @@ def test_refresh_with_agent_keeps_old_data_when_agent_fails(tmp_path: Path) -> N
     assert not (tmp_path / "sale-events" / "gog.json").exists()
     rejected = list((tmp_path / "sale-events" / "rejected").glob("gog-*.json"))
     assert json.loads(rejected[0].read_text())["log"] == ["round 1: search 'x'"]
+
+
+def test_refresh_with_agent_replaces_renamed_event_with_same_end_day(tmp_path: Path) -> None:
+    store = LocalEventStore(tmp_path)
+    # 上一次 AI 把名字抄成了文章标题，id 不同，但结束日期相同。
+    # Last time the AI copied the article headline as the name: a different id, but the same end day.
+    headline_named = SaleEvent(
+        id="gog-2026-10-27-gog-turns-18-celebrate-with-our-anniversary-sale",
+        store="gog",
+        kind="sale",
+        name="GOG turns 18! Celebrate with our Anniversary Sale",
+        start=datetime(2026, 10, 27, 8, tzinfo=UTC),
+        end=datetime(2026, 11, 5, 8, tzinfo=UTC),
+        source_url=PAGE_URL,
+    )
+    store.write("gog", SaleEventList(refreshed_at=datetime(2026, 11, 2, tzinfo=UTC), events=[headline_named]))
+
+    run = make_run()
+    report = refresh_with_agent(SOURCE, lambda: run, store, NOW)
+
+    ids = [event.id for event in report.events]
+    assert ids == ["gog-2026-10-28-anniversary-sale"]
