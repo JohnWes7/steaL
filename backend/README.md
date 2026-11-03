@@ -11,7 +11,7 @@ steaL 的「促销活动日历」后端：定期抓各商店官方公布的全�
 cp .env.example .env                                   # 填 DEEPSEEK_API_KEY
 uv run python scripts/refresh_local.py --text-only     # 只看预处理后的正文，不调 AI
 uv run python scripts/refresh_local.py                 # 刷新全部商店，写进 .data/sale-events/
-uv run python scripts/refresh_local.py --store epic    # 只刷新一个商店（steam / epic / itchio）
+uv run python scripts/refresh_local.py --store epic    # 只刷新一个商店（steam / epic / itchio / gog）
 uv run python scripts/serve_local.py                   # http://127.0.0.1:8000/v1/sale-events
 uv run pytest                                          # 测试不联网、不调 AI
 ```
@@ -23,6 +23,8 @@ src/sale_events/        刷新逻辑（一个包）
   steam.py              Steam：抓页面、预处理、prompt、补时刻
   epic.py               Epic：找季度指南、预处理、prompt、补时刻
   itchio.py             itch.io：读官方博客 RSS、预处理、prompt、补时刻
+  agent.py              通用的找活动 agent：自己搜索、打开网页、提交带引文的活动，代码逐条核对
+  gog.py                GOG：只有一份 agent 配置
   extraction.py         通用的 DeepSeek 调用（prompt 和输出结构由商店模块传入）
   html_text.py          通用的 HTML 转纯文本（Epic、itch.io 共用）
   validation.py         校验规则
@@ -43,6 +45,7 @@ AI 只负责抄日期；时区、id、来源网址都由代码处理。任何一
 AI 的输出存进 `.data/sale-events/rejected/`，方便排查。
 
 Steam 和 Epic 是完整的日程表，一条都没有、或比上一份少一半以上，都算出错；itch.io 只在促销期间有公告，空列表是正常的。
+GOG 走 agent，流程不同，见下面「GOG（agent）」。
 
 ## 数据来源
 
@@ -84,6 +87,23 @@ Epic 的活动不分类，`kind` 都是 `sale`。
 时刻：帖子写了太平洋时间（如 `10:00 AM PT`）就照抄；没写就用 10:00 PT。文章说「现在已开始」但没写开始日期时，用发布日期。
 `kind` 都是 `sale`。
 
+### GOG（agent）
+
+GOG 没有提前公布的日程，官方新闻只在促销开始时发，也没有可用的新闻列表（`gog.com/news` 会跳到首页），
+所以交给通用的 agent（`agent.py`）。`gog.py` 里只有一份配置：要找什么、只认哪些域名（`gog.com`）、网页没写时刻时用什么（8:00 UTC）。
+
+一次运行：
+
+1. DeepSeek 用 tool calling 自己决定搜什么（DeepSeek Search）、打开哪些网页（DeepSeek Fetch），最多 8 轮、6 个网页；
+   最后一轮只给它 `submit_events` 一个工具，逼它交结果；
+2. 每条活动要带：名字、日期、可选的时刻和时区（照抄网页上的 `CET` / `UTC` / `PT` 等，代码换算）、来源网址、一句原文引文；
+3. 代码逐条核对：来源是白名单域名、**这次真的打开过**、引文原样出现在那一页、结束日期在引文里；再过一遍通用校验。
+   **不通过的只丢这一条**，其他照常写入，丢掉的原因存进 `rejected/`；
+4. **按条更新（upsert）**：这次没搜到不代表活动没了，所以旧数据里还没结束的保留，同 id 的用新的覆盖。
+
+以后别的网站也没有固定来源时，写一份 `AgentSource` 配置就能复用，不用改 agent 本身。
+`kind` 都是 `sale`。
+
 ## 接口
 
 `GET /v1/sale-events` 合并所有商店的文件，去掉已结束的，按开始时间排序：
@@ -120,5 +140,8 @@ Epic 的活动不分类，`kind` 都是 `sale`。
 - **校验只核对名字，不核对日期**：名字必须原样出现在正文里，防止 AI 编造活动；日期抄错但看起来合理（结束晚于开始、不超过 31 天）时拦不住。
   Epic 指南写了天数（`| 14 Days`），以后可以拿来核对。
 - **Epic 的时刻是推断的**，见上面「时刻」。
+- **GOG 的开始时间不准**：新闻常只写「已开始」和结束时刻，开始日期用搜索结果的日期，可能差一天，时刻用默认 8:00 UTC。
+- **GOG 同一场活动的名字每次运行可能不同**（实测一次抄成文章标题、一次抄成「Anniversary Sale」），id 跟着变，按条更新时会留下重复的两条，直到结束；去重规则还没定。
+- **GOG 每次结果不完全一样**，也比固定来源贵：每次约十几次搜索 / 打开网页加多轮对话。
 - **itch.io 只能看到正在进行或几天后开始的促销**；帖子没写时刻时用 10:00 PT，往年也出现过 11am PT，可能差一小时。
   开始日期缺失时用发布日期，促销实际可能早一两天开始。

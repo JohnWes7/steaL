@@ -3,8 +3,7 @@ Store-independent conversions: local time to UTC, event ids, and whitespace clea
 """
 
 import re
-from datetime import UTC, date, datetime, time
-from zoneinfo import ZoneInfo
+from datetime import UTC, date, datetime, time, tzinfo
 
 
 def slugify(name: str) -> str:
@@ -27,7 +26,7 @@ def make_event_id(store: str, start_date: date, name: str) -> str:
     return f"{store}-{start_date.isoformat()}-{slug}"
 
 
-def local_moment_to_utc(day: date, local_time: time, zone: ZoneInfo) -> datetime:
+def local_moment_to_utc(day: date, local_time: time, zone: tzinfo) -> datetime:
     """把某个时区里某天的某个时刻换成 UTC。
     Converts a time on a given day in a given time zone to UTC.
 

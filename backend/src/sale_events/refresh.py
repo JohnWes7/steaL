@@ -3,9 +3,12 @@ One refresh of one store: fetch → reduce → AI extraction → apply times →
 
 Steam 的页面和 Epic 的季度指南都是完整的日程表，没出现就是不存在了，所以整份替换（改期、取消都能自动处理）。
 itch.io 读的是最近的全部官方帖子，也整份替换，只是空列表是正常的（没有促销的时候）。
+agent 来源（GOG）每次只看得到这次搜到的，没搜到不代表不存在，所以按条更新（upsert），旧的留到结束。
 The Steam page and Epic's quarterly guides are complete schedules, so anything missing no longer exists;
 each store's data is replaced as a whole. itch.io reads all recent official posts and is also replaced as a whole,
 except that an empty list is normal (when no sale is running).
+Agent sources (GOG) only see what this run found, and not finding an event does not mean it is gone, so they are
+updated per event (upsert) and old events stay until they end.
 """
 
 import logging
@@ -16,7 +19,8 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
-from . import epic, itchio, steam
+from . import agent, epic, itchio, steam
+from .agent import AgentError, AgentRun
 from .extraction import ExtractionError
 from .models import SaleEvent, SaleEventList
 from .storage import EventStore
@@ -42,6 +46,10 @@ class RefreshReport:
     written: bool
     events: list[SaleEvent] = field(default_factory=list)
     dropped_ended: list[str] = field(default_factory=list)
+    dropped_unverified: list[str] = field(default_factory=list)
+    """agent 来源里没通过核对、被单独丢掉的活动（其他活动照常写入）。
+    Agent-source events that failed verification and were dropped individually (the rest are still written).
+    """
     errors: list[str] = field(default_factory=list)
 
 
@@ -190,6 +198,81 @@ def refresh_itchio(
     # 5、6. 校验、整份替换：空列表不算失败，也不比上一份的条数，见 `validate_and_write`。
     page_text = "\n\n".join(post_texts)
     return validate_and_write(itchio.STORE, events, ai_outputs, page_text, store, now, complete_schedule=False)
+
+
+def refresh_with_agent(
+    source: agent.AgentSource,
+    run_agent: Callable[[], AgentRun],
+    store: EventStore,
+    now: datetime,
+) -> RefreshReport:
+    """用通用 agent 刷新一个商店：逐条核对，不通过的单独丢掉，通过的按条更新进旧数据。
+    Refreshes one store with the generic agent: each event is verified, failures are dropped individually, and the
+    rest are upserted into the old data.
+
+    agent 的每条活动各有自己的来源和引文，彼此独立，所以一条不对只丢这一条，不让整次作废。
+    Each agent event has its own source and quote and stands alone, so one bad event is dropped without voiding the run.
+
+    - Parameters:
+      - source: 商店的 agent 配置 / The store's agent config.
+      - run_agent: 跑一次 agent，返回提交的活动与打开过的网页 / Runs the agent once and returns its submission and pages.
+      - store: 读写数据的存储 / The storage to read and write.
+      - now: 当前时刻（UTC）/ The current time (UTC).
+    - Returns: 这次刷新的结果 / The result of this refresh.
+    """
+    # 1–3. 搜索、打开网页、提交：agent 自己做，代码只给工具和上限；没提交就把过程存进 rejected，不动旧数据。
+    try:
+        run = run_agent()
+    except AgentError as error:
+        logger.error("%s agent failed: %s", source.store, error)
+        payload = {"errors": [str(error)], "log": error.log}
+        store.write_rejected(source.store, now, payload)
+        return RefreshReport(written=False, errors=[str(error)])
+    for line in run.log:
+        logger.info("%s agent: %s", source.store, line)
+
+    # 4. 核对来源与补时刻：只认这次打开过的官方页、引文原样在页上、结束日期在引文里；不通过的单独丢掉。
+    dropped = []
+    verified_events = []
+    for submitted in run.submission.events:
+        reason = agent.verify_source(submitted, run, source)
+        if reason is not None:
+            dropped.append(f"{submitted.name}: {reason}")
+            continue
+        event = agent.to_sale_event(submitted, source)
+        verified_events.append(event)
+
+    # 5. 校验：规则同其他商店（名字要在打开过的网页里、时长等），不过的也单独丢掉；空列表正常。
+    page_text = "\n\n".join(run.pages.values())
+    outcome = validate_events(verified_events, page_text, None, now, require_events=False)
+    dropped.extend(outcome.errors)
+    if len(dropped) > 0:
+        logger.warning("%s: dropped %d unverified events: %s", source.store, len(dropped), dropped)
+        ai_output = run.submission.model_dump(mode="json", by_alias=True)
+        opened_urls = list(run.pages.keys())
+        payload = {"errors": dropped, "aiOutput": ai_output, "openedURLs": opened_urls, "log": run.log}
+        store.write_rejected(source.store, now, payload)
+
+    # 6. 按条更新：旧数据里还没结束的留着，这次的同 id 覆盖、新的加进来，整份写回。
+    events_by_id = {}
+    previous = store.read(source.store)
+    if previous is not None:
+        for previous_event in previous.events:
+            if previous_event.end > now:
+                events_by_id[previous_event.id] = previous_event
+    for new_event in outcome.kept:
+        events_by_id[new_event.id] = new_event
+
+    sorted_events = sorted(events_by_id.values(), key=lambda event: event.start)
+    event_list = SaleEventList(refreshed_at=now, events=sorted_events)
+    store.write(source.store, event_list)
+    logger.info("%s: wrote %d events (%d from this run)", source.store, len(sorted_events), len(outcome.kept))
+    return RefreshReport(
+        written=True,
+        events=sorted_events,
+        dropped_ended=outcome.dropped_ended,
+        dropped_unverified=dropped,
+    )
 
 
 def reject_extraction(

@@ -1,5 +1,5 @@
-"""本地跑一次刷新（Steam、Epic、itch.io，或全部），不碰云。
-Runs one refresh locally (Steam, Epic, itch.io, or all of them), without touching the cloud.
+"""本地跑一次刷新（Steam、Epic、itch.io、GOG，或全部），不碰云。
+Runs one refresh locally (Steam, Epic, itch.io, GOG, or all of them), without touching the cloud.
 
 用法 / Usage（在 `backend/` 里 / from `backend/`）:
 
@@ -23,13 +23,13 @@ from pathlib import Path
 
 import httpx
 
-from sale_events import epic, itchio, steam
+from sale_events import agent, epic, gog, itchio, steam
 from sale_events.extraction import DEFAULT_BASE_URL, DEFAULT_MODEL, DeepSeekExtractor
-from sale_events.refresh import RefreshReport, refresh_epic, refresh_itchio, refresh_steam
+from sale_events.refresh import RefreshReport, refresh_epic, refresh_itchio, refresh_steam, refresh_with_agent
 from sale_events.storage import LocalEventStore
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-STORE_CHOICES = ["steam", "epic", "itchio", "all"]
+STORE_CHOICES = ["steam", "epic", "itchio", "gog", "all"]
 
 
 def main() -> int:
@@ -52,6 +52,7 @@ def main() -> int:
     run_steam = arguments.store in ("steam", "all")
     run_epic = arguments.store in ("epic", "all")
     run_itchio = arguments.store in ("itchio", "all")
+    run_gog = arguments.store in ("gog", "all")
     now = datetime.now(UTC)
 
     if arguments.text_only:
@@ -69,6 +70,8 @@ def main() -> int:
             for post in posts:
                 print(f"\n----- {post.url}\n")
                 print(itchio.extract_text(post))
+        if run_gog:
+            print("\nGOG uses the agent, which has no reduced text to print.")
         return 0
 
     # python-dotenv 只是本地开发依赖，上云后 key 从云的 secret 服务读。
@@ -120,6 +123,19 @@ def main() -> int:
         if not succeeded:
             exit_code = 1
 
+    if run_gog:
+        chat = agent.DeepSeekChat(api_key=api_key, model=model, base_url=base_url)
+        web_tools = agent.DeepSeekWebTools(api_key=api_key, client=http_client, base_url=base_url)
+        report = refresh_with_agent(
+            source=gog.SOURCE,
+            run_agent=lambda: agent.run_agent(gog.SOURCE, chat, web_tools, now),
+            store=store,
+            now=now,
+        )
+        succeeded = print_report(gog.SOURCE.store, report, arguments.out)
+        if not succeeded:
+            exit_code = 1
+
     return exit_code
 
 
@@ -138,6 +154,10 @@ def print_report(store_name: str, report: RefreshReport, out: Path) -> bool:
         print(f"  {event.start:%Y-%m-%d %H:%MZ} → {event.end:%Y-%m-%d %H:%MZ}  {event.kind:<12}  {event.name}")
     if report.dropped_ended:
         print(f"  Dropped ended: {', '.join(report.dropped_ended)}")
+    if report.dropped_unverified:
+        print("  Dropped unverified:")
+        for reason in report.dropped_unverified:
+            print(f"    - {reason}")
     return True
 
 
