@@ -6,7 +6,6 @@ The API JSON uses camelCase (decodable by default on Swift / Kotlin); Python use
 """
 
 from datetime import date, datetime
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -20,29 +19,17 @@ class CamelModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-SteamSection = Literal["seasonalSale", "themedFest", "nextFest"]
-"""Steamworks 页面上的三节，也就是 Steam 活动的 `kind`。
-The three sections of the Steamworks page, which are also the `kind` of a Steam event.
-"""
-
-
 class ExtractedEvent(CamelModel):
     """AI 从页面上抄下来的一条活动，只有日期，没有时刻（内部用，不进接口）。
     One event as copied by the AI from the page: dates only, no times (internal, not part of the API).
+
+    各商店需要额外字段时（如 Steam 的 `section`）在自己的模块里继承它。
+    Stores that need extra fields (such as Steam's `section`) subclass it in their own module.
     """
 
-    section: SteamSection
     name: str
     start_date: date
     end_date: date
-
-
-class ExtractionResult(CamelModel):
-    """AI 一次提取的完整输出。
-    The full output of one AI extraction.
-    """
-
-    events: list[ExtractedEvent]
 
 
 class SaleEvent(CamelModel):

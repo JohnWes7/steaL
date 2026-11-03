@@ -1,10 +1,11 @@
-"""本地跑一次 Steam 刷新，不碰云。
-Runs one Steam refresh locally, without touching the cloud.
+"""本地跑一次刷新（Steam、Epic 或两个都跑），不碰云。
+Runs one refresh locally (Steam, Epic or both), without touching the cloud.
 
 用法 / Usage（在 `backend/` 里 / from `backend/`）:
 
-    uv run python scripts/refresh_local.py --text-only   # 只看预处理结果，不调 AI / reduced text only, no AI
-    uv run python scripts/refresh_local.py               # 完整刷新，写 .data/ / full refresh into .data/
+    uv run python scripts/refresh_local.py --text-only           # 只看预处理结果，不调 AI / reduced text only, no AI
+    uv run python scripts/refresh_local.py                       # 两个商店都刷新，写 .data/ / refresh both into .data/
+    uv run python scripts/refresh_local.py --store epic          # 只刷新 Epic / refresh Epic only
 
 DeepSeek key 从 `backend/.env` 的 `DEEPSEEK_API_KEY` 读（模板见 `.env.example`）。
 The DeepSeek key is read from `DEEPSEEK_API_KEY` in `backend/.env` (see `.env.example`).
@@ -22,19 +23,21 @@ from pathlib import Path
 
 import httpx
 
-from sale_events import steam
+from sale_events import epic, steam
 from sale_events.extraction import DEFAULT_BASE_URL, DEFAULT_MODEL, DeepSeekExtractor
-from sale_events.refresh import refresh_steam
+from sale_events.refresh import RefreshReport, refresh_epic, refresh_steam
 from sale_events.storage import LocalEventStore
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
+STORE_CHOICES = ["steam", "epic", "all"]
 
 
 def main() -> int:
     """命令行入口，返回进程退出码。
     The command-line entry point; returns the process exit code.
     """
-    parser = argparse.ArgumentParser(description="Refresh Steam sale events locally.")
+    parser = argparse.ArgumentParser(description="Refresh sale events locally.")
+    parser.add_argument("--store", choices=STORE_CHOICES, default="all", help="which store to refresh")
     parser.add_argument("--text-only", action="store_true", help="print the reduced page text and stop")
     parser.add_argument("--out", type=Path, default=BACKEND_ROOT / ".data", help="local data directory")
     parser.add_argument("--verbose", action="store_true", help="debug logging")
@@ -46,15 +49,23 @@ def main() -> int:
     logging.basicConfig(level=log_level, format="%(levelname)s %(name)s: %(message)s")
 
     http_client = httpx.Client()
+    run_steam = arguments.store in ("steam", "all")
+    run_epic = arguments.store in ("epic", "all")
 
     if arguments.text_only:
-        page_html = steam.fetch_page(http_client)
-        page_text = steam.extract_text(page_html)
-        print(page_text)
+        if run_steam:
+            page_html = steam.fetch_page(http_client)
+            page_text = steam.extract_text(page_html)
+            print(page_text)
+        if run_epic:
+            guides = epic.fetch_guides(http_client)
+            for guide in guides:
+                print(f"\n----- {guide.url}\n")
+                print(epic.extract_text(guide))
         return 0
 
-    # python-dotenv 只是本地开发依赖，function 里 key 从 Vault 读。
-    # python-dotenv is a local dev dependency only; in the function the key comes from Vault.
+    # python-dotenv 只是本地开发依赖，上云后 key 从云的 secret 服务读。
+    # python-dotenv is a local dev dependency only; in the cloud the key comes from the provider's secret service.
     from dotenv import load_dotenv
 
     load_dotenv(BACKEND_ROOT / ".env")
@@ -69,25 +80,48 @@ def main() -> int:
     store = LocalEventStore(arguments.out)
     now = datetime.now(UTC)
 
-    report = refresh_steam(
-        fetch_html=lambda: steam.fetch_page(http_client),
-        extract=extractor.extract,
-        store=store,
-        now=now,
-    )
+    exit_code = 0
+    if run_steam:
+        report = refresh_steam(
+            fetch_html=lambda: steam.fetch_page(http_client),
+            extract=extractor.extract,
+            store=store,
+            now=now,
+        )
+        succeeded = print_report(steam.STORE, report, arguments.out)
+        if not succeeded:
+            exit_code = 1
 
+    if run_epic:
+        report = refresh_epic(
+            fetch_guides=lambda: epic.fetch_guides(http_client),
+            extract=extractor.extract,
+            store=store,
+            now=now,
+        )
+        succeeded = print_report(epic.STORE, report, arguments.out)
+        if not succeeded:
+            exit_code = 1
+
+    return exit_code
+
+
+def print_report(store_name: str, report: RefreshReport, out: Path) -> bool:
+    """打印一个商店的刷新结果，返回是否写入成功。
+    Prints one store's refresh result and returns whether it was written.
+    """
     if not report.written:
-        print("Rejected, nothing written. Errors:")
+        print(f"[{store_name}] Rejected, nothing written. Errors:")
         for error in report.errors:
             print(f"  - {error}")
-        return 1
+        return False
 
-    print(f"Wrote {len(report.events)} events to {arguments.out / 'sale-events' / 'steam.json'}")
+    print(f"[{store_name}] Wrote {len(report.events)} events to {out / 'sale-events' / f'{store_name}.json'}")
     for event in report.events:
         print(f"  {event.start:%Y-%m-%d %H:%MZ} → {event.end:%Y-%m-%d %H:%MZ}  {event.kind:<12}  {event.name}")
     if report.dropped_ended:
-        print(f"Dropped ended: {', '.join(report.dropped_ended)}")
-    return 0
+        print(f"  Dropped ended: {', '.join(report.dropped_ended)}")
+    return True
 
 
 if __name__ == "__main__":

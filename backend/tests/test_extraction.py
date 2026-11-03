@@ -2,33 +2,34 @@ from types import SimpleNamespace
 
 import pytest
 
+from sale_events import steam
 from sale_events.extraction import DeepSeekExtractor, ExtractionError, parse_extraction
 
 VALID_OUTPUT = '{"events": [{"section": "nextFest", "name": "Next Fest", "startDate": "2027-02-22", "endDate": "2027-03-01"}]}'
 
 
 def test_parse_extraction_reads_camel_case_json() -> None:
-    result = parse_extraction(VALID_OUTPUT)
+    result = parse_extraction(VALID_OUTPUT, steam.SteamExtraction)
     assert len(result.events) == 1
     assert result.events[0].name == "Next Fest"
 
 
 def test_parse_extraction_rejects_non_json() -> None:
     with pytest.raises(ExtractionError) as error_info:
-        parse_extraction("Sure! Here are the events:")
+        parse_extraction("Sure! Here are the events:", steam.SteamExtraction)
     assert error_info.value.raw_output == "Sure! Here are the events:"
 
 
 def test_parse_extraction_rejects_unknown_section() -> None:
     output = '{"events": [{"section": "summer", "name": "X", "startDate": "2027-01-01", "endDate": "2027-01-02"}]}'
     with pytest.raises(ExtractionError):
-        parse_extraction(output)
+        parse_extraction(output, steam.SteamExtraction)
 
 
 def test_parse_extraction_rejects_tbd_dates() -> None:
     output = '{"events": [{"section": "seasonalSale", "name": "Autumn Sale 2027", "startDate": "TBD", "endDate": "TBD"}]}'
     with pytest.raises(ExtractionError):
-        parse_extraction(output)
+        parse_extraction(output, steam.SteamExtraction)
 
 
 class FakeCompletions:
@@ -58,7 +59,7 @@ def make_extractor(contents: list[str]) -> tuple[DeepSeekExtractor, FakeCompleti
 
 def test_extractor_retries_once_on_empty_content() -> None:
     extractor, completions = make_extractor(["   ", VALID_OUTPUT])
-    result = extractor.extract("page")
+    result = extractor.extract("prompt", "page", steam.SteamExtraction)
     assert completions.calls == 2
     assert len(result.events) == 1
 
@@ -66,5 +67,5 @@ def test_extractor_retries_once_on_empty_content() -> None:
 def test_extractor_fails_after_two_empty_replies() -> None:
     extractor, completions = make_extractor(["", " "])
     with pytest.raises(ExtractionError):
-        extractor.extract("page")
+        extractor.extract("prompt", "page", steam.SteamExtraction)
     assert completions.calls == 2

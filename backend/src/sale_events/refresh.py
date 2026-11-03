@@ -1,22 +1,34 @@
-"""Steam 的一次刷新：抓页面 → 预处理 → AI 提取 → 补时刻 → 校验 → 整份替换。
-One Steam refresh: fetch → reduce → AI extraction → apply times → validate → replace the whole store.
+"""一个商店的一次刷新：抓页面 → 预处理 → AI 提取 → 补时刻 → 校验 → 整份替换。
+One refresh of one store: fetch → reduce → AI extraction → apply times → validate → replace the whole store.
 
-Steam 的页面是完整的日程表，没出现在页面上就是不存在了，所以整份替换（改期、取消都能自动处理）。
-The Steam page is a complete schedule, so anything missing from it no longer exists; the store is replaced as a whole.
+Steam 的页面和 Epic 的季度指南都是完整的日程表，没出现就是不存在了，所以整份替换（改期、取消都能自动处理）。
+The Steam page and Epic's quarterly guides are complete schedules, so anything missing no longer exists;
+each store's data is replaced as a whole.
 """
 
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Protocol
 
-from . import steam
+from pydantic import BaseModel
+
+from . import epic, steam
 from .extraction import ExtractionError
-from .models import ExtractionResult, SaleEvent, SaleEventList
+from .models import SaleEvent, SaleEventList
 from .storage import EventStore
 from .validation import validate_events
 
 logger = logging.getLogger(__name__)
+
+
+class Extract(Protocol):
+    """把正文交给 AI 抄出活动（`DeepSeekExtractor.extract` 的形状），测试时换成假的。
+    Sends text to the AI to copy events (the shape of `DeepSeekExtractor.extract`); tests pass a fake.
+    """
+
+    def __call__[Result: BaseModel](self, system_prompt: str, page_text: str, result_type: type[Result]) -> Result: ...
 
 
 @dataclass
@@ -33,7 +45,7 @@ class RefreshReport:
 
 def refresh_steam(
     fetch_html: Callable[[], str],
-    extract: Callable[[str], ExtractionResult],
+    extract: Extract,
     store: EventStore,
     now: datetime,
 ) -> RefreshReport:
@@ -61,41 +73,127 @@ def refresh_steam(
 
     # 3. AI 提取：把正文交给 AI 抄出活动日期；没给出能用的 JSON 就存进 rejected，不覆盖旧数据。
     try:
-        extraction = extract(page_text)
+        extraction = extract(steam.SYSTEM_PROMPT, page_text, steam.SteamExtraction)
     except ExtractionError as error:
-        logger.error("Steam extraction failed: %s", error)
-        payload = {
-            "errors": [str(error)],
-            "rawOutput": error.raw_output,
-            "pageText": page_text,
-        }
-        store.write_rejected(steam.STORE, now, payload)
-        return RefreshReport(written=False, errors=[str(error)])
+        return reject_extraction(steam.STORE, error, page_text, store, now)
 
     # 4. 补时刻：按 Steam 规则给每个日期补上太平洋时间 10 点，换成 UTC，生成 id。
     events = [steam.to_sale_event(extracted) for extracted in extraction.events]
 
+    # 5、6. 校验、整份替换：见 `validate_and_write`。
+    ai_output = extraction.model_dump(mode="json", by_alias=True)
+    return validate_and_write(steam.STORE, events, ai_output, page_text, store, now)
+
+
+def refresh_epic(
+    fetch_guides: Callable[[], list[epic.EpicGuide]],
+    extract: Extract,
+    store: EventStore,
+    now: datetime,
+) -> RefreshReport:
+    """刷新 Epic 的活动；每篇指南各提取一次，合起来校验，不过就不覆盖。
+    Refreshes Epic events; each guide is extracted separately and validated together; on failure nothing is overwritten.
+
+    每篇单独提取，来源网址就是那一篇，年份也只看那一篇的标题。
+    Extracting each guide separately makes its URL the source and its title the only place the year comes from.
+
+    - Parameters:
+      - fetch_guides: 返回最新的几篇季度指南 / Returns the newest quarterly guides.
+      - extract: 把正文交给 AI，返回抄出来的活动 / Sends the text to the AI and returns the copied events.
+      - store: 读写数据的存储 / The storage to read and write.
+      - now: 当前时刻（UTC）/ The current time (UTC).
+    - Returns: 这次刷新的结果 / The result of this refresh.
+    - Raises: 抓取失败或找不到指南时照常抛出 / Fetch failures and missing guides propagate.
+    """
+    # 1. 抓指南：在 Epic 开发者论坛搜出最新的几篇季度 Promotional Guide。
+    guides = fetch_guides()
+
+    guide_texts = []
+    ai_outputs = []
+    events = []
+    for guide in guides:
+        # 2. 预处理：每篇转成纯文本，第一行是标题（AI 从标题取年份）。
+        guide_text = epic.extract_text(guide)
+        guide_texts.append(guide_text)
+        logger.info("Epic guide %r reduced to %d characters", guide.title, len(guide_text))
+
+        # 3. AI 提取：一篇一次；任何一篇失败都整次作废，不覆盖旧数据。
+        try:
+            extraction = extract(epic.SYSTEM_PROMPT, guide_text, epic.EpicExtraction)
+        except ExtractionError as error:
+            return reject_extraction(epic.STORE, error, guide_text, store, now)
+        ai_output = extraction.model_dump(mode="json", by_alias=True)
+        ai_outputs.append(ai_output)
+
+        # 4. 补时刻：按 Epic 规则补上太平洋时间 8 点，来源填这一篇的地址。
+        guide_events = [epic.to_sale_event(extracted, guide) for extracted in extraction.events]
+        events.extend(guide_events)
+
+    # 5、6. 校验、整份替换：名字要出现在任意一篇指南里，见 `validate_and_write`。
+    page_text = "\n\n".join(guide_texts)
+    return validate_and_write(epic.STORE, events, ai_outputs, page_text, store, now)
+
+
+def reject_extraction(
+    store_name: str,
+    error: ExtractionError,
+    page_text: str,
+    store: EventStore,
+    now: datetime,
+) -> RefreshReport:
+    """AI 没给出能用的 JSON：把原始输出存进 rejected，不覆盖旧数据。
+    The AI gave no usable JSON: saves the raw output to rejected and keeps the old data.
+    """
+    logger.error("%s extraction failed: %s", store_name, error)
+    payload = {
+        "errors": [str(error)],
+        "rawOutput": error.raw_output,
+        "pageText": page_text,
+    }
+    store.write_rejected(store_name, now, payload)
+    return RefreshReport(written=False, errors=[str(error)])
+
+
+def validate_and_write(
+    store_name: str,
+    events: list[SaleEvent],
+    ai_output: Any,
+    page_text: str,
+    store: EventStore,
+    now: datetime,
+) -> RefreshReport:
+    """校验一个商店的全部活动，通过就整份替换写入，不过就存进 rejected。
+    Validates all events of one store; writes them as a whole if they pass, otherwise saves them to rejected.
+
+    - Parameters:
+      - store_name: 商店名，也是文件名 / The store name, which is also the file name.
+      - events: 已经补好时刻的活动 / Events with times already applied.
+      - ai_output: AI 的原始结构化输出，只在失败时存下来 / The AI's structured output, saved only on failure.
+      - page_text: 发给 AI 的正文 / The text sent to the AI.
+      - store: 读写数据的存储 / The storage to read and write.
+      - now: 当前时刻（UTC）/ The current time (UTC).
+    - Returns: 这次刷新的结果 / The result of this refresh.
+    """
     # 5. 校验：先读上一份的条数（判断条数骤降用），再逐条检查；不过就存进 rejected，不覆盖旧数据。
-    previous = store.read(steam.STORE)
+    previous = store.read(store_name)
     previous_count = None
     if previous is not None:
         previous_count = len(previous.events)
 
     outcome = validate_events(events, page_text, previous_count, now)
     if not outcome.passed:
-        logger.error("Steam validation failed: %s", outcome.errors)
-        ai_output = extraction.model_dump(mode="json", by_alias=True)
+        logger.error("%s validation failed: %s", store_name, outcome.errors)
         payload = {
             "errors": outcome.errors,
             "aiOutput": ai_output,
             "pageText": page_text,
         }
-        store.write_rejected(steam.STORE, now, payload)
+        store.write_rejected(store_name, now, payload)
         return RefreshReport(written=False, errors=outcome.errors)
 
     # 6. 整份替换：留下的活动按开始时间排序，整份覆盖写入。
     sorted_events = sorted(outcome.kept, key=lambda event: event.start)
     event_list = SaleEventList(refreshed_at=now, events=sorted_events)
-    store.write(steam.STORE, event_list)
-    logger.info("Steam: wrote %d events, dropped %d ended", len(sorted_events), len(outcome.dropped_ended))
+    store.write(store_name, event_list)
+    logger.info("%s: wrote %d events, dropped %d ended", store_name, len(sorted_events), len(outcome.dropped_ended))
     return RefreshReport(written=True, events=sorted_events, dropped_ended=outcome.dropped_ended)

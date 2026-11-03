@@ -4,13 +4,14 @@ Steam source: fetch the Steamworks "Upcoming Steam Events" page, reduce it to te
 
 import re
 from datetime import time
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 import httpx
 from bs4 import BeautifulSoup
 
-from .models import ExtractedEvent, SaleEvent
-from .normalize import local_moment_to_utc, make_event_id
+from .models import CamelModel, ExtractedEvent, SaleEvent
+from .normalize import collapse_spaces, local_moment_to_utc, make_event_id
 
 STORE = "steam"
 SOURCE_URL = "https://partner.steamgames.com/doc/marketing/upcoming_events"
@@ -25,6 +26,52 @@ SALE_LOCAL_TIME = time(hour=10)
 """Steam 活动开始 / 结束的当地时刻。
 The local time at which Steam events start and end.
 """
+
+
+SYSTEM_PROMPT = """\
+You copy sale event dates from the Steamworks "Upcoming Steam Events" page. Reply with json only.
+
+Rules:
+- One entry per event that has concrete dates. Skip events whose dates are TBD.
+- "section" is where the event is listed: "seasonalSale" under "## Seasonal Sales", \
+"themedFest" in the tables under "## Themed Sale Events (Fests)", "nextFest" under "## Next Fest".
+- "name" must be copied exactly as written on the page (for fests, the Theme column). \
+Do not translate, shorten or rephrase it. Several Next Fest events are all named "Next Fest".
+- "startDate" and "endDate" are YYYY-MM-DD, copied from the page. Do not add times or convert time zones.
+- Fest table dates only have month and day: take the year from the heading above the table \
+("## 2026 Fests" means 2026). If the end month is before the start month, the end is in the next year.
+- "June 14 - 21, 2027" means June 14, 2027 to June 21, 2027.
+
+Example json output:
+{
+  "events": [
+    {"section": "seasonalSale", "name": "Winter Sale 2026", "startDate": "2026-12-17", "endDate": "2027-01-04"},
+    {"section": "themedFest", "name": "Steam Scream V", "startDate": "2026-10-26", "endDate": "2026-11-02"},
+    {"section": "nextFest", "name": "Next Fest", "startDate": "2027-02-22", "endDate": "2027-03-01"}
+  ]
+}
+"""
+
+SteamSection = Literal["seasonalSale", "themedFest", "nextFest"]
+"""Steamworks 页面上的三节，也就是 Steam 活动的 `kind`。
+The three sections of the Steamworks page, which are also the `kind` of a Steam event.
+"""
+
+
+class SteamExtractedEvent(ExtractedEvent):
+    """AI 从 Steamworks 页面抄下来的一条活动，多一个所在的节。
+    One event copied by the AI from the Steamworks page, plus the section it is listed in.
+    """
+
+    section: SteamSection
+
+
+class SteamExtraction(CamelModel):
+    """AI 对 Steamworks 页面一次提取的完整输出。
+    The full output of one AI extraction of the Steamworks page.
+    """
+
+    events: list[SteamExtractedEvent]
 
 
 class SteamPageError(Exception):
@@ -92,18 +139,7 @@ def extract_text(page_html: str) -> str:
     return collapsed.strip()
 
 
-def collapse_spaces(text: str) -> str:
-    """把连续空白（含换行）压成一个空格，去掉首尾空白。
-    Collapses runs of whitespace (including newlines) into single spaces and trims the ends.
-
-    不用 `get_text(strip=True)`：它会把每段文字的首尾空格去掉再拼起来，`going <i>fast</i>` 会变成 `goingfast`。
-    `get_text(strip=True)` is avoided because it trims each fragment before joining, turning `going <i>fast</i>` into `goingfast`.
-    """
-    words = text.split()
-    return " ".join(words)
-
-
-def to_sale_event(extracted: ExtractedEvent) -> SaleEvent:
+def to_sale_event(extracted: SteamExtractedEvent) -> SaleEvent:
     """把 AI 抄的日期按 Steam 规则补上时刻，转成接口的活动。
     Applies Steam's timing rule to the AI's dates and builds an API event.
 

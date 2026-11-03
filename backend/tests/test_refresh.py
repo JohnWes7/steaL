@@ -1,19 +1,19 @@
 import json
 from pathlib import Path
 
+from sale_events import steam
 from sale_events.extraction import ExtractionError
-from sale_events.models import ExtractionResult
 from sale_events.refresh import refresh_steam
 from sale_events.storage import LocalEventStore
 
 from .conftest import FIXTURE_NOW
 
 
-def test_refresh_writes_store_file(tmp_path: Path, page_html: str, expected_extraction: ExtractionResult) -> None:
+def test_refresh_writes_store_file(tmp_path: Path, page_html: str, expected_extraction: steam.SteamExtraction) -> None:
     store = LocalEventStore(tmp_path)
     report = refresh_steam(
         fetch_html=lambda: page_html,
-        extract=lambda page_text: expected_extraction,
+        extract=lambda system_prompt, page_text, result_type: expected_extraction,
         store=store,
         now=FIXTURE_NOW,
     )
@@ -39,17 +39,17 @@ def test_refresh_writes_store_file(tmp_path: Path, page_html: str, expected_extr
 
 
 def test_refresh_keeps_old_data_when_validation_fails(
-    tmp_path: Path, page_html: str, expected_extraction: ExtractionResult
+    tmp_path: Path, page_html: str, expected_extraction: steam.SteamExtraction
 ) -> None:
     store = LocalEventStore(tmp_path)
-    refresh_steam(lambda: page_html, lambda page_text: expected_extraction, store, FIXTURE_NOW)
+    refresh_steam(lambda: page_html, lambda system_prompt, page_text, result_type: expected_extraction, store, FIXTURE_NOW)
     written_path = tmp_path / "sale-events" / "steam.json"
     before = written_path.read_text()
 
     # 只剩 3 条，少于上一份的一半。
     # Only 3 events left, fewer than half of the previous run.
-    shrunk = ExtractionResult(events=expected_extraction.events[:3])
-    report = refresh_steam(lambda: page_html, lambda page_text: shrunk, store, FIXTURE_NOW)
+    shrunk = steam.SteamExtraction(events=expected_extraction.events[:3])
+    report = refresh_steam(lambda: page_html, lambda system_prompt, page_text, result_type: shrunk, store, FIXTURE_NOW)
 
     assert not report.written
     assert written_path.read_text() == before
@@ -60,7 +60,7 @@ def test_refresh_keeps_old_data_when_validation_fails(
 
 
 def test_refresh_saves_raw_output_when_ai_returns_garbage(tmp_path: Path, page_html: str) -> None:
-    def broken_extract(page_text: str) -> ExtractionResult:
+    def broken_extract(system_prompt: str, page_text: str, result_type: type) -> steam.SteamExtraction:
         raise ExtractionError("not json", "Sure! Here are the events")
 
     store = LocalEventStore(tmp_path)

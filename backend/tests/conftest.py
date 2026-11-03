@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 
 from sale_events import steam
-from sale_events.models import ExtractionResult
 
 FIXTURES = Path(__file__).parent / "fixtures"
 PAGE_PATH = FIXTURES / "steamworks_upcoming_events_2026-11-01.html"
@@ -34,6 +33,6 @@ def page_text(page_html: str) -> str:
 
 
 @pytest.fixture
-def expected_extraction() -> ExtractionResult:
+def expected_extraction() -> steam.SteamExtraction:
     text = EXPECTED_PATH.read_text(encoding="utf-8")
-    return ExtractionResult.model_validate_json(text)
+    return steam.SteamExtraction.model_validate_json(text)

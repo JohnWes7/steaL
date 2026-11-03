@@ -1,5 +1,5 @@
-"""与商店无关的换算：本地时刻转 UTC、生成 id。
-Store-independent conversions: local time to UTC, and event ids.
+"""与商店无关的换算：本地时刻转 UTC、生成 id、整理空白。
+Store-independent conversions: local time to UTC, event ids, and whitespace cleanup.
 """
 
 import re
@@ -36,3 +36,14 @@ def local_moment_to_utc(day: date, local_time: time, zone: ZoneInfo) -> datetime
     """
     local_moment = datetime.combine(day, local_time, tzinfo=zone)
     return local_moment.astimezone(UTC)
+
+
+def collapse_spaces(text: str) -> str:
+    """把连续空白（含换行）压成一个空格，去掉首尾空白。
+    Collapses runs of whitespace (including newlines) into single spaces and trims the ends.
+
+    不用 `get_text(strip=True)`：它会把每段文字的首尾空格去掉再拼起来，`going <i>fast</i>` 会变成 `goingfast`。
+    `get_text(strip=True)` is avoided because it trims each fragment before joining, turning `going <i>fast</i>` into `goingfast`.
+    """
+    words = text.split()
+    return " ".join(words)

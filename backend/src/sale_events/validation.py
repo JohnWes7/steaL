@@ -13,8 +13,9 @@ from datetime import datetime, timedelta
 from .models import SaleEvent
 
 MAX_DURATION = timedelta(days=31)
-"""最长时长。Steam 最长的冬促约 18 天，超过多半是年份补错。
-The longest allowed duration. Steam's longest winter sale is about 18 days; longer usually means a wrong year.
+"""最长时长。Steam 最长的冬促约 18 天、Epic 的 Holiday / MEGA Sale 28 天，超过多半是年份补错。
+The longest allowed duration. Steam's longest winter sale is about 18 days and Epic's Holiday / MEGA Sale 28 days;
+longer usually means a wrong year.
 """
 
 

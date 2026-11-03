@@ -3,7 +3,6 @@ from datetime import UTC, date, datetime
 import pytest
 
 from sale_events import steam
-from sale_events.models import ExtractedEvent
 
 
 def test_extract_text_keeps_all_sections(page_text: str) -> None:
@@ -37,7 +36,7 @@ def test_extract_text_fails_when_layout_changes() -> None:
 def test_to_sale_event_uses_10am_pacific_across_dst_end() -> None:
     # 2026-11-01 太平洋时间结束夏令时：开始 UTC-7，结束 UTC-8。
     # DST ends on 2026-11-01 in the Pacific zone: start is UTC-7, end is UTC-8.
-    extracted = ExtractedEvent(
+    extracted = steam.SteamExtractedEvent(
         section="themedFest",
         name="Steam Scream V",
         start_date=date(2026, 10, 26),
@@ -54,7 +53,7 @@ def test_to_sale_event_uses_10am_pacific_across_dst_end() -> None:
 def test_to_sale_event_uses_10am_pacific_across_dst_start() -> None:
     # 2027-03-14 进入夏令时：开始 UTC-8，结束 UTC-7。
     # DST starts on 2027-03-14: start is UTC-8, end is UTC-7.
-    extracted = ExtractedEvent(
+    extracted = steam.SteamExtractedEvent(
         section="themedFest",
         name="Rhythm Fest",
         start_date=date(2027, 3, 8),
