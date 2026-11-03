@@ -139,7 +139,19 @@ GOG 没有提前公布的日程，官方新闻只在促销开始时发，也没�
 ## 部署（AWS，进行中）
 
 部署到 AWS 香港（`ap-east-1`）：API Gateway HTTP API → `sale_events_api` Lambda 读 S3；EventBridge Scheduler 每个商店一个定时器
-（Steam / Epic 每周、itch.io / GOG 每天）→ `sale_events_refresh` Lambda 写 S3；刷新失败经 SNS 发邮件。Terraform 将放在 `infra/`（还没写）。
+（Steam / Epic 每周、itch.io / GOG 每天）→ `sale_events_refresh` Lambda 写 S3；刷新失败经 SNS 发邮件。Terraform 在 `infra/`：
+
+```sh
+aws login --profile steal                     # 会话最长 12 小时
+cd infra
+cp terraform.tfvars.example terraform.tfvars  # 填云上专用的 DeepSeek key（不提交）
+terraform init
+terraform plan                                # 先看会建什么
+terraform apply
+```
+
+定时器默认关闭（`schedules_enabled = false`）。先手动调用一次 refresh，确认数据写进 S3，再在 `terraform.tfvars` 里打开。
+刷新失败目前只记在 CloudWatch Logs 里（还没有邮件通知）。
 
 为了不绑定某一家云：`sale_events` 包和 `api_core.py` 不依赖任何云 SDK，AWS 专用的只有上面三个文件。换云时只换它们和 Terraform。
 

@@ -1,0 +1,7 @@
+# 复制成 terraform.tfvars 再填（*.tfvars 已 gitignore，这个 .example 要提交）。
+# Copy to terraform.tfvars and fill in (*.tfvars is gitignored; commit this .example).
+deepseek_api_key = ""
+
+# 手动调用 refresh 确认能写进 S3 之后再打开。
+# Turn on after a manual refresh invocation has written to S3.
+# schedules_enabled = true
