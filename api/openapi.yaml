@@ -166,9 +166,9 @@ components:
       format: date-time
       pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
       description: |
-        RFC 3339 UTC 时刻，**整秒、不带小数秒**，以 `Z` 结尾（iOS `JSONDecoder` 的 `.iso8601` 不认小数秒）。
-        An RFC 3339 UTC time in **whole seconds with no fractional part**, ending in `Z` (iOS `JSONDecoder`'s
-        `.iso8601` rejects fractional seconds).
+        RFC 3339 UTC 时刻，**整秒、不带小数秒**，以 `Z` 结尾：所有时刻一个格式，各端用最简单的解析即可。
+        An RFC 3339 UTC time in **whole seconds with no fractional part**, ending in `Z`: one format for every
+        time, so every client can use the simplest parsing.
       example: '2026-12-17T18:00:00Z'
     Problem:
       description: RFC 9457 Problem Details，我们的代码返回的错误体 / The error body returned by our code.

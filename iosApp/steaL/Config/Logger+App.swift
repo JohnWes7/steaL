@@ -26,6 +26,8 @@ extension Logger {
     nonisolated static let itad = Logger(subsystem: subsystem, category: "ITAD")
     /// LLM 请求 / LLM requests
     nonisolated static let llm = Logger(subsystem: subsystem, category: "LLM")
+    /// 自建后端的促销活动请求与解码 / Sale events requests and decoding against our backend
+    nonisolated static let saleEvents = Logger(subsystem: subsystem, category: "SaleEvents")
     /// 登录、注册、登出与删号 / Sign-in, sign-up, sign-out and account deletion
     nonisolated static let auth = Logger(subsystem: subsystem, category: "Auth")
     /// 搜索页 / The search page

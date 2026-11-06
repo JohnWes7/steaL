@@ -16,8 +16,9 @@ def drop_microseconds(value: datetime) -> datetime:
     """去掉小数秒，只保留到整秒。
     Drops fractional seconds, keeping whole seconds only.
 
-    接口约定时刻都是整秒（`2026-12-17T18:00:00Z`）：iOS `JSONDecoder` 的 `.iso8601` 不认小数秒。
-    The API promises whole-second times (`2026-12-17T18:00:00Z`): iOS `JSONDecoder`'s `.iso8601` rejects fractional seconds.
+    接口约定时刻都是整秒（`2026-12-17T18:00:00Z`）：所有时刻一个格式，各端解析最简单，小数秒也没有用处。
+    The API promises whole-second times (`2026-12-17T18:00:00Z`): one format for every time keeps parsing simple
+    on every client, and fractional seconds serve no purpose.
     """
     return value.replace(microsecond=0)
 
