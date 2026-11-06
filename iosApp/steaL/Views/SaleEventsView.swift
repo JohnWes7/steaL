@@ -67,7 +67,11 @@ struct SaleEventsView: View {
     /// 分段的活动列表。
     /// The sectioned event list.
     private func eventList(_ sections: [SaleEventsViewModel.EventSection]) -> some View {
-        List {
+        // 免责说明只挂在最后一段的 footer，读到列表末尾时看到。
+        // The disclaimer hangs only off the last section's footer, read at the end of the list.
+        let lastSectionKind = sections.last?.kind
+
+        return List {
             ForEach(sections) { section in
                 Section {
                     ForEach(section.events) { event in
@@ -75,6 +79,10 @@ struct SaleEventsView: View {
                     }
                 } header: {
                     sectionHeader(for: section.kind)
+                } footer: {
+                    if section.kind == lastSectionKind {
+                        Text("Sale dates are gathered by AI from each store's official announcements and may be wrong. Tap an event to check the original page.")
+                    }
                 }
             }
         }

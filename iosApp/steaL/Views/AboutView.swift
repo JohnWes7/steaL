@@ -97,8 +97,8 @@ struct AboutView: View {
 
     // MARK: - 数据来源 / Data sources
 
-    /// 价格与游戏信息从哪里来，以及 AI 建议的免责说明。
-    /// Where prices and game details come from, plus the AI advice disclaimer.
+    /// 价格、游戏信息与促销日期从哪里来，以及 AI 建议、AI 整理日期的免责说明。
+    /// Where prices, game details and sale dates come from, plus disclaimers for AI advice and AI-gathered dates.
     private var dataSourcesSection: some View {
         Section {
             AboutLinkRow(
@@ -131,10 +131,25 @@ struct AboutView: View {
                 }
             }
             .accessibilityElement(children: .combine)
+
+            // 来源有四家商店，没有单一链接；每条活动在 Sales 页里能点开自己的出处。
+            // There are four stores behind it and no single link; each event opens its own source on the Sales page.
+            HStack(spacing: 12) {
+                IconTileView(icon: "calendar", tint: .brandBlue)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Store Sales")
+
+                    Text("Gathered by AI from official announcements by Steam, Epic Games Store, itch.io and GOG, so dates can be wrong. Tap an event in Sales to check its source.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
         } header: {
             Text("Data Sources")
         } footer: {
-            Text("Price data provided by the IsThereAnyDeal API. steaL is an independent project and is not affiliated with or endorsed by IsThereAnyDeal, Valve or Steam. Prices are shown as provided and can change at any time.")
+            Text("Price data provided by the IsThereAnyDeal API. steaL is an independent project and is not affiliated with or endorsed by IsThereAnyDeal, Valve, Epic Games, itch.io or GOG. Prices are shown as provided and can change at any time.")
         }
     }
 
@@ -176,7 +191,7 @@ struct AboutView: View {
         } header: {
             Text("Developer")
         } footer: {
-            Text("Steam and the Steam logo are trademarks of Valve Corporation. Game names, images and trailers belong to their respective owners.")
+            Text("Steam and the Steam logo are trademarks of Valve Corporation. Other store names, game names, images and trailers belong to their respective owners.")
         }
     }
 }

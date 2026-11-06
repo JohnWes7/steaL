@@ -39,10 +39,11 @@ struct PrivacyPolicyView: View {
                 }
 
                 PolicySection(title: "Sent to Other Services") {
-                    Text("To show prices and game details, steaL sends requests to:")
+                    Text("To show prices, game details and store sales, steaL sends requests to:")
 
                     PolicyBullet("**IsThereAnyDeal**: game IDs and your selected region.")
                     PolicyBullet("**Steam Store**: what you type in Search, game IDs, your region and language.")
+                    PolicyBullet("**steaL's own server** (Amazon Web Services, Hong Kong), for the Sales tab: only a request for the list of store sales. It carries nothing about you, and the server doesn't log your IP address.")
                     PolicyBullet("**AI provider**, only when you ask for AI advice: the game's name, type, release date, genres, tags, prices, reviews and player counts. This goes to the built-in service (DeepSeek) or to the provider you add in Profile › AI Model.")
 
                     Text("These requests never include your email, name or wishlist. Like any internet request, the service can see your IP address. Each service handles requests under its own privacy policy.")
@@ -87,7 +88,7 @@ struct PrivacyPolicyView: View {
     /// The last-updated date and a short summary.
     private var intro: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Last updated 16 October 2026")
+            Text("Last updated 6 November 2026")
                 .font(.footnote)
                 .foregroundStyle(.secondaryText)
 
