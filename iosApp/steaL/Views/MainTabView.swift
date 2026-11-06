@@ -15,6 +15,7 @@ struct MainTabView: View {
         case games
         case search
         case wishlist
+        case sales
         case profile
         case test
     }
@@ -39,6 +40,12 @@ struct MainTabView: View {
             Tab("Wishlist", systemImage: "heart.fill", value: AppTab.wishlist) {
                 NavigationStack {
                     WishlistView()
+                }
+            }
+
+            Tab("Sales", systemImage: "calendar", value: AppTab.sales) {
+                NavigationStack {
+                    SaleEventsView()
                 }
             }
 
