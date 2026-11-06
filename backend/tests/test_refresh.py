@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from pathlib import Path
 
 from sale_events import steam
@@ -36,6 +37,20 @@ def test_refresh_writes_store_file(tmp_path: Path, page_html: str, expected_extr
     }
     starts = [event["start"] for event in payload["events"]]
     assert starts == sorted(starts)
+
+
+def test_refreshed_at_is_whole_seconds(
+    tmp_path: Path, page_html: str, expected_extraction: steam.SteamExtraction
+) -> None:
+    # 真实的 `datetime.now` 带微秒，接口约定只给整秒。
+    # The real `datetime.now` has microseconds; the API promises whole seconds.
+    store = LocalEventStore(tmp_path)
+    now_with_microseconds = FIXTURE_NOW + timedelta(seconds=41, microseconds=539005)
+    refresh_steam(lambda: page_html, lambda system_prompt, page_text, result_type: expected_extraction, store, now_with_microseconds)
+
+    written_path = tmp_path / "sale-events" / "steam.json"
+    payload = json.loads(written_path.read_text())
+    assert payload["refreshedAt"] == "2026-11-01T00:00:41Z"
 
 
 def test_refresh_keeps_old_data_when_validation_fails(

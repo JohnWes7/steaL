@@ -6,9 +6,26 @@ The API JSON uses camelCase (decodable by default on Swift / Kotlin); Python use
 """
 
 from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+
+def drop_microseconds(value: datetime) -> datetime:
+    """去掉小数秒，只保留到整秒。
+    Drops fractional seconds, keeping whole seconds only.
+
+    接口约定时刻都是整秒（`2026-12-17T18:00:00Z`）：iOS `JSONDecoder` 的 `.iso8601` 不认小数秒。
+    The API promises whole-second times (`2026-12-17T18:00:00Z`): iOS `JSONDecoder`'s `.iso8601` rejects fractional seconds.
+    """
+    return value.replace(microsecond=0)
+
+
+WholeSecondTime = Annotated[datetime, AfterValidator(drop_microseconds)]
+"""接口里的时刻：建模型时自动截到整秒。
+A time in the API: truncated to whole seconds when the model is built.
+"""
 
 
 class CamelModel(BaseModel):
@@ -41,8 +58,8 @@ class SaleEvent(CamelModel):
     store: str
     kind: str
     name: str
-    start: datetime
-    end: datetime
+    start: WholeSecondTime
+    end: WholeSecondTime
     source_url: str = Field(alias="sourceURL")
 
 
@@ -51,5 +68,5 @@ class SaleEventList(CamelModel):
     One store's data, in the same shape as the API response.
     """
 
-    refreshed_at: datetime
+    refreshed_at: WholeSecondTime
     events: list[SaleEvent]

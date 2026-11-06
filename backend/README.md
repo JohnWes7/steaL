@@ -132,10 +132,10 @@ GOG 没有提前公布的日程，官方新闻只在促销开始时发，也没�
 ```
 
 - `refreshedAt` 取各商店里最早的那次成功刷新，表示最旧的那部分数据有多旧。
-- 时刻都是 UTC，`end` 是结束的那一刻（不含）。
+- 时刻都是 UTC、整秒（不带小数秒，iOS 的 `.iso8601` 解码不认），`end` 是结束的那一刻（不含）。
 - 还没有任何数据或读不到存储时返回 503，数据损坏返回 500，错误体是 RFC 9457 `application/problem+json`。
 - 线上还有两种网关生成的错误（响应体是 `{"message": "..."}`，不是 problem+json）：超过限流（每秒 10 次、突发 20）返回 429；Lambda 并发打满返回 503。两种都应稍后重试。
-- 接口还在原型阶段，字段可能会变，等稳定后再写 OpenAPI 文件。
+- 完整契约见仓库根的 [`api/openapi.yaml`](../api/openapi.yaml)（OpenAPI 3.1）：改了接口要一起改它。
 
 ## 部署（AWS，进行中）
 
@@ -153,14 +153,25 @@ terraform apply
 
 已部署（2026-11-04）：`https://1gfwpsgqnc.execute-api.ap-east-1.amazonaws.com/v1/sale-events`。
 
-手动刷新一个商店：
+手动刷新一个商店（`store` 可选 `steam` / `epic` / `itchio` / `gog`）：
 
 ```sh
+# 同步调用：等函数跑完，返回值写进 out.json（GOG 要半分钟左右）
 aws lambda invoke --profile steal --region ap-east-1 --function-name steal-sale-events-refresh \
   --cli-binary-format raw-in-base64-out --payload '{"store":"steam"}' --cli-read-timeout 700 out.json
+cat out.json
+
+# 看日志（实时跟踪；不加 --follow 就看最近的）
+aws logs tail /aws/lambda/steal-sale-events-refresh --profile steal --region ap-east-1 --since 30m --follow
+
+# 看接口合并后的结果
+curl -s https://1gfwpsgqnc.execute-api.ap-east-1.amazonaws.com/v1/sale-events
 ```
 
-定时器默认关闭（`schedules_enabled = false`）。先手动调用一次 refresh，确认数据写进 S3，再在 `terraform.tfvars` 里打开。
+加 `--invocation-type Event` 就是异步调用，和定时器的调用方式一样：命令马上返回 202，结果只能看日志。
+
+定时器（2026-11-06 起打开，`schedules_enabled = true`）：Steam 周一 00:00、Epic 周一 00:10、itch.io 每天 01:00、GOG 每天 01:10（UTC）。
+EventBridge Scheduler 没有「立即运行」，手动测试就用上面的 `aws lambda invoke`。要停掉就把 `terraform.tfvars` 里的 `schedules_enabled` 改成 `false` 再 `terraform apply`。
 刷新失败目前只记在 CloudWatch Logs 里（还没有邮件通知）。
 
 为了不绑定某一家云：`sale_events` 包和 `api_core.py` 不依赖任何云 SDK，AWS 专用的只有上面三个文件。换云时只换它们和 Terraform。
