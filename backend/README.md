@@ -140,7 +140,7 @@ GOG 没有提前公布的日程，官方新闻只在促销开始时发，也没�
 ## 部署（AWS，进行中）
 
 部署到 AWS 香港（`ap-east-1`）：API Gateway HTTP API → `sale_events_api` Lambda 读 S3；EventBridge Scheduler 每个商店一个定时器
-（Steam / Epic 每周、itch.io / GOG 每天）→ `sale_events_refresh` Lambda 写 S3；刷新失败经 SNS 发邮件。Terraform 在 `infra/`：
+（目前四家都是每周一次）→ `sale_events_refresh` Lambda 写 S3；刷新失败经 SNS 发邮件。Terraform 在 `infra/`：
 
 ```sh
 aws login --profile steal                     # 会话最长 12 小时
@@ -170,7 +170,7 @@ curl -s https://1gfwpsgqnc.execute-api.ap-east-1.amazonaws.com/v1/sale-events
 
 加 `--invocation-type Event` 就是异步调用，和定时器的调用方式一样：命令马上返回 202，结果只能看日志。
 
-定时器（2026-11-06 起打开，`schedules_enabled = true`）：Steam 周一 00:00、Epic 周一 00:10、itch.io 每天 01:00、GOG 每天 01:10（UTC）。
+定时器（2026-11-06 起打开，`schedules_enabled = true`）：Steam 周一 00:00、Epic 周一 00:10、itch.io 周一 01:00、GOG 周一 01:10（UTC）。
 EventBridge Scheduler 没有「立即运行」，手动测试就用上面的 `aws lambda invoke`。要停掉就把 `terraform.tfvars` 里的 `schedules_enabled` 改成 `false` 再 `terraform apply`。
 刷新失败目前只记在 CloudWatch Logs 里（还没有邮件通知）。
 

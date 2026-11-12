@@ -2,13 +2,13 @@
 # EventBridge Scheduler: one schedule per store, all invoking the same refresh Lambda with the store name in the event.
 
 locals {
-  # cron 用 UTC。Steam / Epic 有完整日程，每周一次；itch.io / GOG 只在促销开始时发公告，每天一次。
-  # Cron in UTC. Steam / Epic publish full schedules, so weekly; itch.io / GOG only announce when a sale starts, so daily.
+  # cron 用 UTC。暂时全部每周一刷新一次（itch.io / GOG 只在促销开始时发公告，每周刷新最多晚 7 天才收录）。
+  # Cron in UTC. For now every store refreshes once a week on Monday (itch.io / GOG only announce when a sale starts, so a sale may show up to 7 days late).
   refresh_schedules = {
     steam  = "cron(0 0 ? * MON *)"
     epic   = "cron(10 0 ? * MON *)"
-    itchio = "cron(0 1 * * ? *)"
-    gog    = "cron(10 1 * * ? *)"
+    itchio = "cron(0 1 ? * MON *)"
+    gog    = "cron(10 1 ? * MON *)"
   }
 }
 
