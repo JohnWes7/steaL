@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">steaL</string>
+
+    <!-- 底部导航栏 / Bottom navigation bar -->
+    <string name="tab_games">Games</string>
+    <string name="tab_search">Search</string>
+    <string name="tab_wishlist">Wishlist</string>
+    <string name="tab_sales">Sales</string>
+    <string name="tab_profile">Profile</string>
 </resources>
