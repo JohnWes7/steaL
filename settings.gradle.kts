@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "steaL"
 include(":androidApp")
+include(":shared")
