@@ -46,3 +46,14 @@ backend/build/
 *.tfstate
 *.tfstate.*
 *.tfvars
+
+# Android / Gradle（Gradle 根在仓库根；模块 androidApp/，之后加 shared/）
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
