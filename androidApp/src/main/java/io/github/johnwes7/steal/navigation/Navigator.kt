@@ -34,14 +34,14 @@ class Navigator(val state: NavigationState) {
      * Back on the start tab's root never reaches here; `NavDisplay` hands it to the system, which leaves the app.
      */
     fun goBack() {
-        val currentStack = state.backStacks.getValue(state.topLevelRoute)
-        val currentRoute = currentStack.last()
-        val isAtTabRoot = currentRoute == state.topLevelRoute
+        val currentStack = state.backStacks.getValue(state.topLevelRoute)   // 当前 tab 的栈
+        val currentRoute = currentStack.last()                              // 栈顶那一页
+        val isAtTabRoot = currentRoute == state.topLevelRoute               // 栈顶是不是 tab 的根页面
 
         if (isAtTabRoot) {
-            state.topLevelRoute = state.startRoute
+            state.topLevelRoute = state.startRoute     // 已经在根页面：切回 Games
         } else {
-            currentStack.removeLastOrNull()
+            currentStack.removeLastOrNull()            // 还有子页面：弹掉最上面一页
         }
     }
 }
