@@ -18,7 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import io.github.johnwes7.steal.navigation.AppTab
 import io.github.johnwes7.steal.navigation.GamesRoute
@@ -42,20 +42,31 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  */
 @Composable
 fun MainTabView() {
-    val tabs = AppTab.entries
-    val topLevelRoutes = remember { tabs.map { tab -> tab.route } }
+    val tabs = AppTab.entries // 所有 tab
+    val topLevelRoutes = remember { tabs.map { tab -> tab.route } } // 所有tab的navkey
+    
+    // state 保存三个东西: start页面, 当前tab, 每个tab的返回栈(字典)
     val navigationState = rememberNavigationState(
         startRoute = GamesRoute,
         topLevelRoutes = topLevelRoutes,
     )
+    
+    // 只有navigationState改变时才会创建navigator, 避免重复创建
     val navigator = remember(navigationState) { Navigator(navigationState) }
 
-    val entryProvider = entryProvider<NavKey> {
-        entry<GamesRoute> { GamesView() }
-        entry<SearchRoute> { SearchView() }
-        entry<WishlistRoute> { WishlistView() }
-        entry<SalesRoute> { SaleEventsView() }
-        entry<ProfileRoute> { ProfileView() }
+    // 把返回栈里的 key 换成页面：每种 key 一个分支，新页面在这里加一行。
+    // Turns a back stack key into a screen: one branch per key type; add a line here for each new screen.
+    val entryProvider: (NavKey) -> NavEntry<NavKey> = { key ->
+        when (key) {
+            is GamesRoute -> NavEntry(key) { GamesView() }
+            is SearchRoute -> NavEntry(key) { SearchView() }
+            is WishlistRoute -> NavEntry(key) { WishlistView() }
+            is SalesRoute -> NavEntry(key) { SaleEventsView() }
+            is ProfileRoute -> NavEntry(key) { ProfileView() }
+            // 漏写页面时直接崩溃，开发时立刻发现（同官方 entryProvider DSL 的默认 fallback）。
+            // Crash on a missing screen so it shows up during development (same as the DSL's default fallback).
+            else -> error("Unknown route: $key")
+        }
     }
 
     // 页面自己处理顶部系统栏的留白，所以 Scaffold 不再加内容边距，只让出底部导航栏的高度。
@@ -107,7 +118,7 @@ private fun MainNavigationBar(
         for (tab in tabs) {
             val isSelected = tab.route == selectedRoute
             val iconRes = if (isSelected) tab.selectedIconRes else tab.iconRes
-            val label = stringResource(tab.labelRes)
+            val label = stringResource(tab.labelRes) // 获取本地字符串
 
             NavigationBarItem(
                 selected = isSelected,
