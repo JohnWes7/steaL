@@ -1,8 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// 读仓库根的 secrets.properties（不进 git，模板是 secrets.example.properties）；文件不存在时 key 为空，照样能编译。
+// Reads secrets.properties in the repository root (kept out of git; the template is secrets.example.properties);
+// without the file the key is empty and the build still works.
+val secretsFile = rootProject.file("secrets.properties")
+val secrets = Properties()
+if (secretsFile.exists()) {
+    secretsFile.inputStream().use { stream -> secrets.load(stream) }
+}
+val itadApiKey = secrets.getProperty("ITAD_API_KEY", "")
 
 android {
     namespace = "io.github.johnwes7.steal"
@@ -18,6 +30,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 生成 BuildConfig.ITAD_API_KEY，由 config/Config.kt 读。
+        // Generates BuildConfig.ITAD_API_KEY, which config/Config.kt reads.
+        buildConfigField("String", "ITAD_API_KEY", "\"$itadApiKey\"")
     }
 
     buildTypes {
@@ -34,6 +50,9 @@ android {
     }
     buildFeatures {
         compose = true
+        // AGP 默认不生成 BuildConfig，自定义字段要先打开。
+        // AGP does not generate BuildConfig by default; custom fields need it turned on.
+        buildConfig = true
     }
 }
 
