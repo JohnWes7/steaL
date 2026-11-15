@@ -28,8 +28,10 @@ DerivedData/
 *.ipa
 *.dSYM
 
-# API keys（模板 Secrets.example.xcconfig 要提交）
+# API keys（模板 Secrets.example.xcconfig / secrets.example.properties 要提交）
 Secrets.xcconfig
+# Android 的 key（仓库根，androidApp/build.gradle.kts 读）
+secrets.properties
 
 # Python（backend/）
 __pycache__/
