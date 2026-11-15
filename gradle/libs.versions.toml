@@ -15,6 +15,9 @@ core = "1.5.0"
 navigation3 = "1.2.1"
 lifecycleViewmodelNavigation3 = "2.11.0"
 kotlinxSerialization = "1.11.0"
+kotlinxCoroutines = "1.11.0"
+ktor = "3.6.1"
+kermit = "2.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,6 +43,16 @@ androidx-navigation3-runtime = { group = "androidx.navigation3", name = "navigat
 androidx-navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
 androidx-lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNavigation3" }
 kotlinx-serialization-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+
+# shared 网络层：Ktor（HTTP 客户端）与 Kermit（日志）/ shared networking: Ktor (HTTP client) and Kermit (logging)
+ktor-client-engine-defaults = { group = "io.ktor", name = "ktor-client-engine-defaults", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
+kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

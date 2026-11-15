@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.android.lint)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -62,13 +63,37 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
-                // Add KMP dependencies here
+
+                // HTTP 客户端：core + 各平台引擎（Android 是 OkHttp，iOS 是 Darwin）；
+                // 用 api 是因为 androidApp 要创建并持有 HttpClient，得看得见它的类型。
+                // HTTP client: core plus each platform's engine (OkHttp on Android, Darwin on iOS);
+                // api because androidApp creates and holds the HttpClient, so it must see the type.
+                api(libs.ktor.client.engine.defaults)
+                // 让 HttpClient 用 kotlinx.serialization 编解码 JSON。
+                // Lets the HttpClient encode and decode JSON with kotlinx.serialization.
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                // 打印请求与响应的插件。
+                // The plugin that logs requests and responses.
+                implementation(libs.ktor.client.logging)
+                // DTO 的 @Serializable 与 Json / JsonElement。
+                // @Serializable for the DTOs, plus Json and JsonElement.
+                implementation(libs.kotlinx.serialization.json)
+                // 日志。
+                // Logging.
+                implementation(libs.kermit)
             }
         }
 
         commonTest {
             dependencies {
                 implementation(libs.kotlin.test)
+                // 假的引擎：测试里给请求返回写好的响应，不联网。
+                // A fake engine: tests answer requests with canned responses, without the network.
+                implementation(libs.ktor.client.mock)
+                // runTest：在测试里跑 suspend 函数。
+                // runTest, for running suspend functions in tests.
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
