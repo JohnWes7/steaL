@@ -24,6 +24,8 @@
   <img src="screenshots/detail.png" width="200" alt="Game detail">
   <img src="screenshots/ai-advice.png" width="200" alt="AI advice">
   <img src="screenshots/wishlist.png" width="200" alt="Wishlist">
+  <img src="screenshots/sales.png" width="200" alt="Sales">
+  <img src="screenshots/profile.png" width="200" alt="Profile">
 </p>
 
 ## 简介
