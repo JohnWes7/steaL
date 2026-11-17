@@ -79,9 +79,9 @@ kotlin {
                 // DTO 的 @Serializable 与 Json / JsonElement。
                 // @Serializable for the DTOs, plus Json and JsonElement.
                 implementation(libs.kotlinx.serialization.json)
-                // 日志。
-                // Logging.
-                implementation(libs.kermit)
+                // 日志；用 api 是因为 AppLog 的分类就是 Kermit 的 Logger，androidApp 的 ViewModel 也要用它打日志。
+                // Logging; api because AppLog's categories are Kermit Loggers, which androidApp's view models log with too.
+                api(libs.kermit)
             }
         }
 
