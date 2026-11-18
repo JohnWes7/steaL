@@ -38,8 +38,8 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// 购物区域；Steam 与第三方商店按区定价，它同时决定货币格式与 API 参数 /
-/// The store region the user is shopping in; it drives the currency format and the API parameters
+/// 购物区域；Steam 与第三方商店按区定价，它决定请求参数，从而决定返回的价格与货币 /
+/// The store region the user is shopping in; it drives the request parameters, and so the prices and currency returned
 enum AppRegion: String, Codable, CaseIterable, Identifiable {
     case australia
     case china
@@ -60,32 +60,6 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
         case .japan: return "Japan"
         case .korea: return "Korea"
         case .europe: return "Europe"
-        }
-    }
-
-    /// 该区域的 ISO 4217 货币代码，如 `"CNY"` / The region's ISO 4217 currency code, e.g. `"CNY"`
-    var currencyCode: String {
-        switch self {
-        case .australia: return "AUD"
-        case .china: return "CNY"
-        case .unitedStates: return "USD"
-        case .unitedKingdom: return "GBP"
-        case .japan: return "JPY"
-        case .korea: return "KRW"
-        case .europe: return "EUR"
-        }
-    }
-
-    /// 该区域格式化价格时用的货币符号 / The symbol used when formatting prices for the region
-    var currencySymbol: String {
-        switch self {
-        case .australia: return "$"
-        case .china: return "¥"
-        case .unitedStates: return "$"
-        case .unitedKingdom: return "£"
-        case .japan: return "¥"
-        case .korea: return "₩"
-        case .europe: return "€"
         }
     }
 
