@@ -31,8 +31,10 @@ data class ItadShopIDsResponse(
      */
     fun appIDs(uuid: String): List<Int> {
         val shopIDs = shopIDs(uuid)
-        val appShopIDs = shopIDs.filter { shopID -> shopID.startsWith(APP_PREFIX) }
-        val appIDs = appShopIDs.mapNotNull { shopID -> shopID.removePrefix(APP_PREFIX).toIntOrNull() }
+        // 获取以 app/ 开头
+        val prefixAppID = shopIDs.filter { shopID -> shopID.startsWith(APP_PREFIX) }
+        // 移除前缀并转换为 Int
+        val appIDs = prefixAppID.mapNotNull { shopID -> shopID.removePrefix(APP_PREFIX).toIntOrNull() }
         return appIDs
     }
 
