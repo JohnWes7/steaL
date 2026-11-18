@@ -1,7 +1,10 @@
 # backend
 
 steaL 的「促销活动日历」后端：定期抓各商店官方公布的全站促销日期，用 DeepSeek 抄出日期，校验后存成 JSON，
-再由一个只读接口 `GET /v1/sale-events` 合并返回。目前只在本地运行，云厂商还没定；代码尽量不依赖任何一家云。
+再由一个只读接口 `GET /v1/sale-events` 合并返回。已部署到 AWS 香港（见「部署」），本地也能完整跑一遍；
+业务代码不依赖任何云 SDK，AWS 专用的只有三个薄文件（见「目录」）。
+
+调用方：iOS 的 `SaleEventsAPI`（Sales tab，`iosApp/steaL/Services/SaleEventsAPI.swift`）；Android 的 Sales 页目前还是占位，没接。
 
 ## 运行
 
@@ -16,6 +19,10 @@ uv run python scripts/serve_local.py                   # http://127.0.0.1:8000/v
 uv run pytest                                          # 测试不联网、不调 AI、不碰真 AWS（S3 用 moto 模拟）
 scripts/build_refresh_lambda.sh                        # 打包 refresh Lambda（Linux arm64）到 build/refresh/
 ```
+
+`refresh_local.py` 还有 `--out <目录>`（默认 `.data/`）和 `--verbose`；`serve_local.py` 有 `--data` / `--host` / `--port`。
+`.env` 里还可以填 `DEEPSEEK_MODEL` / `DEEPSEEK_BASE_URL`，默认值在 `extraction.py`（`deepseek-flash`、`https://api.deepseek.com`）。
+打包脚本平时不用手动跑：`terraform apply` 发现源码变了会自动调它。
 
 ## 目录
 
@@ -37,7 +44,8 @@ functions/sale_events_api/api_core.py             读接口的核心逻辑（不
 functions/sale_events_api/api_handler.py          AWS 专用：Lambda 入口，从 S3 读文件交给 api_core.py
 functions/sale_events_refresh/refresh_handler.py  AWS 专用：Lambda 入口，每次刷新事件里的一个商店，没写成就抛错
 functions/sale_events_refresh/s3_store.py         AWS 专用：EventStore 的 S3 实现
-scripts/                本地入口（不打包上云）
+infra/                  Terraform（AWS）：s3.tf、lambda_api.tf（含 API Gateway）、lambda_refresh.tf、scheduler.tf
+scripts/                本地入口与打包脚本（不打包上云）
 tests/                  pytest；fixtures/ 是存下来的真实页面
 ```
 
@@ -47,7 +55,7 @@ tests/                  pytest；fixtures/ 是存下来的真实页面
 5. 校验 → 6. 整份替换这个商店的文件。
 
 AI 只负责抄日期；时区、id、来源网址都由代码处理。任何一步校验不通过，这次结果整份作废，旧数据保留，
-AI 的输出存进 `.data/sale-events/rejected/`，方便排查。
+AI 的输出与错误清单存进 `sale-events/rejected/{store}-{时间}.json`（本地在 `.data/` 下，云上在 S3 bucket 里，留 90 天），方便排查。
 
 Steam 和 Epic 是完整的日程表，一条都没有、或比上一份少一半以上，都算出错；itch.io 只在促销期间有公告，空列表是正常的。
 GOG 走 agent，流程不同，见下面「GOG（agent）」。
@@ -58,6 +66,8 @@ GOG 走 agent，流程不同，见下面「GOG（agent）」。
 
 固定抓 Steamworks 的 [Upcoming Steam Events](https://partner.steamgames.com/doc/marketing/upcoming_events)，
 这是 Valve 写给开发者的完整日程，大约能看到半年后。开始和结束都是**太平洋时间上午 10 点**（各活动子页写明了）。
+
+`kind` 按活动在页面上的哪一节分：`seasonalSale`（Seasonal Sales）、`themedFest`（Themed Sale Events）、`nextFest`（Next Fest）。
 
 ### Epic
 
@@ -133,14 +143,23 @@ GOG 没有提前公布的日程，官方新闻只在促销开始时发，也没�
 
 - `refreshedAt` 取各商店里最早的那次成功刷新，表示最旧的那部分数据有多旧。
 - 时刻都是 UTC、整秒（不带小数秒，所有时刻一个格式），`end` 是结束的那一刻（不含）。
+- 成功响应带 `Cache-Control: public, max-age=3600`（数据每周才刷新一次）。
 - 还没有任何数据或读不到存储时返回 503，数据损坏返回 500，错误体是 RFC 9457 `application/problem+json`。
-- 线上还有两种网关生成的错误（响应体是 `{"message": "..."}`，不是 problem+json）：超过限流（每秒 10 次、突发 20）返回 429；Lambda 并发打满返回 503。两种都应稍后重试。
+- 线上还有网关生成的错误（响应体是 `{"message": "..."}`，不是 problem+json）：超过限流（每秒 10 次、突发 20，整个 stage 共用）返回 429；
+  Lambda 并发打满返回 503；其他路径返回 404。429 和 503 都应稍后重试。
 - 完整契约见仓库根的 [`api/openapi.yaml`](../api/openapi.yaml)（OpenAPI 3.1）：改了接口要一起改它。
 
-## 部署（AWS，进行中）
+## 部署（AWS）
 
-部署到 AWS 香港（`ap-east-1`）：API Gateway HTTP API → `sale_events_api` Lambda 读 S3；EventBridge Scheduler 每个商店一个定时器
-（目前四家都是每周一次）→ `sale_events_refresh` Lambda 写 S3；刷新失败经 SNS 发邮件。Terraform 在 `infra/`：
+部署在 AWS 香港（`ap-east-1`），资源全部由 `infra/` 的 Terraform 管理：
+
+- **读**：API Gateway HTTP API（只有 `GET /v1/sale-events` 一条路由）→ `steal-sale-events-api` Lambda（python3.12、arm64、128 MB）只读 S3。
+- **写**：EventBridge Scheduler 每个商店一个定时器，事件 `{"store": "..."}` → `steal-sale-events-refresh` Lambda（512 MB、超时 10 分钟）写 S3。
+  执行失败不自动重试（每次都要调 DeepSeek，下一次定时会再跑）。
+- **存储**：私有 bucket `steal-sale-events-{账号 ID}`，布局同本地 `.data/`（`sale-events/{store}.json` 与 `sale-events/rejected/`）；
+  开了版本控制，覆盖前的旧版本留 180 天。
+- **权限**：三个 IAM 角色分开：api 只读、refresh 读写 `sale-events/`、scheduler 只能调 refresh。
+- **失败通知**：还没有（SNS 邮件暂不做），失败只记在 CloudWatch Logs（两个函数的日志都留 30 天）。
 
 ```sh
 aws login --profile steal                     # 会话最长 12 小时
@@ -148,8 +167,11 @@ cd infra
 cp terraform.tfvars.example terraform.tfvars  # 填云上专用的 DeepSeek key（不提交）
 terraform init
 terraform plan                                # 先看会建什么
-terraform apply
+terraform apply                               # 源码变了会先跑 scripts/build_refresh_lambda.sh 重新打包
 ```
+
+Terraform state 目前放在本地 `infra/terraform.tfstate`（已 gitignore，**里面有 DeepSeek key 明文**），以后再挪到 S3 远端 backend。
+`.terraform.lock.hcl` 要提交（锁住 provider 的精确版本）。
 
 已部署（2026-11-04）：`https://1gfwpsgqnc.execute-api.ap-east-1.amazonaws.com/v1/sale-events`。
 
@@ -170,9 +192,9 @@ curl -s https://1gfwpsgqnc.execute-api.ap-east-1.amazonaws.com/v1/sale-events
 
 加 `--invocation-type Event` 就是异步调用，和定时器的调用方式一样：命令马上返回 202，结果只能看日志。
 
-定时器（2026-11-06 起打开，`schedules_enabled = true`）：Steam 周一 00:00、Epic 周一 00:10、itch.io 周一 01:00、GOG 周一 01:10（UTC）。
+定时器（2026-11-06 起打开，`schedules_enabled = true`；`variables.tf` 的默认值是 `false`，新环境先手动调用确认能写进 S3 再打开）：
+四家都是每周一次（2026-11-12 起；之前 itch.io / GOG 每天），Steam 周一 00:00、Epic 周一 00:10、itch.io 周一 01:00、GOG 周一 01:10（UTC），时间写在 `infra/scheduler.tf`。
 EventBridge Scheduler 没有「立即运行」，手动测试就用上面的 `aws lambda invoke`。要停掉就把 `terraform.tfvars` 里的 `schedules_enabled` 改成 `false` 再 `terraform apply`。
-刷新失败目前只记在 CloudWatch Logs 里（还没有邮件通知）。
 
 为了不绑定某一家云：`sale_events` 包和 `api_core.py` 不依赖任何云 SDK，AWS 专用的只有上面三个文件。换云时只换它们和 Terraform。
 
@@ -181,7 +203,9 @@ EventBridge Scheduler 没有「立即运行」，手动测试就用上面的 `aw
 - **Epic 指南的标题换了格式就认不出来**（比如改成 `Q1 2027 Promotional Guide`）：新帖子会被过滤掉，代码继续用旧的两篇。
   旧指南里还有没结束的活动时，校验照常通过，新季度的活动就悄悄缺了；等旧活动全部结束才会报「no upcoming events left」。
   不会写坏数据，但会有一段时间缺数据。可以补的检查：选中的指南里必须有当前或下一季度的那篇，否则直接报错。
-- **刷新失败还没有通知**：失败只记日志、存 rejected，要上云时再接告警。
+- **刷新失败还没有通知**：失败只记在 CloudWatch Logs、AI 输出存进 S3 的 `rejected/`，要主动去看；以后可以接 SNS 邮件。
+- **itch.io / GOG 最多晚 7 天才收录**：它们只在促销开始时发公告，而定时器每周才跑一次。
+- **Lambda 并发配额只有 10**（新账号默认，可申请提高）：请求一多 Lambda 先被限，网关返回 503。
 - **Epic 只能看到 1 到 1.5 个月后**，Steam 大约能看到半年后。
 - **校验只核对名字，不核对日期**：名字必须原样出现在正文里，防止 AI 编造活动；日期抄错但看起来合理（结束晚于开始、不超过 31 天）时拦不住。
   Epic 指南写了天数（`| 14 Days`），以后可以拿来核对。

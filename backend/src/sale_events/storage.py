@@ -1,8 +1,9 @@
 """活动数据的存储：每个商店一个 JSON 文件，校验不过的存进 rejected。
 Storage for event data: one JSON file per store, plus rejected outputs.
 
-本地开发用 `LocalEventStore` 写文件；上云后换成 Object Storage 的实现，接口相同。
-Local development writes files with `LocalEventStore`; the cloud version will use Object Storage with the same interface.
+本地开发用 `LocalEventStore` 写文件；AWS 上用 `functions/sale_events_refresh/s3_store.py` 的 `S3EventStore`，接口相同。
+Local development writes files with `LocalEventStore`; on AWS, `S3EventStore` in
+`functions/sale_events_refresh/s3_store.py` implements the same interface.
 """
 
 import json
@@ -38,8 +39,8 @@ class EventStore(Protocol):
 
 
 class LocalEventStore:
-    """写本地文件的存储，路径布局和 Object Storage 一样（`sale-events/{store}.json`）。
-    File-based storage with the same layout as Object Storage (`sale-events/{store}.json`).
+    """写本地文件的存储，路径布局和 S3 上一样（`sale-events/{store}.json`）。
+    File-based storage with the same layout as on S3 (`sale-events/{store}.json`).
     """
 
     def __init__(self, root: Path) -> None:
@@ -56,8 +57,8 @@ class LocalEventStore:
         path = self._store_path(store)
         path.parent.mkdir(parents=True, exist_ok=True)
         text = event_list.model_dump_json(by_alias=True, indent=2)
-        # 先写临时文件再改名，读的一方不会读到写了一半的数据（同 Object Storage 覆盖写是原子的）。
-        # Write to a temp file then rename, so readers never see a half-written file (like Object Storage).
+        # 先写临时文件再改名，读的一方不会读到写了一半的数据（同 S3 覆盖写是原子的）。
+        # Write to a temp file then rename, so readers never see a half-written file (like S3).
         temp_path = path.with_suffix(".json.tmp")
         temp_path.write_text(text + "\n", encoding="utf-8")
         temp_path.replace(path)

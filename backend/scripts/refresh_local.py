@@ -75,8 +75,8 @@ def main() -> int:
             print("\nGOG uses the agent, which has no reduced text to print.")
         return 0
 
-    # python-dotenv 只是本地开发依赖，上云后 key 从云的 secret 服务读。
-    # python-dotenv is a local dev dependency only; in the cloud the key comes from the provider's secret service.
+    # python-dotenv 只是本地开发依赖；云上 key 是 refresh Lambda 的环境变量（由 Terraform 写入）。
+    # python-dotenv is a local dev dependency only; in the cloud the key is a refresh Lambda environment variable set by Terraform.
     from dotenv import load_dotenv
 
     load_dotenv(BACKEND_ROOT / ".env")

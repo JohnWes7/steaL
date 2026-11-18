@@ -39,8 +39,8 @@ class Extract(Protocol):
 
 @dataclass
 class RefreshReport:
-    """一次刷新的结果，给命令行和以后的 function 日志用。
-    The result of one refresh, for the CLI and later the function logs.
+    """一次刷新的结果，给命令行和 refresh Lambda 的日志用。
+    The result of one refresh, for the CLI and the refresh Lambda's logs.
     """
 
     written: bool

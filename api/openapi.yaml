@@ -29,8 +29,8 @@ paths:
         Returns events whose `end` is after now (ongoing and upcoming), all stores merged, sorted by `start` ascending.
         No query parameters; everything is returned (a few dozen events).
 
-        刷新频率：Steam / Epic 每周一次，itch.io / GOG 每天一次；各商店分开刷新，一个商店失败不影响其他商店的数据。
-        Refresh schedule: Steam / Epic weekly, itch.io / GOG daily; stores refresh separately, so one store failing
+        刷新频率：四个商店都是每周一次；各商店分开刷新，一个商店失败不影响其他商店的数据。
+        Refresh schedule: every store weekly; stores refresh separately, so one store failing
         does not affect the others' data.
       responses:
         '200':

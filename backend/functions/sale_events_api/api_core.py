@@ -8,9 +8,9 @@ Entry points: `api_handler.py` on AWS, `scripts/serve_local.py` locally.
 只用标准库、不 import `sale_events`：文件内容当字典处理，包小、冷启动快。
 Standard library only and no `sale_events` import: file contents are handled as dicts, keeping the package small and cold starts fast.
 
-与云无关：怎么读文件由调用方传入（本地读 `.data/`，上云后读对象存储），结果是普通的 `Response`，
+与云无关：怎么读文件由调用方传入（本地读 `.data/`，AWS 上读 S3），结果是普通的 `Response`，
 由各家云的 handler 转成自己的格式。
-Cloud-neutral: how files are read is passed in (local `.data/` now, object storage later), and the result is a plain
+Cloud-neutral: how files are read is passed in (`.data/` locally, S3 on AWS), and the result is a plain
 `Response` that each cloud's handler converts to its own format.
 """
 

@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 class RefreshFailedError(Exception):
-    """这个商店这次没写入（抓取后校验不过或 AI 输出不可用）。抛出它让这次调用算失败，触发失败通知。
+    """这个商店这次没写入（抓取后校验不过或 AI 输出不可用）。抛出它让这次调用算失败，在 CloudWatch 里能看到。
     This store was not written this time (validation failed or the AI output was unusable). Raising it marks the
-    invocation as failed, which triggers the failure notification.
+    invocation as failed, so it shows up in CloudWatch.
     """
 
 

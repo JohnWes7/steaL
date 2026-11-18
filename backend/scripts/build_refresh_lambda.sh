@@ -4,8 +4,9 @@
 # files, all into build/refresh/.
 #
 # 用法 / Usage（在 backend/ 或任意位置 / from anywhere）: scripts/build_refresh_lambda.sh
-# Terraform 之后会用 terraform_data + local-exec 调它；zip 由 Terraform 的 archive_file 打。
-# Terraform will call it through terraform_data + local-exec; Terraform's archive_file makes the zip.
+# Terraform 用 terraform_data + local-exec 调它（源码变了才重跑，见 infra/lambda_refresh.tf）；zip 由 Terraform 的 archive_file 打。
+# Terraform calls it through terraform_data + local-exec (only when the source changed, see infra/lambda_refresh.tf);
+# Terraform's archive_file makes the zip.
 
 set -euo pipefail
 
