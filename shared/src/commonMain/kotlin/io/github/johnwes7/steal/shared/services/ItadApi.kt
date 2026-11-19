@@ -2,9 +2,14 @@ package io.github.johnwes7.steal.shared.services
 
 import io.github.johnwes7.steal.shared.models.itad.ItadDealsRequest
 import io.github.johnwes7.steal.shared.models.itad.ItadDealsResponse
+import io.github.johnwes7.steal.shared.models.itad.ItadGiveaway
+import io.github.johnwes7.steal.shared.models.itad.ItadShopIDsResponse
+import io.github.johnwes7.steal.shared.models.itad.ItadShopRef
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -46,6 +51,64 @@ class ItadApi(
 
         val deals: ItadDealsResponse = response.body()
         return deals
+    }
+
+    /**
+     * 取限时免费领取列表（`GET /giveaways/v1`）。
+     * Fetches the list of limited-time giveaways (`GET /giveaways/v1`).
+     *
+     * 默认值同 iOS：从第 [offset] 条起取 [limit] 条，[expired] 为 `false` 只要没过期的，[mature] 为 `false` 不要限制级，
+     * [sort] 默认 `-publish` 按发布时间从新到旧。响应是裸数组，空列表表示现在没有，不是错误。
+     * Defaults match iOS: [limit] entries from [offset], only unexpired ones when [expired] is `false`, no mature
+     * content when [mature] is `false`, and [sort] defaults to `-publish`, newest first. The response is a bare
+     * array; an empty list means there are none right now, not an error.
+     */
+    suspend fun fetchGiveaways(
+        offset: Int = 0,
+        limit: Int = 20,
+        expired: Boolean = false,
+        mature: Boolean = false,
+        sort: String = "-publish",
+    ): List<ItadGiveaway> {
+        val response = client.get("$BASE_URL/giveaways/v1") {
+            header(API_KEY_HEADER, apiKey)
+            parameter("offset", offset)
+            parameter("limit", limit)
+            parameter("expired", expired)
+            parameter("mature", mature)
+            parameter("sort", sort)
+        }
+        ensureSuccess(response)
+
+        val giveaways: List<ItadGiveaway> = response.body()
+        return giveaways
+    }
+
+    /**
+     * 把一批 ITAD 游戏 UUID 换成它们在 Steam 上的商店 ID（`POST /lookup/shop/61/id/v1`）。
+     * Turns a batch of ITAD game UUIDs into their shop IDs on Steam (`POST /lookup/shop/61/id/v1`).
+     *
+     * 请求体是 [uuids] 组成的 JSON 数组。[uuids] 为空时直接返回空结果、不发请求：服务器会拒绝空数组。
+     * 响应顶层是字典，先解码成字典再包进 [ItadShopIDsResponse]。
+     * The body is a JSON array of [uuids]. An empty [uuids] returns an empty result without a request, because the
+     * server rejects an empty array. The response root is a dictionary, decoded first and then wrapped in
+     * [ItadShopIDsResponse].
+     */
+    suspend fun lookupShopIDs(uuids: List<String>): ItadShopIDsResponse {
+        if (uuids.isEmpty()) {
+            return ItadShopIDsResponse(entries = emptyMap())
+        }
+
+        val response = client.post("$BASE_URL/lookup/shop/${ItadShopRef.STEAM_ID}/id/v1") {
+            header(API_KEY_HEADER, apiKey)
+            contentType(ContentType.Application.Json)
+            setBody(uuids)
+        }
+        ensureSuccess(response)
+
+        val entries: Map<String, List<String>?> = response.body()
+        val shopIDs = ItadShopIDsResponse(entries = entries)
+        return shopIDs
     }
 
     /**
