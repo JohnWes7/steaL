@@ -1,6 +1,6 @@
 package io.github.johnwes7.steal.shared.models.itad
 
-import io.github.johnwes7.steal.shared.services.appJson
+import io.github.johnwes7.steal.shared.services.appNetworkJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -16,7 +16,7 @@ class ItadShopIDsTest {
      * Decodes the way the service will: into a dictionary first, then wrapped in [ItadShopIDsResponse].
      */
     private fun decode(json: String): ItadShopIDsResponse {
-        val entries = appJson.decodeFromString<Map<String, List<String>?>>(json)
+        val entries = appNetworkJson.decodeFromString<Map<String, List<String>?>>(json)
         val response = ItadShopIDsResponse(entries)
         return response
     }

@@ -1,6 +1,6 @@
 package io.github.johnwes7.steal.shared.models.itad
 
-import io.github.johnwes7.steal.shared.services.appJson
+import io.github.johnwes7.steal.shared.services.appNetworkJson
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,7 +20,7 @@ class ItadDealsTest {
      */
     @Test
     fun decodesRealResponse() {
-        val response = appJson.decodeFromString<ItadDealsResponse>(REAL_RESPONSE)
+        val response = appNetworkJson.decodeFromString<ItadDealsResponse>(REAL_RESPONSE)
 
         assertEquals(3, response.nextOffset)
         assertTrue(response.hasMore)
@@ -46,7 +46,7 @@ class ItadDealsTest {
      */
     @Test
     fun decodesMissingOptionalsAndUnknownFields() {
-        val response = appJson.decodeFromString<ItadDealsResponse>(SPARSE_RESPONSE)
+        val response = appNetworkJson.decodeFromString<ItadDealsResponse>(SPARSE_RESPONSE)
 
         val deal = response.list[0]
         assertNull(response.nextOffset)
@@ -63,7 +63,7 @@ class ItadDealsTest {
      */
     @Test
     fun historicalLowComparesMinorUnits() {
-        val response = appJson.decodeFromString<ItadDealsResponse>(SPARSE_RESPONSE)
+        val response = appNetworkJson.decodeFromString<ItadDealsResponse>(SPARSE_RESPONSE)
         val sparseDeal = response.list[0].deal
 
         val atLow = sparseDeal.copy(historyLow = sparseDeal.price)
@@ -85,7 +85,7 @@ class ItadDealsTest {
             filter = ItadDealsFilter(type = listOf(1), drm = listOf(61)),
         )
 
-        val encoded = appJson.encodeToJsonElement(ItadDealsRequest.serializer(), request)
+        val encoded = appNetworkJson.encodeToJsonElement(ItadDealsRequest.serializer(), request)
         val expected = Json.parseToJsonElement(
             """
             {"country":"AU","offset":0,"limit":5,"sort":"-hot","nondeals":false,
@@ -110,7 +110,7 @@ class ItadDealsTest {
             filter = ItadDealsFilter(type = listOf(1), drm = listOf(61), tags = listOf("Action")),
         )
 
-        val encoded = appJson.encodeToJsonElement(ItadDealsRequest.serializer(), request)
+        val encoded = appNetworkJson.encodeToJsonElement(ItadDealsRequest.serializer(), request)
         val expected = Json.parseToJsonElement(
             """
             {"country":"AU","offset":20,"limit":20,"sort":"-hot","nondeals":false,

@@ -1,6 +1,6 @@
 package io.github.johnwes7.steal.shared.models.itad
 
-import io.github.johnwes7.steal.shared.services.appJson
+import io.github.johnwes7.steal.shared.services.appNetworkJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -20,7 +20,7 @@ class ItadGiveawaysTest {
      */
     @Test
     fun decodesRealResponse() {
-        val giveaways = appJson.decodeFromString<List<ItadGiveaway>>(REAL_RESPONSE)
+        val giveaways = appNetworkJson.decodeFromString<List<ItadGiveaway>>(REAL_RESPONSE)
 
         assertEquals(2, giveaways.size)
 
@@ -46,7 +46,7 @@ class ItadGiveawaysTest {
      */
     @Test
     fun decodesMissingOptionals() {
-        val giveaways = appJson.decodeFromString<List<ItadGiveaway>>(SPARSE_RESPONSE)
+        val giveaways = appNetworkJson.decodeFromString<List<ItadGiveaway>>(SPARSE_RESPONSE)
 
         val giveaway = giveaways[0]
         assertNull(giveaway.shop)
@@ -61,7 +61,7 @@ class ItadGiveawaysTest {
      */
     @Test
     fun decodesEmptyList() {
-        val giveaways = appJson.decodeFromString<List<ItadGiveaway>>("[]")
+        val giveaways = appNetworkJson.decodeFromString<List<ItadGiveaway>>("[]")
 
         assertTrue(giveaways.isEmpty())
     }

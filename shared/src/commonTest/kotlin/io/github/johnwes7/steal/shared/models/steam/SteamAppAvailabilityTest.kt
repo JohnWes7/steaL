@@ -1,6 +1,6 @@
 package io.github.johnwes7.steal.shared.models.steam
 
-import io.github.johnwes7.steal.shared.services.appJson
+import io.github.johnwes7.steal.shared.services.appNetworkJson
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -16,7 +16,7 @@ class SteamAppAvailabilityTest {
      * Decodes the way the service will: into a dictionary first, then wrapped in [SteamAppAvailabilityResponse].
      */
     private fun decode(json: String): SteamAppAvailabilityResponse {
-        val entries = appJson.decodeFromString<Map<String, SteamAppAvailabilityEntry>>(json)
+        val entries = appNetworkJson.decodeFromString<Map<String, SteamAppAvailabilityEntry>>(json)
         val response = SteamAppAvailabilityResponse(entries)
         return response
     }

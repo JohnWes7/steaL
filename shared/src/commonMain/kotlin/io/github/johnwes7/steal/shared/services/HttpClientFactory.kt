@@ -31,7 +31,7 @@ private const val MAX_HTTP_LOG_LENGTH = 4000
  * so this relaxes them to match iOS; a `null` for a non-null property still fails (as on iOS), and DTOs
  * declare fields that may be `null` as nullable.
  */
-internal val appJson: Json = Json {
+internal val appNetworkJson: Json = Json {
     // 忽略 DTO 里没写的字段：接口加了字段也不会解码失败。
     // Ignore fields the DTO does not declare, so new fields from the API never break decoding.
     ignoreUnknownKeys = true
@@ -76,10 +76,10 @@ internal fun HttpClientConfig<*>.installAppPlugins(logsRequests: Boolean) {
     // Keep Ktor from throwing its own exceptions by status code: each service checks the status and throws its own error type.
     expectSuccess = false
 
-    // 用 appJson 编解码 JSON 请求体与响应体。
-    // Encode and decode JSON bodies with appJson.
+    // 用 appNetworkJson 编解码 JSON 请求体与响应体。
+    // Encode and decode JSON bodies with appNetworkJson.
     install(ContentNegotiation) {
-        json(appJson)
+        json(appNetworkJson)
     }
 
     if (logsRequests) {
