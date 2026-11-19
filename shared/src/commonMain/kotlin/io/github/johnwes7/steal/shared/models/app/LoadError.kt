@@ -1,6 +1,7 @@
 package io.github.johnwes7.steal.shared.models.app
 
 import io.github.johnwes7.steal.shared.services.ItadApiException
+import io.github.johnwes7.steal.shared.services.SteamApiException
 import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.network.sockets.SocketTimeoutException
@@ -64,6 +65,7 @@ sealed interface LoadError {
             val loadError = when (error) {
                 // 各 Service 的非 2xx / Each service's non-2xx status
                 is ItadApiException -> Server(error.statusCode)
+                is SteamApiException -> Server(error.statusCode)
 
                 // 超时 / Timeouts
                 is HttpRequestTimeoutException -> Unknown

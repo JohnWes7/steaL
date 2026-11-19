@@ -1,0 +1,134 @@
+package io.github.johnwes7.steal.shared.services
+
+import io.github.johnwes7.steal.shared.models.app.LoadError
+import io.github.johnwes7.steal.shared.models.settings.AppRegion
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.MockRequestHandleScope
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.HttpResponseData
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/**
+ * [SteamApi] 的请求与错误测试，用 Ktor 的假引擎，不联网。
+ * Request and error tests for [SteamApi], using Ktor's mock engine without the network.
+ */
+class SteamApiTest {
+
+    /**
+     * 用假引擎建一个 [SteamApi]，装的是和正式 client 一样的配置；[handler] 决定每个请求返回什么。
+     * Builds a [SteamApi] on the mock engine with the same configuration as the real client; [handler] decides
+     * what each request gets back.
+     */
+    private fun makeApi(
+        handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
+    ): SteamApi {
+        val engine = MockEngine(handler)
+        val client = HttpClient(engine) {
+            installAppPlugins(logsRequests = false)
+        }
+        val api = SteamApi(client = client)
+        return api
+    }
+
+    /**
+     * 请求发到 `GET /api/appdetails`，appID 用逗号连起来，带地区代码和 `filters=price_overview`。
+     * The request goes to `GET /api/appdetails`, with appIDs joined by commas, the region code and
+     * `filters=price_overview`.
+     */
+    @Test
+    fun fetchAvailabilitySendsExpectedQuery() = runTest {
+        var captured: HttpRequestData? = null
+        val api = makeApi { request ->
+            captured = request
+            respond(content = AVAILABILITY_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        api.fetchAvailability(appIDs = listOf(601100, 743980, 582010), region = AppRegion.Australia)
+
+        val request = captured!!
+        assertEquals(HttpMethod.Get, request.method)
+        assertEquals("store.steampowered.com", request.url.host)
+        assertEquals("/api/appdetails", request.url.encodedPath)
+        assertEquals("601100,743980,582010", request.url.parameters["appids"])
+        assertEquals("AU", request.url.parameters["cc"])
+        assertEquals("price_overview", request.url.parameters["filters"])
+    }
+
+    /**
+     * 响应包进 `SteamAppAvailabilityResponse` 后能分出存在、有价格的那个候选。
+     * Wrapped in `SteamAppAvailabilityResponse`, the response tells which candidate exists and has a price.
+     */
+    @Test
+    fun fetchAvailabilityWrapsResponse() = runTest {
+        val api = makeApi {
+            respond(content = AVAILABILITY_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val availability = api.fetchAvailability(appIDs = listOf(601100, 743980, 582010), region = AppRegion.Australia)
+
+        assertFalse(availability.isAvailable(601100))
+        assertFalse(availability.isAvailable(743980))
+        assertTrue(availability.hasPrice(582010))
+    }
+
+    /**
+     * appID 列表为空时不发请求，直接返回空结果。
+     * An empty appID list sends no request and returns an empty result.
+     */
+    @Test
+    fun fetchAvailabilitySkipsEmptyList() = runTest {
+        var requestCount = 0
+        val api = makeApi {
+            requestCount += 1
+            respond(content = "{}", status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val availability = api.fetchAvailability(appIDs = emptyList(), region = AppRegion.Australia)
+
+        assertEquals(0, requestCount)
+        assertTrue(availability.entries.isEmpty())
+    }
+
+    /**
+     * 非 2xx 抛 [SteamApiException]，带状态码与原文，并归成 `LoadError.Server`。
+     * A non-2xx throws [SteamApiException] with the status and raw reply, normalised to `LoadError.Server`.
+     */
+    @Test
+    fun fetchAvailabilityThrowsOnNonSuccess() = runTest {
+        val api = makeApi {
+            respond(content = "Internal Server Error", status = HttpStatusCode.InternalServerError)
+        }
+
+        val error = assertFailsWith<SteamApiException> {
+            api.fetchAvailability(appIDs = listOf(582010), region = AppRegion.Australia)
+        }
+
+        assertEquals(500, error.statusCode)
+        assertEquals("Internal Server Error", error.body)
+        assertEquals(LoadError.Server(500), LoadError.from(error))
+    }
+
+    private companion object {
+
+        /**
+         * Monster Hunter: World 三个候选的真实响应（2026-11-19）。
+         * The real response for Monster Hunter: World's three candidates (2026-11-19).
+         */
+        const val AVAILABILITY_BODY =
+            """{"601100":{"success":false},"743980":{"success":false},"582010":{"success":true,"data":{"price_overview":{"currency":"AUD","initial":4494,"final":4494,"discount_percent":0,"initial_formatted":"","final_formatted":"A$ 44.94"}}}}"""
+
+        /** JSON 响应头 / The JSON response header. */
+        val JSON_HEADERS = headersOf(HttpHeaders.ContentType, "application/json")
+    }
+}
