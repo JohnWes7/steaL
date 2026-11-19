@@ -115,7 +115,7 @@ final class HotDealsViewModel {
             let items = response.list.map { deal in HomeDealItem(deal: deal) }
             dealState = .loaded(items)
 
-            let uuids = items.map(\.id)
+            let uuids = items.map(\.itadUUID)
             Task {
                 await resolveAppIDs(uuids: uuids, region: request.region)
             }
@@ -169,7 +169,7 @@ final class HotDealsViewModel {
 
             // 按 ITAD UUID 去重：`-hot` 排序在两次请求之间会变，新一页可能带着已有的游戏 /
             // Dedupe by ITAD UUID: the `-hot` order shifts between requests, so a new page may repeat games
-            let existingIDs = Set(currentItems.map(\.id))
+            let existingIDs = Set(currentItems.map(\.itadUUID))
             let newDeals = response.list.filter { deal in
                 !existingIDs.contains(deal.id)
             }
@@ -185,7 +185,7 @@ final class HotDealsViewModel {
             // 4. 补 appID 另开一个 Task：改了 `nextOffset` 后底部视图的 `.task(id:)` 会被取消，跟着它走的话每一页都查不完 /
             //    Resolve appIDs in a separate Task: changing `nextOffset` cancels the footer's `.task(id:)`,
             //    so riding along with it would cut off every page's lookup
-            let uuids = newItems.map(\.id)
+            let uuids = newItems.map(\.itadUUID)
             Task {
                 await resolveAppIDs(uuids: uuids, region: request.region)
             }
@@ -228,11 +228,11 @@ final class HotDealsViewModel {
 
         dealState = .loaded(items.map { item in
             // 只更新 uuids 里的这些条目 / Only update the items whose uuids are in the dictionary
-            guard uuids.contains(item.id) else { return item }
+            guard uuids.contains(item.itadUUID) else { return item }
 
             var updatedItem = item
 
-            if let appID = appIDByUUID[item.id] {
+            if let appID = appIDByUUID[item.itadUUID] {
                 updatedItem.steam = .resolved(appID)
             } else {
                 updatedItem.steam = .notFound
@@ -248,7 +248,7 @@ final class HotDealsViewModel {
 
         dealState = .loaded(
             items.map { item in
-                guard uuids.contains(item.id) else { return item }
+                guard uuids.contains(item.itadUUID) else { return item }
                 guard item.steam == .pending else { return item }
 
                 var updatedItem = item

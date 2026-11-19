@@ -115,7 +115,7 @@ final class GamesViewModel {
         guard case .loaded(let items) = dealState else { return }
         guard !items.isEmpty else { return }
 
-        let uuids = items.map(\.id)
+        let uuids = items.map(\.itadUUID)
 
         do {
             let appIDByUUID = try await SteamAppIDResolver.resolveAppIDs(uuids: uuids, region: region)
@@ -148,7 +148,7 @@ final class GamesViewModel {
         dealState = .loaded(items.map { item in
             var updated = item
 
-            if let appID = appIDByUUID[item.id] {
+            if let appID = appIDByUUID[item.itadUUID] {
                 updated.steam = .resolved(appID)
             } else {
                 updated.steam = .notFound

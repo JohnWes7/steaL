@@ -139,13 +139,13 @@ struct GamesView: View {
 
     /// 是否已在 wishlist；没有 appID 的条目不可能收藏 / Whether it is on the wishlist; entries without an appID never are
     private func isFavorite(_ item: HomeDealItem) -> Bool {
-        guard let appID = item.appID else { return false }
+        guard let appID = item.steamAppID else { return false }
         return wishlistService.contains(appID: appID)
     }
 
     /// 切换收藏；未登录先弹登录 sheet / Toggles the favourite; signed-out users get the sign-in sheet first
     private func toggleFavorite(_ item: HomeDealItem) {
-        guard let appID = item.appID else { return }
+        guard let appID = item.steamAppID else { return }
         guard let uid = authService.uid else {
             isShowingSignIn = true
             return
@@ -194,7 +194,7 @@ struct GamesView: View {
 
         case .resolved(let appID):
             // 赋值即跳转，`item:` 非空就推栈 / Assigning navigates: `.navigationDestination(item:)` pushes once non-nil
-            homeDetailItem = GameDetailRoute(appID: appID, uuid: item.id, title: item.deal.title)
+            homeDetailItem = GameDetailRoute(appID: appID, uuid: item.itadUUID, title: item.deal.title)
 
         case .notFound:
             warning = "“\(item.deal.title)” is not available on Steam, so there is no detail page to show."

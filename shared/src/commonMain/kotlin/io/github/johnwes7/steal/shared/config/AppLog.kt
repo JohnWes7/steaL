@@ -35,4 +35,10 @@ object AppLog {
      * so it gets its own category; each API's own failures still go to `steam` / `itad`.
      */
     val http: Logger = Logger.withTag("HTTP")
+
+    /**
+     * 首页（含 Hot Deals）：加载 deals、giveaways 与补 appID 的失败。
+     * The home page, Hot Deals included: failures loading deals and giveaways or resolving appIDs.
+     */
+    val games: Logger = Logger.withTag("Games")
 }

@@ -118,7 +118,7 @@ struct DealsSectionView: View {
             DealCardView(
                 deal: item.deal,
                 isFavorite: isFavorite(item),
-                isFavoriteEnabled: item.appID != nil,
+                isFavoriteEnabled: item.steamAppID != nil,
                 onToggleFavorite: {
                     onToggleFavorite(item)
                 }
@@ -140,7 +140,7 @@ struct DealsSectionView: View {
             DealGridCardView(
                 deal: item.deal,
                 isFavorite: isFavorite(item),
-                isFavoriteEnabled: item.appID != nil,
+                isFavoriteEnabled: item.steamAppID != nil,
                 onToggleFavorite: {
                     onToggleFavorite(item)
                 }

@@ -233,7 +233,7 @@ struct HotDealsView: View {
             DealCardView(
                 deal: item.deal,
                 isFavorite: isFavorite(item),
-                isFavoriteEnabled: item.appID != nil,
+                isFavoriteEnabled: item.steamAppID != nil,
                 onToggleFavorite: {
                     toggleFavorite(item)
                 }
@@ -261,7 +261,7 @@ struct HotDealsView: View {
             DealGridCardView(
                 deal: item.deal,
                 isFavorite: isFavorite(item),
-                isFavoriteEnabled: item.appID != nil,
+                isFavoriteEnabled: item.steamAppID != nil,
                 onToggleFavorite: {
                     toggleFavorite(item)
                 }
@@ -316,7 +316,7 @@ struct HotDealsView: View {
 
         let triggerIndex = max(items.count - 6, 0)
         let triggerItem = items[triggerIndex]
-        guard item.id == triggerItem.id else { return }
+        guard item.itadUUID == triggerItem.itadUUID else { return }
 
         loadNextPage()
     }
@@ -335,14 +335,14 @@ struct HotDealsView: View {
     // MARK: - 收藏 / Favorite
 
     private func isFavorite(_ item: HomeDealItem) -> Bool {
-        guard let appID = item.appID else {
+        guard let appID = item.steamAppID else {
             return false
         }
         return wishlistService.contains(appID: appID)
     }
 
     private func toggleFavorite(_ item: HomeDealItem) {
-        guard let appID = item.appID else {
+        guard let appID = item.steamAppID else {
             return
         }
 
@@ -396,7 +396,7 @@ struct HotDealsView: View {
             break
 
         case .resolved(let appID):
-            detailRoute = GameDetailRoute(appID: appID, uuid: item.id, title: item.deal.title)
+            detailRoute = GameDetailRoute(appID: appID, uuid: item.itadUUID, title: item.deal.title)
 
         case .notFound:
             warning = "“\(item.deal.title)” is not available on Steam, so there is no detail page to show."
