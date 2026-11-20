@@ -158,8 +158,9 @@ class GamesViewModel(
     // 界面调用 / Called by the UI
 
     /**
-     * 第一次显示或地区变了时加载两个区块；这个地区已经加载过就什么也不做。
-     * Loads both sections on first display or when the region changes; does nothing for a region already loaded.
+     * 第一次显示时加载两个区块，地区变了只重新加载 deals；这个地区已经加载过就什么也不做。
+     * Loads both sections on first display and only the deals when the region changes; does nothing for a region
+     * already loaded.
      *
      * 页面每次出现都会调用（`LaunchedEffect`），所以要幂等：切 tab、从详情页返回都不重新请求（同 iOS `hasStarted`），
      * 只有 [region] 变了才重新加载（同 iOS `.onChange(of: region)`）。不放在 `init` 里：Android 官方
@@ -173,9 +174,16 @@ class GamesViewModel(
         if (region == loadedRegion) {
             return
         }
+        val isFirstLoad = loadedRegion == null
         loadedRegion = region
+
         loadDeals(region = region, showsLoading = true)
-        loadGiveaways(showsLoading = true)
+        // giveaways 的请求不带地区，换地区拿到的还是同一份，所以只在第一次加载时请求（iOS 换地区时两块都重查）。
+        // The giveaways request carries no region, so a region change would fetch the same list; it loads only the
+        // first time (iOS refetches both sections on a region change).
+        if (isFirstLoad) {
+            loadGiveaways(showsLoading = true)
+        }
     }
 
     /**
@@ -217,8 +225,10 @@ class GamesViewModel(
         loadGiveaways(showsLoading = true)
     }
 
-    // 每个区块的请求：load 启动协程、马上返回，fetch 是协程里真正做事的 suspend 函数。
-    // Per-section requests: load starts a coroutine and returns at once; fetch is the suspend function doing the work.
+    // 每个区块的请求，前缀两端统一：load 启动协程、马上返回；update 是协程里取数据并写进状态的 suspend 函数；
+    // Service 的 fetch 只取数据、返回结果。
+    // Per-section requests, with prefixes shared by both platforms: load starts a coroutine and returns at once; update
+    // is the suspend function that fetches data and writes it into state; a service's fetch only fetches and returns.
 
     /**
      * 取消 deals 区块的旧请求，启动新的一次，返回它的 [Job]。
@@ -230,7 +240,7 @@ class GamesViewModel(
     private fun loadDeals(region: AppRegion, showsLoading: Boolean): Job {
         dealsJob?.cancel()
         val job = viewModelScope.launch {
-            fetchDeals(region = region, showsLoading = showsLoading)
+            updateDeals(region = region, showsLoading = showsLoading)
         }
         dealsJob = job
         return job
@@ -246,7 +256,7 @@ class GamesViewModel(
     private fun loadGiveaways(showsLoading: Boolean): Job {
         giveawaysJob?.cancel()
         val job = viewModelScope.launch {
-            fetchGiveaways(showsLoading = showsLoading)
+            updateGiveaways(showsLoading = showsLoading)
         }
         giveawaysJob = job
         return job
@@ -255,10 +265,10 @@ class GamesViewModel(
     // deals
 
     /**
-     * 取首页的 deals，先发布列表，再补 Steam appID。
-     * Fetches the home deals, publishes the list first, then resolves the Steam appIDs.
+     * 取首页的 deals 写进 [dealState]，先发布列表，再补 Steam appID。
+     * Fetches the home deals into [dealState], publishing the list first, then resolves the Steam appIDs.
      */
-    private suspend fun fetchDeals(region: AppRegion, showsLoading: Boolean) {
+    private suspend fun updateDeals(region: AppRegion, showsLoading: Boolean) {
         if (showsLoading) {
             _dealState.value = DealLoadState.Loading
         }
@@ -389,10 +399,10 @@ class GamesViewModel(
     // giveaways
 
     /**
-     * 取限时免费领取列表。
-     * Fetches the giveaways list.
+     * 取限时免费领取列表写进 [giveawaysState]。
+     * Fetches the giveaways list into [giveawaysState].
      */
-    private suspend fun fetchGiveaways(showsLoading: Boolean) {
+    private suspend fun updateGiveaways(showsLoading: Boolean) {
         if (showsLoading) {
             _giveawaysState.value = GiveawaysLoadState.Loading
         }
