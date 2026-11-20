@@ -36,12 +36,11 @@ kotlin {
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "sharedKit"
 
-    iosX64 {
-        binaries.framework {
-            baseName = xcfName
-        }
-    }
-
+    // 只要真机（iosArm64）和 Apple Silicon 模拟器（iosSimulatorArm64）。模板原有的 iosX64（Intel Mac 模拟器）已去掉：
+    // Kotlin 把它列为 Tier 3，AndroidX Lifecycle 2.11 也不再发布这个平台（同 JetBrains 的 KMP-App-Template / KotlinConf App）。
+    // Only devices (iosArm64) and Apple silicon simulators (iosSimulatorArm64). The template's iosX64 (Intel Mac
+    // simulators) is gone: Kotlin lists it as Tier 3 and AndroidX Lifecycle 2.11 no longer publishes it (as in
+    // JetBrains' KMP-App-Template and KotlinConf App).
     iosArm64 {
         binaries.framework {
             baseName = xcfName
@@ -65,9 +64,10 @@ kotlin {
                 implementation(libs.kotlin.stdlib)
 
                 // HTTP 客户端：core + 各平台引擎（Android 是 OkHttp，iOS 是 Darwin）；
-                // 用 api 是因为 androidApp 要创建并持有 HttpClient，得看得见它的类型。
+                // 用 api 是因为 Service 的公开构造参数是 HttpClient（ItadApi(client = …)），用 shared 的模块要看得见这个类型。
                 // HTTP client: core plus each platform's engine (OkHttp on Android, Darwin on iOS);
-                // api because androidApp creates and holds the HttpClient, so it must see the type.
+                // api because the services' public constructors take an HttpClient (ItadApi(client = …)),
+                // so modules using shared must see the type.
                 api(libs.ktor.client.engine.defaults)
                 // 让 HttpClient 用 kotlinx.serialization 编解码 JSON。
                 // Lets the HttpClient encode and decode JSON with kotlinx.serialization.
@@ -79,9 +79,17 @@ kotlin {
                 // DTO 的 @Serializable 与 Json / JsonElement。
                 // @Serializable for the DTOs, plus Json and JsonElement.
                 implementation(libs.kotlinx.serialization.json)
-                // 日志；用 api 是因为 AppLog 的分类就是 Kermit 的 Logger，androidApp 的 ViewModel 也要用它打日志。
-                // Logging; api because AppLog's categories are Kermit Loggers, which androidApp's view models log with too.
+                // 日志；用 api 是因为 AppLog 的公开属性就是 Kermit 的 Logger，androidApp 用 AppLog 时要看得见这个类型。
+                // Logging; api because AppLog's public properties are Kermit Loggers, a type androidApp must see to use AppLog.
                 api(libs.kermit)
+                // ViewModel 基类、viewModelScope 与工厂 DSL；用 api 是因为 GamesViewModel 继承 ViewModel、
+                // AppContainer 公开的是 ViewModelProvider.Factory，androidApp 取 ViewModel 时要看得见（同 Fruitties）。
+                // The ViewModel base class, viewModelScope and the factory DSL; api because GamesViewModel extends
+                // ViewModel and AppContainer exposes ViewModelProvider.Factory, which androidApp needs to see (as in Fruitties).
+                api(libs.androidx.lifecycle.viewmodel)
+                // StateFlow、launch 等协程 API，ViewModel 直接用到。
+                // Coroutine APIs such as StateFlow and launch, used directly by the view models.
+                implementation(libs.kotlinx.coroutines.core)
             }
         }
 
