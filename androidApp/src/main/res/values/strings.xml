@@ -18,7 +18,6 @@
     <string name="deals_empty_title">No deals found</string>
     <string name="deals_empty_message">There are no discounted games to show right now. Try again later.</string>
     <string name="deal_discount_badge">-%1$d%%</string>
-    <string name="deal_discount_description">%1$d%% off</string>
     <string name="deal_regular_price_description">Was %1$s</string>
     <string name="deal_quality_all_time_low">All-time low</string>
     <string name="deal_quality_three_month_low">3-month low</string>

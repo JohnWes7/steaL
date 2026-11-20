@@ -53,7 +53,6 @@ fun DealsSectionView(
     onSelect: (HomeDealItem) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
-    design: DealCardDesign = DealCardDesign.CoverFirst,
 ) {
     when (state) {
         DealLoadState.Loading -> DealsLoadingPlaceholder(modifier = modifier)
@@ -69,7 +68,7 @@ fun DealsSectionView(
                     modifier = modifier,
                 )
             } else {
-                DealsContent(items = state.items, design = design, onSelect = onSelect, modifier = modifier)
+                DealsContent(items = state.items, onSelect = onSelect, modifier = modifier)
             }
         }
     }
@@ -86,7 +85,6 @@ private val MIN_GRID_CARD_WIDTH = 160.dp
 @Composable
 private fun DealsContent(
     items: List<HomeDealItem>,
-    design: DealCardDesign,
     onSelect: (HomeDealItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -97,15 +95,14 @@ private fun DealsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
     ) {
-        DealHeroCard(deal = firstItem.deal, design = design, onClick = { onSelect(firstItem) })
-        DealsGrid(items = otherItems, design = design, onSelect = onSelect)
+        DealCardView(deal = firstItem.deal, onClick = { onSelect(firstItem) })
+        DealsGrid(items = otherItems, onSelect = onSelect)
     }
 }
 
 @Composable
 private fun DealsGrid(
     items: List<HomeDealItem>,
-    design: DealCardDesign,
     onSelect: (HomeDealItem) -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -119,9 +116,8 @@ private fun DealsGrid(
                         // 按 UUID 认卡片：刷新后顺序变了，图片和点按状态跟着游戏走。
                         // Cards are keyed by UUID, so after a refresh reorders them, images and press state follow the game.
                         key(item.itadUUID) {
-                            DealGridCard(
+                            DealGridCardView(
                                 deal = item.deal,
-                                design = design,
                                 onClick = { onSelect(item) },
                                 modifier = Modifier.weight(1f),
                             )
@@ -171,9 +167,9 @@ private fun DealsLoadingPlaceholder(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            // 大卡 = 图片区 + 标题与价格（约 130dp）。
-            // The large card is the artwork plus the title and prices, about 130dp.
-            val heroHeight = heroArtworkHeight(availableWidth = maxWidth) + 130.dp
+            // 大卡 = 封面 + 价格行（约 84dp）。
+            // The large card is the cover plus a price row of about 84dp.
+            val heroHeight = heroArtworkHeight(availableWidth = maxWidth) + 84.dp
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -199,7 +195,7 @@ private fun DealsLoadingPlaceholder(modifier: Modifier = Modifier) {
 @Preview
 @Composable
 private fun DealsSectionViewLoadedPreview() {
-    SteaLTheme {
+    SteaLTheme(darkTheme = true) {
         DealsSectionView(
             state = DealLoadState.Loaded(items = previewDealItems),
             onSelect = { _ -> },
@@ -212,7 +208,7 @@ private fun DealsSectionViewLoadedPreview() {
 @Preview
 @Composable
 private fun DealsSectionViewOtherStatesPreview() {
-    SteaLTheme {
+    SteaLTheme(darkTheme = true) {
         Column(modifier = Modifier.padding(16.dp)) {
             DealsSectionView(state = DealLoadState.Loading, onSelect = { _ -> }, onRetry = {})
             DealsSectionView(state = DealLoadState.Failed(error = LoadError.Offline), onSelect = { _ -> }, onRetry = {})

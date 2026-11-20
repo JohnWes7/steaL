@@ -58,7 +58,6 @@ import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadState
-import io.github.johnwes7.steal.views.components.home.DealCardDesign
 import io.github.johnwes7.steal.views.components.home.DealsSectionView
 import io.github.johnwes7.steal.views.components.home.GamesHeaderView
 import io.github.johnwes7.steal.views.theme.SteaLTheme
@@ -76,10 +75,9 @@ fun GamesView(modifier: Modifier = Modifier) {
     val giveawaysState by viewModel.giveawaysState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
-    // 2. 调试用的地区和卡片设计，转屏不丢
-    // 2. The debug region and card design, surviving rotation
+    // 2. 调试用的地区，转屏不丢
+    // 2. The debug region, surviving rotation
     var region by rememberSaveable { mutableStateOf(AppRegion.Australia) }
-    var design by rememberSaveable { mutableStateOf(DealCardDesign.CoverFirst) }
 
     // 3. 页面出现、地区变了都调 loadIfNeeded，由它决定要不要请求
     // 3. Call loadIfNeeded whenever the page appears or the region changes; it decides whether to fetch
@@ -95,8 +93,6 @@ fun GamesView(modifier: Modifier = Modifier) {
         isRefreshing = isRefreshing,
         region = region,
         onSelectRegion = { newRegion -> region = newRegion },
-        design = design,
-        onSelectDesign = { newDesign -> design = newDesign },
         onRefresh = { viewModel.refresh(region = region) },
         onOpenHotDeals = {},
         onSelectDeal = { _ -> },
@@ -118,8 +114,6 @@ private fun GamesContent(
     isRefreshing: Boolean,
     region: AppRegion,
     onSelectRegion: (AppRegion) -> Unit,
-    design: DealCardDesign,
-    onSelectDesign: (DealCardDesign) -> Unit,
     onRefresh: () -> Unit,
     onOpenHotDeals: () -> Unit,
     onSelectDeal: (HomeDealItem) -> Unit,
@@ -141,7 +135,7 @@ private fun GamesContent(
     ) {
         TopAppBar(
             title = { GamesHeaderView() },
-            expandedHeight = 76.dp,
+            expandedHeight = 80.dp,
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.background,
                 scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -154,8 +148,6 @@ private fun GamesContent(
             isRefreshing = isRefreshing,
             region = region,
             onSelectRegion = onSelectRegion,
-            design = design,
-            onSelectDesign = onSelectDesign,
             onRefresh = onRefresh,
             onOpenHotDeals = onOpenHotDeals,
             onSelectDeal = onSelectDeal,
@@ -174,8 +166,6 @@ private fun GamesList(
     isRefreshing: Boolean,
     region: AppRegion,
     onSelectRegion: (AppRegion) -> Unit,
-    design: DealCardDesign,
-    onSelectDesign: (DealCardDesign) -> Unit,
     onRefresh: () -> Unit,
     onOpenHotDeals: () -> Unit,
     onSelectDeal: (HomeDealItem) -> Unit,
@@ -197,14 +187,12 @@ private fun GamesList(
                 HotDealsHeader(onClick = onOpenHotDeals)
             }
             item(key = "deals") {
-                DealsSectionView(state = dealState, onSelect = onSelectDeal, onRetry = onRetryDeals, design = design)
+                DealsSectionView(state = dealState, onSelect = onSelectDeal, onRetry = onRetryDeals)
             }
             item(key = "debug") {
                 DebugSection(
                     region = region,
                     onSelectRegion = onSelectRegion,
-                    design = design,
-                    onSelectDesign = onSelectDesign,
                     giveawaysState = giveawaysState,
                     onRetryGiveaways = onRetryGiveaways,
                 )
@@ -270,8 +258,6 @@ private fun HotDealsHeader(onClick: () -> Unit) {
 private fun DebugSection(
     region: AppRegion,
     onSelectRegion: (AppRegion) -> Unit,
-    design: DealCardDesign,
-    onSelectDesign: (DealCardDesign) -> Unit,
     giveawaysState: GiveawaysLoadState,
     onRetryGiveaways: () -> Unit,
 ) {
@@ -281,15 +267,6 @@ private fun DebugSection(
     ) {
         HorizontalDivider()
         Text(text = "Debug", style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (option in DealCardDesign.entries) {
-                FilterChip(
-                    selected = option == design,
-                    onClick = { onSelectDesign(option) },
-                    label = { Text("Design ${option.label}") },
-                )
-            }
-        }
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -329,8 +306,6 @@ private fun GamesContentPreview() {
             isRefreshing = false,
             region = AppRegion.Australia,
             onSelectRegion = { _ -> },
-            design = DealCardDesign.CoverFirst,
-            onSelectDesign = { _ -> },
             onRefresh = {},
             onOpenHotDeals = {},
             onSelectDeal = { _ -> },
