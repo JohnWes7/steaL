@@ -72,7 +72,9 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
         case .unitedKingdom: return "GB"
         case .japan: return "JP"
         case .korea: return "KR"
-        case .europe: return "EU"
+        // EU 不是国家代码（ITAD 返回 400，Steam 退回美元），用德国代表欧元区。
+        // EU is not a country code (ITAD answers 400, Steam falls back to US dollars), so Germany stands in for the eurozone.
+        case .europe: return "DE"
         }
     }
 }

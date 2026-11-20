@@ -22,7 +22,7 @@ enum class AppRegion(
     Japan(apiRegionCode = "JP"),
     Korea(apiRegionCode = "KR"),
 
-    // EU 不是正式的国家代码，照 iOS 原样搬；Steam / ITAD 怎么处理还没查过。
-    // EU is not a real country code; copied from iOS as-is, and how Steam and ITAD treat it has not been checked.
-    Europe(apiRegionCode = "EU"),
+    // EU 不是国家代码（ITAD 返回 400，Steam 退回美元），用德国代表欧元区。
+    // EU is not a country code (ITAD answers 400, Steam falls back to US dollars), so Germany stands in for the eurozone.
+    Europe(apiRegionCode = "DE"),
 }
