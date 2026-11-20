@@ -24,17 +24,8 @@ import kotlinx.coroutines.launch
  * 首页的状态：Hot Deals 前 5 条与 Giveaways 两个区块，各自加载、失败、重试，互不影响。
  * The home page's state: the first five Hot Deals and the Giveaways, each loading, failing and retrying on its own.
  *
- * 对应 iOS `GamesViewModel`。地区不存在这里，每次由页面传入（同 iOS）。公开方法都由界面在主线程调用，
- * 请求在 `viewModelScope` 里跑：页面暂时离开（切 tab）不会中断，ViewModel 被清掉（页面出栈）时才一起取消。
- * 每个区块同时只有一个请求：新请求先取消同区块的旧请求，旧结果不会盖掉新结果。
- * The counterpart of iOS `GamesViewModel`. The region is not stored here; the page passes it in every time (as on
- * iOS). The UI calls the public methods on the main thread, and requests run in `viewModelScope`: leaving the page
- * for a while (switching tabs) does not stop them, and they are cancelled together only when the view model is
- * cleared (the page is popped). Each section has one request at a time: a new one cancels the section's old one
- * first, so a stale result never overwrites a fresh one.
- *
- * [itadApi] 取 deals 与 giveaways；[steamAppIDResolver] 给每条 deal 补 Steam appID。
- * [itadApi] fetches deals and giveaways; [steamAppIDResolver] resolves each deal's Steam appID.
+ * 请求跑在 `viewModelScope` 里，切 tab 不会中断，页面出栈（ViewModel 被清掉）时才取消。
+ * Requests run in `viewModelScope`: switching tabs does not stop them; they are cancelled when the page is popped.
  */
 class GamesViewModel(
     private val itadApi: ItadApi,
@@ -50,8 +41,8 @@ class GamesViewModel(
     sealed interface DealLoadState {
 
         /**
-         * 第一次加载、换了地区或重试中。
-         * The first load, a region change, or a retry in progress.
+         * 第一次加载、换了地区或重试中；下拉刷新不切到这里，旧列表留着。
+         * The first load, a region change or a retry; pull to refresh never comes here and keeps the old list.
          */
         data object Loading : DealLoadState
 
@@ -62,8 +53,8 @@ class GamesViewModel(
         data class Loaded(val items: List<HomeDealItem>) : DealLoadState
 
         /**
-         * 请求失败，[error] 是归一后的原因。
-         * The request failed; [error] is the normalised reason.
+         * 请求失败，原因在 [error]。
+         * The request failed; [error] says why.
          */
         data class Failed(val error: LoadError) : DealLoadState
     }
@@ -75,8 +66,8 @@ class GamesViewModel(
     sealed interface GiveawaysLoadState {
 
         /**
-         * 第一次加载或重试中。
-         * The first load, or a retry in progress.
+         * 第一次加载或重试中；下拉刷新不切到这里。
+         * The first load or a retry; pull to refresh never comes here.
          */
         data object Loading : GiveawaysLoadState
 
@@ -87,51 +78,35 @@ class GamesViewModel(
         data class Loaded(val giveaways: List<ItadGiveaway>) : GiveawaysLoadState
 
         /**
-         * 请求失败，[error] 是归一后的原因。
-         * The request failed; [error] is the normalised reason.
+         * 请求失败，原因在 [error]。
+         * The request failed; [error] says why.
          */
         data class Failed(val error: LoadError) : GiveawaysLoadState
     }
 
     // MARK: - 对外状态 / Exposed state
 
-    /**
-     * deals 区块的状态，可写的那份只在 ViewModel 内部。
-     * The deals section's state; the writable copy stays inside the view model.
-     */
     private val _dealState = MutableStateFlow<DealLoadState>(DealLoadState.Loading)
 
     /**
-     * deals 区块的状态，界面只读。
-     * The deals section's state, read-only for the UI.
+     * deals 区块当前的状态，界面按它显示。
+     * The deals section's current state, which the UI renders.
      */
     val dealState: StateFlow<DealLoadState> = _dealState.asStateFlow()
 
-    /**
-     * giveaways 区块的状态，可写的那份只在 ViewModel 内部。
-     * The giveaways section's state; the writable copy stays inside the view model.
-     */
     private val _giveawaysState = MutableStateFlow<GiveawaysLoadState>(GiveawaysLoadState.Loading)
 
     /**
-     * giveaways 区块的状态，界面只读。
-     * The giveaways section's state, read-only for the UI.
+     * giveaways 区块当前的状态。
+     * The giveaways section's current state.
      */
     val giveawaysState: StateFlow<GiveawaysLoadState> = _giveawaysState.asStateFlow()
 
-    /**
-     * 是否正在下拉刷新，可写的那份只在 ViewModel 内部。
-     * Whether a pull to refresh is running; the writable copy stays inside the view model.
-     */
     private val _isRefreshing = MutableStateFlow(false)
 
     /**
-     * 是否正在下拉刷新，交给 `PullToRefreshBox(isRefreshing = …)` 显示转圈。
-     * Whether a pull to refresh is running, for `PullToRefreshBox(isRefreshing = …)` to show its spinner.
-     *
-     * iOS 的 `.refreshable` 自己等 `await` 结束收起转圈；Compose 的 `PullToRefreshBox` 要调用方告诉它刷新完没有。
-     * iOS `.refreshable` hides its spinner when the `await` returns; Compose's `PullToRefreshBox` needs the caller to
-     * say when refreshing has finished.
+     * 是否正在下拉刷新，给 `PullToRefreshBox` 显示转圈；两个区块都结束才变回 `false`。
+     * Whether a pull to refresh is running, for `PullToRefreshBox`'s spinner; `false` again once both sections finish.
      */
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
@@ -143,66 +118,64 @@ class GamesViewModel(
      */
     private var loadedRegion: AppRegion? = null
 
-    /**
-     * deals 区块正在跑的请求（含补 appID）。
-     * The deals section's running request, appID resolution included.
-     */
     private var dealsJob: Job? = null
 
-    /**
-     * giveaways 区块正在跑的请求。
-     * The giveaways section's running request.
-     */
     private var giveawaysJob: Job? = null
 
     // MARK: - 界面调用 / Called by the UI
 
     /**
-     * 第一次显示时加载两个区块，地区变了只重新加载 deals；这个地区已经加载过就什么也不做。
-     * Loads both sections on first display and only the deals when the region changes; does nothing for a region
+     * 第一次调用时加载两个区块，地区变了只重新加载 deals；这个地区已经加载过就什么也不做。
+     * Loads both sections on the first call and only the deals when the region changes; does nothing for a region
      * already loaded.
      *
-     * 页面每次出现都会调用（`LaunchedEffect`），所以要幂等：切 tab、从详情页返回都不重新请求（同 iOS `hasStarted`），
-     * 只有 [region] 变了才重新加载（同 iOS `.onChange(of: region)`）。不放在 `init` 里：Android 官方
-     * 「UI State production」不建议在 ViewModel 构造时发起异步操作，要写成由界面调用的幂等函数。
-     * The page calls this every time it appears (`LaunchedEffect`), so it is idempotent: switching tabs or coming
-     * back from the detail page does not refetch (like iOS `hasStarted`), and only a new [region] reloads (like iOS
-     * `.onChange(of: region)`). It is not in `init`: Android's "UI State production" guide advises against starting
-     * async work while a view model is being constructed and suggests an idempotent function the UI calls instead.
+     * 页面每次出现都会调用，所以要幂等：切 tab、从详情页返回都不重新请求。
+     * The page calls this every time it appears, so it is idempotent: switching tabs or coming back does not refetch.
      */
     fun loadIfNeeded(region: AppRegion) {
+        // 1. 这个地区加载过就跳过，没有就记下
+        // 1. Skip a region already loaded; otherwise record it
         if (region == loadedRegion) {
             return
         }
         val isFirstLoad = loadedRegion == null
         loadedRegion = region
 
+        // 2. 加载 deals
+        // 2. Load the deals
         loadDeals(region = region, showsLoading = true)
-        // giveaways 的请求不带地区，换地区拿到的还是同一份，所以只在第一次加载时请求（iOS 换地区时两块都重查）。
-        // The giveaways request carries no region, so a region change would fetch the same list; it loads only the
-        // first time (iOS refetches both sections on a region change).
+
+        // 3. giveaways 只在第一次加载：请求不分地区
+        // 3. Giveaways only on the first load: the request has no region
         if (isFirstLoad) {
             loadGiveaways(showsLoading = true)
         }
     }
 
     /**
-     * 下拉刷新：两个区块都重查，旧内容留到新数据回来；appID 也一起重查，所以它也是补 appID 失败后的重试入口。
-     * Pull to refresh: refetches both sections and keeps the old content until new data arrives; appIDs are resolved
-     * again too, which makes this the retry for a failed appID lookup.
+     * 下拉刷新：两个区块连同 appID 都重查，旧内容留到新数据回来；已经在刷新时再调用不做事。
+     * Pull to refresh: refetches both sections and the appIDs, keeping the old content until new data arrives; does
+     * nothing while already refreshing.
      *
-     * [isRefreshing] 在两个区块都结束后变回 `false`；已经在刷新时再调用不做事。
-     * [isRefreshing] turns back to `false` once both sections finish; calling this while refreshing does nothing.
+     * 补 appID 失败的卡片也靠它重试。
+     * It is also how cards whose appID lookup failed get retried.
      */
     fun refresh(region: AppRegion) {
+        // 1. 正在刷新就跳过，否则记下地区、开始转圈
+        // 1. Skip if already refreshing; otherwise record the region and start the spinner
         if (_isRefreshing.value) {
             return
         }
         loadedRegion = region
         _isRefreshing.value = true
 
+        // 2. 两个区块都重查，不切 Loading：旧内容留着
+        // 2. Refetch both sections without Loading: the old content stays
         val deals = loadDeals(region = region, showsLoading = false)
         val giveaways = loadGiveaways(showsLoading = false)
+
+        // 3. 两个都结束才停止转圈
+        // 3. Stop the spinner once both finish
         viewModelScope.launch {
             joinAll(deals, giveaways)
             _isRefreshing.value = false
@@ -210,36 +183,32 @@ class GamesViewModel(
     }
 
     /**
-     * 重试 deals，只影响这一个区块。
-     * Retries the deals; only this section is affected.
+     * deals 失败后的重试：切回 Loading 重新请求。
+     * Retries the deals after a failure, showing Loading again.
      */
     fun retryDeals(region: AppRegion) {
         loadDeals(region = region, showsLoading = true)
     }
 
     /**
-     * 重试 giveaways，只影响这一个区块。
-     * Retries the giveaways; only this section is affected.
+     * giveaways 失败后的重试：切回 Loading 重新请求。
+     * Retries the giveaways after a failure, showing Loading again.
      */
     fun retryGiveaways() {
         loadGiveaways(showsLoading = true)
     }
 
     // MARK: - 每个区块的请求 / Per-section requests
-    // 前缀两端统一：load 启动协程、马上返回；update 是协程里取数据并写进状态的 suspend 函数；
-    // Service 的 fetch 只取数据、返回结果。
-    // Prefixes shared by both platforms: load starts a coroutine and returns at once; update is the suspend function
-    // that fetches data and writes it into state; a service's fetch only fetches and returns.
+    // load… 管协程、马上返回；update… 在协程里取数据、写状态。
+    // load… manages the coroutine and returns at once; update… fetches inside it and writes the state.
 
-    /**
-     * 取消 deals 区块的旧请求，启动新的一次，返回它的 [Job]。
-     * Cancels the deals section's old request, starts a new one, and returns its [Job].
-     *
-     * [showsLoading] 为 `false` 时（下拉刷新）不切到 `Loading`，旧列表留着。
-     * When [showsLoading] is `false` (pull to refresh), the state does not switch to `Loading` and the old list stays.
-     */
     private fun loadDeals(region: AppRegion, showsLoading: Boolean): Job {
+        // 1. 取消旧请求：旧结果不会盖掉新结果
+        // 1. Cancel the old request: a stale result never overwrites a fresh one
         dealsJob?.cancel()
+
+        // 2. 启动新请求，记下来供下次取消
+        // 2. Launch the new one and keep it for the next cancel
         val job = viewModelScope.launch {
             updateDeals(region = region, showsLoading = showsLoading)
         }
@@ -247,15 +216,13 @@ class GamesViewModel(
         return job
     }
 
-    /**
-     * 取消 giveaways 区块的旧请求，启动新的一次，返回它的 [Job]。
-     * Cancels the giveaways section's old request, starts a new one, and returns its [Job].
-     *
-     * [showsLoading] 为 `false` 时（下拉刷新）不切到 `Loading`，旧列表留着。
-     * When [showsLoading] is `false` (pull to refresh), the state does not switch to `Loading` and the old list stays.
-     */
     private fun loadGiveaways(showsLoading: Boolean): Job {
+        // 1. 取消旧请求
+        // 1. Cancel the old request
         giveawaysJob?.cancel()
+
+        // 2. 启动新请求，记下来供下次取消
+        // 2. Launch the new one and keep it for the next cancel
         val job = viewModelScope.launch {
             updateGiveaways(showsLoading = showsLoading)
         }
@@ -265,40 +232,34 @@ class GamesViewModel(
 
     // MARK: - deals 区块 / Deals
 
-    /**
-     * 取首页的 deals 写进 [dealState]，先发布列表，再补 Steam appID。
-     * Fetches the home deals into [dealState], publishing the list first, then resolves the Steam appIDs.
-     */
     private suspend fun updateDeals(region: AppRegion, showsLoading: Boolean) {
+        // 1. 按需切到 Loading：下拉刷新时旧列表留着
+        // 1. Show Loading if asked: pull to refresh keeps the old list
         if (showsLoading) {
             _dealState.value = DealLoadState.Loading
         }
 
+        // 2. 请求 deals，马上发布：appID 还是 Pending
+        // 2. Fetch and publish the deals at once: appIDs still Pending
         try {
             val response = itadApi.fetchDeals(request = homeDealsRequest(region = region))
             val items = response.list.map { deal -> HomeDealItem(deal = deal) }
-            // 先发布，卡片马上显示，appID 还是 Pending；补 appID 不挡首屏。
-            // Publish first so the cards show right away with appIDs still Pending; resolving never delays them.
             _dealState.value = DealLoadState.Loaded(items = items)
         } catch (cancellation: CancellationException) {
-            // 取消（换地区、刷新或重试接手、ViewModel 清掉）不是失败，原样抛出去。
-            // A cancellation (new region, a refresh or retry taking over, the view model cleared) is no failure; rethrow it.
+            // 取消不是失败，要原样抛出，协程才会结束。
+            // A cancellation is no failure; rethrow it so the coroutine ends.
             throw cancellation
         } catch (error: Exception) {
-            // 完整错误只进日志，界面只看到 LoadError。
-            // The full error goes to the log only; the UI sees just a LoadError.
             AppLog.games.e(error) { "deals 加载失败 / Loading deals failed" }
             _dealState.value = DealLoadState.Failed(error = LoadError.from(error))
             return
         }
 
+        // 3. 补 Steam appID：不挡首屏
+        // 3. Resolve the Steam appIDs: never delays the cards
         resolveAppIDs(region = region)
     }
 
-    /**
-     * 首页 deals 的请求体：这个地区的 5 条热门优惠，只要游戏、只要 Steam 激活的。
-     * The home deals request body: five hot deals for the region, games only, Steam activation only.
-     */
     private fun homeDealsRequest(region: AppRegion): ItadDealsRequest {
         val filter = ItadDealsFilter(
             // 1 是游戏。
@@ -320,14 +281,6 @@ class GamesViewModel(
 
     // MARK: - 补 Steam appID / Steam appID resolution
 
-    /**
-     * 给当前列表里的每条 deal 批量补 Steam appID。
-     * Resolves the Steam appID for every deal in the current list, in one batch.
-     *
-     * 失败不改列表本身：列表是好的，只是还进不了详情页，所以只把还在等的条目标成 `Failed`。
-     * A failure leaves the list itself alone: it is fine, the rows just cannot open the detail page yet, so only the
-     * rows still waiting become `Failed`.
-     */
     private suspend fun resolveAppIDs(region: AppRegion) {
         val state = _dealState.value
         if (state !is DealLoadState.Loaded) {
@@ -337,6 +290,8 @@ class GamesViewModel(
             return
         }
 
+        // 1. 一次查完整个列表的 appID
+        // 1. Look up the whole list's appIDs in one batch
         val uuids = state.items.map { item -> item.itadUUID }
         val appIDByUUID: Map<String, Int>
         try {
@@ -345,20 +300,21 @@ class GamesViewModel(
             throw cancellation
         } catch (error: Exception) {
             AppLog.games.e(error) { "Steam appID 补全失败 / Resolving Steam appIDs failed" }
+            // 列表本身没问题，只把还在等的条目标成 Failed，不然这些卡片一直点不动。
+            // The list itself is fine; only the rows still waiting become Failed, or their cards would never respond.
             settlePendingAsFailed()
             return
         }
 
+        // 2. 写回列表
+        // 2. Write them back into the list
         applyAppIDs(appIDByUUID = appIDByUUID)
     }
 
     /**
-     * 按查到的 appID 整批更新列表，不在 [appIDByUUID] 里的标成 `NotFound`。
-     * Updates the whole list with the resolved appIDs; rows missing from [appIDByUUID] become `NotFound`.
-     *
-     * 只在查询成功后调用，所以不在字典里就是真的没有；请求失败走 [settlePendingAsFailed]。
-     * Only called after a successful lookup, so a missing row really has none; a failed request goes to
-     * [settlePendingAsFailed].
+     * 按查到的 appID 更新整个列表；只在查询成功后调用，所以不在 [appIDByUUID] 里的就是真的没有（`NotFound`）。
+     * Updates the whole list with the resolved appIDs; only called after a successful lookup, so a row missing from
+     * [appIDByUUID] really has none (`NotFound`).
      */
     private fun applyAppIDs(appIDByUUID: Map<String, Int>) {
         val state = _dealState.value
@@ -377,10 +333,6 @@ class GamesViewModel(
         _dealState.value = DealLoadState.Loaded(items = updatedItems)
     }
 
-    /**
-     * 查询请求失败后，把还在等的条目标成 `Failed`，否则卡片会一直点不动。
-     * After the lookup request fails, marks the rows still waiting as `Failed`; otherwise those cards never respond.
-     */
     private fun settlePendingAsFailed() {
         val state = _dealState.value
         if (state !is DealLoadState.Loaded) {
@@ -399,15 +351,15 @@ class GamesViewModel(
 
     // MARK: - giveaways 区块 / Giveaways
 
-    /**
-     * 取限时免费领取列表写进 [giveawaysState]。
-     * Fetches the giveaways list into [giveawaysState].
-     */
     private suspend fun updateGiveaways(showsLoading: Boolean) {
+        // 1. 按需切到 Loading
+        // 1. Show Loading if asked
         if (showsLoading) {
             _giveawaysState.value = GiveawaysLoadState.Loading
         }
 
+        // 2. 请求 giveaways 并发布
+        // 2. Fetch and publish the giveaways
         try {
             val giveaways = itadApi.fetchGiveaways()
             _giveawaysState.value = GiveawaysLoadState.Loaded(giveaways = giveaways)
