@@ -41,7 +41,7 @@ class GamesViewModel(
     private val steamAppIDResolver: SteamAppIDResolver,
 ) : ViewModel() {
 
-    // 状态类型 / State types
+    // MARK: - 状态类型 / State types
 
     /**
      * deals 区块的状态。
@@ -93,7 +93,7 @@ class GamesViewModel(
         data class Failed(val error: LoadError) : GiveawaysLoadState
     }
 
-    // 对外状态 / Exposed state
+    // MARK: - 对外状态 / Exposed state
 
     /**
      * deals 区块的状态，可写的那份只在 ViewModel 内部。
@@ -135,7 +135,7 @@ class GamesViewModel(
      */
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    // 内部记录 / Internal bookkeeping
+    // MARK: - 内部记录 / Internal bookkeeping
 
     /**
      * 当前内容属于哪个地区；`null` 表示还没加载过。
@@ -155,7 +155,7 @@ class GamesViewModel(
      */
     private var giveawaysJob: Job? = null
 
-    // 界面调用 / Called by the UI
+    // MARK: - 界面调用 / Called by the UI
 
     /**
      * 第一次显示时加载两个区块，地区变了只重新加载 deals；这个地区已经加载过就什么也不做。
@@ -225,10 +225,11 @@ class GamesViewModel(
         loadGiveaways(showsLoading = true)
     }
 
-    // 每个区块的请求，前缀两端统一：load 启动协程、马上返回；update 是协程里取数据并写进状态的 suspend 函数；
+    // MARK: - 每个区块的请求 / Per-section requests
+    // 前缀两端统一：load 启动协程、马上返回；update 是协程里取数据并写进状态的 suspend 函数；
     // Service 的 fetch 只取数据、返回结果。
-    // Per-section requests, with prefixes shared by both platforms: load starts a coroutine and returns at once; update
-    // is the suspend function that fetches data and writes it into state; a service's fetch only fetches and returns.
+    // Prefixes shared by both platforms: load starts a coroutine and returns at once; update is the suspend function
+    // that fetches data and writes it into state; a service's fetch only fetches and returns.
 
     /**
      * 取消 deals 区块的旧请求，启动新的一次，返回它的 [Job]。
@@ -262,7 +263,7 @@ class GamesViewModel(
         return job
     }
 
-    // deals
+    // MARK: - deals 区块 / Deals
 
     /**
      * 取首页的 deals 写进 [dealState]，先发布列表，再补 Steam appID。
@@ -317,7 +318,7 @@ class GamesViewModel(
         )
     }
 
-    // Steam appID
+    // MARK: - 补 Steam appID / Steam appID resolution
 
     /**
      * 给当前列表里的每条 deal 批量补 Steam appID。
@@ -396,7 +397,7 @@ class GamesViewModel(
         _dealState.value = DealLoadState.Loaded(items = updatedItems)
     }
 
-    // giveaways
+    // MARK: - giveaways 区块 / Giveaways
 
     /**
      * 取限时免费领取列表写进 [giveawaysState]。
