@@ -38,7 +38,7 @@ internal val coverScrim: Brush = Brush.verticalGradient(
  * 压在封面上的文字的阴影：亮色封面上也看得清。
  * The shadow for text on covers, keeping it legible on bright artwork.
  */
-private val coverTextShadow = Shadow(color = Color.Black.copy(alpha = 0.6f), offset = Offset(0f, 1f), blurRadius = 8f)
+internal val coverTextShadow: Shadow = Shadow(color = Color.Black.copy(alpha = 0.6f), offset = Offset(0f, 1f), blurRadius = 8f)
 
 /**
  * 压在封面渐变上的白色标题，最多两行。
@@ -62,8 +62,8 @@ internal fun CoverTitle(
 }
 
 /**
- * 封面左上角的折扣：品牌蓝底、白字的小圆角标签，写着「-55%」。
- * The discount at a cover's top left: a small rounded brand-blue label with white text, such as "-55%".
+ * 封面左上角的折扣：蓝色容器配蓝色文字的小圆角标签（Material 的 tonal 样式），写着「-55%」。
+ * The discount at a cover's top left: a small rounded tonal label, blue text on a blue container, such as "-55%".
  *
  * [cut] 直接用 ITAD 给的值，不按价格重算，免得和服务端的舍入对不上。
  * [cut] is ITAD's own value rather than one recomputed from the prices, which could round differently.
@@ -77,8 +77,8 @@ internal fun DiscountBadge(
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.secondary,
-        contentColor = MaterialTheme.colorScheme.onSecondary,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
     ) {
         Text(
             text = stringResource(R.string.deal_discount_badge, cut),

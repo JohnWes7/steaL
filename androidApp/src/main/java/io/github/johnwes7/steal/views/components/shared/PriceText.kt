@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -52,20 +53,24 @@ fun formattedPrice(price: ItadPrice): String {
 }
 
 /**
- * 当前价：品牌绿、加粗、等宽数字，免费时是「Free」。
- * The current price: brand green, bold, with tabular figures; "Free" when there is nothing to pay.
+ * 当前价：默认品牌绿、加粗、等宽数字，免费时是「Free」。
+ * The current price: brand green by default, bold, with tabular figures; "Free" when there is nothing to pay.
+ *
+ * 放在容器色上时，[color] 传配对的文字色（如 `onPrimaryContainer`）。
+ * On a container color, pass the matching content color (such as `onPrimaryContainer`) as [color].
  */
 @Composable
 fun DealCurrentPrice(
     price: ItadPrice,
     style: TextStyle,
     modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
 ) {
     Text(
         text = formattedPrice(price = price),
         style = style.copy(fontFeatureSettings = TABULAR_FIGURES),
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
+        color = color,
         maxLines = 1,
         modifier = modifier,
     )
@@ -81,6 +86,7 @@ fun DealRegularPrice(
     price: ItadPrice,
     style: TextStyle,
     modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     if (regular.amountInt <= price.amountInt) {
         return
@@ -91,7 +97,7 @@ fun DealRegularPrice(
     Text(
         text = text,
         style = style.copy(fontFeatureSettings = TABULAR_FIGURES),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = color,
         textDecoration = TextDecoration.LineThrough,
         maxLines = 1,
         modifier = modifier.semantics { contentDescription = description },

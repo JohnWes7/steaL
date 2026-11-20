@@ -209,7 +209,6 @@ private fun GamesList(
 @Composable
 private fun HotDealsHeader(onClick: () -> Unit) {
     val openLabel = stringResource(R.string.hot_deals_open_label)
-    val accent = MaterialTheme.colorScheme.tertiary
 
     Row(
         modifier = Modifier
@@ -226,13 +225,13 @@ private fun HotDealsHeader(onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .background(color = accent.copy(alpha = 0.16f), shape = CircleShape),
+                .background(color = MaterialTheme.colorScheme.tertiaryContainer, shape = CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(R.drawable.local_fire_department_fill1_24px),
                 contentDescription = null,
-                tint = accent,
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
             )
         }
         Text(

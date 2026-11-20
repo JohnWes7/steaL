@@ -157,3 +157,84 @@ internal val SecondaryTextDark = Color(0xFF8E969A)
  * Placeholder fill before an image loads (dark).
  */
 internal val ImagePlaceholderDark = Color(0xFF192022)
+
+// 容器色 / Container colors
+// 深色是我们自己定的色阶（用户 2026-11-21 定）：容器 = 品牌色 16–18% 叠在深色表面上（约 Material 色阶第 18–24 档、
+// 低彩度），容器上的字 = 品牌色本身（约第 57–77 档）。比 Material 默认（容器第 30 档、字第 90 档）的字更亮、品牌色更突出。
+// 浅色先沿用 Material 默认（容器第 90 档、字第 10 档），浅色还没设计。
+// Dark mode uses our own tones (the user's call): a container is the brand color at 16–18% over the dark surface
+// (about Material tone 18–24, low chroma) and its content is the brand color itself (about tone 57–77), brighter and
+// more on-brand than Material's default (container tone 30, content tone 90). Light mode keeps Material's default
+// for now (container tone 90, content tone 10).
+
+/**
+ * 品牌绿的容器（深色）：绿 16% 叠在导航栏色上；品质标签、Games 选中的胶囊。
+ * The brand-green container (dark): green at 16% over the navigation bar color.
+ */
+internal val GreenContainerDark = Color(0xFF2D3926)
+
+/**
+ * 品牌绿容器上的文字与图标（深色）：品牌绿本身。
+ * Text and icons on the brand-green container (dark): the brand green itself.
+ */
+internal val OnGreenContainerDark = BrandGreenDark
+
+/**
+ * 品牌蓝的容器（深色）：蓝 18% 叠在卡片色上；折扣标签、其他 tab 选中的胶囊。
+ * The brand-blue container (dark): blue at 18% over the card color.
+ */
+internal val BlueContainerDark = Color(0xFF2B3951)
+
+/**
+ * 品牌蓝容器上的文字与图标（深色）：品牌蓝本身。
+ * Text and icons on the brand-blue container (dark): the brand blue itself.
+ */
+internal val OnBlueContainerDark = BrandBlueDark
+
+/**
+ * 橙色的容器（深色）：橙 16% 叠在页面背景上；火焰圆底。
+ * The orange container (dark): orange at 16% over the page background.
+ */
+internal val OrangeContainerDark = Color(0xFF362912)
+
+/**
+ * 橙色容器上的文字与图标（深色）：系统橙本身。
+ * Text and icons on the orange container (dark): the system orange itself.
+ */
+internal val OnOrangeContainerDark = SystemOrangeDark
+
+/**
+ * 品牌绿的容器（浅色，第 90 档）。
+ * The brand-green container (light, tone 90).
+ */
+internal val GreenContainerLight = Color(0xFFB1F66C)
+
+/**
+ * 品牌绿容器上的文字与图标（浅色，第 10 档）。
+ * Text and icons on the brand-green container (light, tone 10).
+ */
+internal val OnGreenContainerLight = Color(0xFF0E2000)
+
+/**
+ * 品牌蓝的容器（浅色，第 90 档）。
+ * The brand-blue container (light, tone 90).
+ */
+internal val BlueContainerLight = Color(0xFFD9E2FF)
+
+/**
+ * 品牌蓝容器上的文字与图标（浅色，第 10 档）。
+ * Text and icons on the brand-blue container (light, tone 10).
+ */
+internal val OnBlueContainerLight = Color(0xFF001A43)
+
+/**
+ * 橙色的容器（浅色，第 90 档）。
+ * The orange container (light, tone 90).
+ */
+internal val OrangeContainerLight = Color(0xFFFFDDBB)
+
+/**
+ * 橙色容器上的文字与图标（浅色，第 10 档）。
+ * Text and icons on the orange container (light, tone 10).
+ */
+internal val OnOrangeContainerLight = Color(0xFF2B1700)

@@ -46,7 +46,7 @@ fun DealGridCardView(
     Card(
         onClick = onClick,
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.largeIncreased,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         // 2:3 和 Steam 库封面、ITAD boxart 一致，裁切时不丢内容。

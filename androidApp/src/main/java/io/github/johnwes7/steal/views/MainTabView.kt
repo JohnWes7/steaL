@@ -108,12 +108,15 @@ private fun MainNavigationBar(
     onSelect: (NavKey) -> Unit,
 ) {
     val isOnGames = selectedRoute == GamesRoute
-    val tint = if (isOnGames) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-    // 选中项背后的胶囊用选中色的浅色版，代替 Material 默认的 secondaryContainer。
-    // The pill behind the selected item uses a light version of the tint instead of Material's default secondaryContainer.
-    val indicatorColor = tint.copy(alpha = 0.16f)
+    val colorScheme = MaterialTheme.colorScheme
+    // 选中项：胶囊用容器色、图标用配对的文字色、标签用主色本身（Material 导航栏的配色方式）。
+    // The selected item: container color for the pill, its paired content color for the icon, the base color for
+    // the label (Material's navigation bar pairing).
+    val tint = if (isOnGames) colorScheme.primary else colorScheme.secondary
+    val indicatorColor = if (isOnGames) colorScheme.primaryContainer else colorScheme.secondaryContainer
+    val selectedIconColor = if (isOnGames) colorScheme.onPrimaryContainer else colorScheme.onSecondaryContainer
     val itemColors = NavigationBarItemDefaults.colors(
-        selectedIconColor = tint,
+        selectedIconColor = selectedIconColor,
         selectedTextColor = tint,
         indicatorColor = indicatorColor,
     )

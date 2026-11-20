@@ -3,7 +3,7 @@ package io.github.johnwes7.steal.views.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
  * 浅色配色：iOS 的品牌色对应到 Material 3 的颜色角色。
  * The light scheme, mapping the iOS brand colors onto Material 3 color roles.
  *
- * 品牌绿是主色，品牌蓝是次色（同 iOS tab 栏：Games 用绿、其他用蓝），iOS 的系统橙是第三色；占位底色放在 surfaceVariant，
+ * 品牌绿是主色，品牌蓝是次色（同 iOS tab 栏：Games 用绿、其他用蓝），iOS 的系统橙是第三色，三者的容器色是从各自色阶取的；占位底色放在 surfaceVariant，
  * 所有 surfaceContainer 都用 iOS 的浮起表面色，让卡片和底部导航栏是白底、页面是浅灰底。
  * Brand green is primary and brand blue is secondary (as in the iOS tab bar: green for Games, blue
  * elsewhere), with the iOS system orange as tertiary; the image placeholder goes in surfaceVariant, and every
@@ -28,6 +28,12 @@ private val LightColors = lightColorScheme(
     onSecondary = OnBrandBlue,
     tertiary = SystemOrangeLight,
     onTertiary = OnSystemOrange,
+    primaryContainer = GreenContainerLight,
+    onPrimaryContainer = OnGreenContainerLight,
+    secondaryContainer = BlueContainerLight,
+    onSecondaryContainer = OnBlueContainerLight,
+    tertiaryContainer = OrangeContainerLight,
+    onTertiaryContainer = OnOrangeContainerLight,
     background = AppBackgroundLight,
     onBackground = PrimaryTextLight,
     surface = AppBackgroundLight,
@@ -58,6 +64,12 @@ private val DarkColors = darkColorScheme(
     onSecondary = OnBrandBlue,
     tertiary = SystemOrangeDark,
     onTertiary = OnSystemOrange,
+    primaryContainer = GreenContainerDark,
+    onPrimaryContainer = OnGreenContainerDark,
+    secondaryContainer = BlueContainerDark,
+    onSecondaryContainer = OnBlueContainerDark,
+    tertiaryContainer = OrangeContainerDark,
+    onTertiaryContainer = OnOrangeContainerDark,
     background = AppBackgroundDark,
     onBackground = PrimaryTextDark,
     surface = AppBackgroundDark,
@@ -100,7 +112,9 @@ fun SteaLTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors
     }
 
-    MaterialTheme(
+    // Expressive 主题：同样的颜色和字体，加上 Expressive 的弹簧动效（MotionScheme.expressive）和形状。
+    // The Expressive theme: the same colors and type, plus Expressive spring motion (MotionScheme.expressive) and shapes.
+    MaterialExpressiveTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
         content = content,

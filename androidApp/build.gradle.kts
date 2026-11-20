@@ -18,8 +18,12 @@ val itadApiKey = secrets.getProperty("ITAD_API_KEY", "")
 
 android {
     namespace = "io.github.johnwes7.steal"
+    // Compose 1.13（BOM 2026.11.01）要求用 37.1 以上的 API 编译；只影响编译，不改 targetSdk。
+    // Compose 1.13 (BOM 2026.11.01) needs API 37.1 or later to compile against; targetSdk is unaffected.
     compileSdk {
-        version = release(37)
+        version = release(37) {
+            minorApiLevel = 2
+        }
     }
 
     defaultConfig {

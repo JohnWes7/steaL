@@ -167,14 +167,14 @@ private fun DealsLoadingPlaceholder(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            // 大卡 = 封面 + 价格行（约 84dp）。
-            // The large card is the cover plus a price row of about 84dp.
-            val heroHeight = heroArtworkHeight(availableWidth = maxWidth) + 84.dp
+            // 大卡整张就是封面。
+            // The large card is all cover.
+            val heroHeight = heroArtworkHeight(availableWidth = maxWidth)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(heroHeight)
-                    .clip(MaterialTheme.shapes.extraLarge)
+                    .clip(MaterialTheme.shapes.extraLargeIncreased)
                     .background(blockColor),
             )
         }
@@ -184,7 +184,7 @@ private fun DealsLoadingPlaceholder(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .weight(1f)
                         .aspectRatio(2f / 3f)
-                        .clip(MaterialTheme.shapes.large)
+                        .clip(MaterialTheme.shapes.largeIncreased)
                         .background(blockColor),
                 )
             }
