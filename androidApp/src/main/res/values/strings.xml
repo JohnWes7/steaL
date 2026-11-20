@@ -7,4 +7,37 @@
     <string name="tab_wishlist">Wishlist</string>
     <string name="tab_sales">Sales</string>
     <string name="tab_profile">Profile</string>
+
+    <!-- 首页顶栏 / Home header -->
+    <string name="games_header_tagline">STEAM PRICE TRACKER</string>
+
+    <!-- 首页 Hot Deals / Home: Hot Deals -->
+    <string name="hot_deals_title">Hot deals</string>
+    <string name="hot_deals_open_label">Show all hot deals</string>
+    <string name="deals_loading">Loading deals</string>
+    <string name="deals_empty_title">No deals found</string>
+    <string name="deals_empty_message">There are no discounted games to show right now. Try again later.</string>
+    <string name="deal_discount_badge">-%1$d%%</string>
+    <string name="deal_discount_description">%1$d%% off</string>
+    <string name="deal_regular_price_description">Was %1$s</string>
+    <string name="deal_quality_all_time_low">All-time low</string>
+    <string name="deal_quality_three_month_low">3-month low</string>
+    <string name="deal_quality_steam">Steam</string>
+
+    <!-- 价格 / Prices -->
+    <string name="price_free">Free</string>
+
+    <!-- 通用操作 / Common actions -->
+    <string name="action_refresh">Refresh</string>
+    <string name="action_retry">Retry</string>
+
+    <!-- 加载失败，四种原因同 LoadError / Load failures, one per LoadError case -->
+    <string name="load_error_offline_title">You\'re offline</string>
+    <string name="load_error_offline_message">Check your internet connection and try again.</string>
+    <string name="load_error_server_title">Server unavailable</string>
+    <string name="load_error_server_message">The service is having trouble right now. Please try again in a moment.</string>
+    <string name="load_error_decoding_title">Unexpected response</string>
+    <string name="load_error_decoding_message">We received data we couldn\'t read. Please try again later.</string>
+    <string name="load_error_unknown_title">Something went wrong</string>
+    <string name="load_error_unknown_message">We couldn\'t load this right now. Please try again.</string>
 </resources>

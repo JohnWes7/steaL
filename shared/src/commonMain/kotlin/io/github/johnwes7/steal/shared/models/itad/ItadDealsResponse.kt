@@ -121,7 +121,28 @@ data class ItadAssets(
      * The 600-wide banner.
      */
     val banner600: String?,
-)
+) {
+
+    /**
+     * 给宽卡片用的图：最大的横幅优先，都没有时退到竖版封面；一张都没有是 `null`。
+     * The image for wide cards: the largest banner first, falling back to the box art; `null` when there is none.
+     */
+    val wideArtworkUrl: String?
+        get() {
+            val candidates = listOfNotNull(banner600, banner400, banner300, banner145, boxart)
+            return candidates.firstOrNull()
+        }
+
+    /**
+     * 给竖版卡片用的图：竖版封面优先，没有时退到最大的横幅；一张都没有是 `null`。
+     * The image for portrait cards: the box art first, falling back to the largest banner; `null` when there is none.
+     */
+    val portraitArtworkUrl: String?
+        get() {
+            val candidates = listOfNotNull(boxart, banner600, banner400, banner300, banner145)
+            return candidates.firstOrNull()
+        }
+}
 
 // 优惠详情 / Deal detail
 

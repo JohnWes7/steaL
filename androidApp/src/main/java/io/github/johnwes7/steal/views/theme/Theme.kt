@@ -15,17 +15,19 @@ import androidx.compose.ui.platform.LocalContext
  * 浅色配色：iOS 的品牌色对应到 Material 3 的颜色角色。
  * The light scheme, mapping the iOS brand colors onto Material 3 color roles.
  *
- * 品牌绿是主色，品牌蓝是次色（同 iOS tab 栏：Games 用绿、其他用蓝）；占位底色放在 surfaceVariant，
+ * 品牌绿是主色，品牌蓝是次色（同 iOS tab 栏：Games 用绿、其他用蓝），iOS 的系统橙是第三色；占位底色放在 surfaceVariant，
  * 所有 surfaceContainer 都用 iOS 的浮起表面色，让卡片和底部导航栏是白底、页面是浅灰底。
  * Brand green is primary and brand blue is secondary (as in the iOS tab bar: green for Games, blue
- * elsewhere); the image placeholder goes in surfaceVariant, and every surfaceContainer uses the iOS
- * elevated surface so cards and the navigation bar sit white on a light gray page.
+ * elsewhere), with the iOS system orange as tertiary; the image placeholder goes in surfaceVariant, and every
+ * surfaceContainer uses the iOS elevated surface so cards and the navigation bar sit white on a light gray page.
  */
 private val LightColors = lightColorScheme(
     primary = BrandGreenLight,
     onPrimary = OnBrandGreenLight,
     secondary = BrandBlueLight,
-    onSecondary = OnBrandGreenLight,
+    onSecondary = OnBrandBlue,
+    tertiary = SystemOrangeLight,
+    onTertiary = OnSystemOrange,
     background = AppBackgroundLight,
     onBackground = PrimaryTextLight,
     surface = AppBackgroundLight,
@@ -40,25 +42,33 @@ private val LightColors = lightColorScheme(
 )
 
 /**
- * 深色配色，角色对应同 [LightColors]。
- * The dark scheme, with the same role mapping as [LightColors].
+ * 深色配色，主色、次色、第三色同 [LightColors]。
+ * The dark scheme, with the same primary, secondary and tertiary roles as [LightColors].
+ *
+ * 表面层级不全用 iOS 的浮起表面色：导航栏和滚动后的顶栏（surfaceContainer）比卡片（surfaceContainerHigh）暗一层，
+ * 两者才分得开；卡片上的胶囊用 surfaceContainerHighest。
+ * The surface tiers don't all use the iOS elevated surface: the navigation bar and scrolled top bar
+ * (surfaceContainer) sit one step darker than cards (surfaceContainerHigh) so they read apart, and pills on cards
+ * use surfaceContainerHighest.
  */
 private val DarkColors = darkColorScheme(
     primary = BrandGreenDark,
     onPrimary = OnBrandGreenDark,
     secondary = BrandBlueDark,
-    onSecondary = OnBrandGreenDark,
+    onSecondary = OnBrandBlue,
+    tertiary = SystemOrangeDark,
+    onTertiary = OnSystemOrange,
     background = AppBackgroundDark,
     onBackground = PrimaryTextDark,
     surface = AppBackgroundDark,
     onSurface = PrimaryTextDark,
     onSurfaceVariant = SecondaryTextDark,
     surfaceVariant = ImagePlaceholderDark,
-    surfaceContainerLowest = SurfaceElevatedDark,
-    surfaceContainerLow = SurfaceElevatedDark,
-    surfaceContainer = SurfaceElevatedDark,
+    surfaceContainerLowest = SurfaceContainerLowestDark,
+    surfaceContainerLow = SurfaceContainerLowDark,
+    surfaceContainer = SurfaceContainerDark,
     surfaceContainerHigh = SurfaceElevatedDark,
-    surfaceContainerHighest = SurfaceElevatedDark,
+    surfaceContainerHighest = SurfaceContainerHighestDark,
 )
 
 /**

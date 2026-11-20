@@ -1,23 +1,34 @@
 package io.github.johnwes7.steal.views
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,22 +36,36 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnwes7.steal.LocalAppContainer
+import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.previews.previewDealItems
 import io.github.johnwes7.steal.shared.models.app.HomeDealItem
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadState
+import io.github.johnwes7.steal.views.components.home.DealCardDesign
+import io.github.johnwes7.steal.views.components.home.DealsSectionView
+import io.github.johnwes7.steal.views.components.home.GamesHeaderView
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
- * Games tab 的根页面，目前是调试界面：用纯文字列出 [GamesViewModel] 的状态。
- * The Games tab's root screen, currently a debug screen listing [GamesViewModel]'s state as plain text.
+ * Games tab 的根页面：Hot deals 区块，下面暂时是调试用的地区切换与 giveaways 文字。
+ * The Games tab's root screen: the Hot deals section, followed for now by a debug region switch and giveaways text.
  */
 @Composable
 fun GamesView(modifier: Modifier = Modifier) {
@@ -51,9 +76,10 @@ fun GamesView(modifier: Modifier = Modifier) {
     val giveawaysState by viewModel.giveawaysState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
-    // 2. 调试用的地区，转屏不丢
-    // 2. The debug region, surviving rotation
+    // 2. 调试用的地区和卡片设计，转屏不丢
+    // 2. The debug region and card design, surviving rotation
     var region by rememberSaveable { mutableStateOf(AppRegion.Australia) }
+    var design by rememberSaveable { mutableStateOf(DealCardDesign.CoverFirst) }
 
     // 3. 页面出现、地区变了都调 loadIfNeeded，由它决定要不要请求
     // 3. Call loadIfNeeded whenever the page appears or the region changes; it decides whether to fetch
@@ -61,15 +87,19 @@ fun GamesView(modifier: Modifier = Modifier) {
         viewModel.loadIfNeeded(region = region)
     }
 
-    // 4. 状态和操作交给内容函数显示
-    // 4. Hand the state and actions to the content function
-    GamesDebugContent(
+    // 4. 状态和操作交给内容函数显示；Hot deals 列表页和详情页还没做，点了先不做事
+    // 4. Hand the state and actions to the content function; the Hot deals list and detail pages don't exist yet
+    GamesContent(
         dealState = dealState,
         giveawaysState = giveawaysState,
         isRefreshing = isRefreshing,
         region = region,
         onSelectRegion = { newRegion -> region = newRegion },
+        design = design,
+        onSelectDesign = { newDesign -> design = newDesign },
         onRefresh = { viewModel.refresh(region = region) },
+        onOpenHotDeals = {},
+        onSelectDeal = { _ -> },
         onRetryDeals = { viewModel.retryDeals(region = region) },
         onRetryGiveaways = { viewModel.retryGiveaways() },
         modifier = modifier,
@@ -77,118 +107,210 @@ fun GamesView(modifier: Modifier = Modifier) {
 }
 
 /**
- * 调试界面本身：只接状态和回调，预览直接用它。
- * The debug screen itself, taking only state and callbacks, so previews can use it directly.
+ * 页面内容：只接状态和回调，预览直接用它。
+ * The screen content, taking only state and callbacks, so previews can use it directly.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GamesDebugContent(
+private fun GamesContent(
     dealState: DealLoadState,
     giveawaysState: GiveawaysLoadState,
     isRefreshing: Boolean,
     region: AppRegion,
     onSelectRegion: (AppRegion) -> Unit,
+    design: DealCardDesign,
+    onSelectDesign: (DealCardDesign) -> Unit,
     onRefresh: () -> Unit,
+    onOpenHotDeals: () -> Unit,
+    onSelectDeal: (HomeDealItem) -> Unit,
     onRetryDeals: () -> Unit,
     onRetryGiveaways: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 底部由 MainTabView 让出导航栏，这里只让出顶部状态栏和横屏时的刘海。
-    // MainTabView already clears the navigation bar; this clears only the status bar and landscape cutouts.
-    val topInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+    // 顶栏固定在上面；内容滚到它下面时，顶栏底色换成导航栏那一层的灰。
+    // The top bar stays pinned; once content scrolls under it, it switches to the navigation bar's gray.
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    // 底部由 MainTabView 让出导航栏，顶栏自己让出状态栏，内容只需让出横屏时左右的刘海。
+    // MainTabView clears the navigation bar and the top bar clears the status bar, so content only clears side cutouts.
+    val sideInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
 
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+    ) {
+        TopAppBar(
+            title = { GamesHeaderView() },
+            expandedHeight = 76.dp,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background,
+                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            ),
+            scrollBehavior = scrollBehavior,
+        )
+        GamesList(
+            dealState = dealState,
+            giveawaysState = giveawaysState,
+            isRefreshing = isRefreshing,
+            region = region,
+            onSelectRegion = onSelectRegion,
+            design = design,
+            onSelectDesign = onSelectDesign,
+            onRefresh = onRefresh,
+            onOpenHotDeals = onOpenHotDeals,
+            onSelectDeal = onSelectDeal,
+            onRetryDeals = onRetryDeals,
+            onRetryGiveaways = onRetryGiveaways,
+            modifier = Modifier.windowInsetsPadding(sideInsets),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GamesList(
+    dealState: DealLoadState,
+    giveawaysState: GiveawaysLoadState,
+    isRefreshing: Boolean,
+    region: AppRegion,
+    onSelectRegion: (AppRegion) -> Unit,
+    design: DealCardDesign,
+    onSelectDesign: (DealCardDesign) -> Unit,
+    onRefresh: () -> Unit,
+    onOpenHotDeals: () -> Unit,
+    onSelectDeal: (HomeDealItem) -> Unit,
+    onRetryDeals: () -> Unit,
+    onRetryGiveaways: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
-        modifier = modifier
-            .fillMaxSize()
-            .windowInsetsPadding(topInsets),
+        modifier = modifier.fillMaxSize(),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            DebugRegionPicker(selected = region, onSelect = onSelectRegion)
-            DebugDealsSection(state = dealState, onRetry = onRetryDeals)
-            DebugGiveawaysSection(state = giveawaysState, onRetry = onRetryGiveaways)
+            item(key = "hotDealsHeader") {
+                HotDealsHeader(onClick = onOpenHotDeals)
+            }
+            item(key = "deals") {
+                DealsSectionView(state = dealState, onSelect = onSelectDeal, onRetry = onRetryDeals, design = design)
+            }
+            item(key = "debug") {
+                DebugSection(
+                    region = region,
+                    onSelectRegion = onSelectRegion,
+                    design = design,
+                    onSelectDesign = onSelectDesign,
+                    giveawaysState = giveawaysState,
+                    onRetryGiveaways = onRetryGiveaways,
+                )
+            }
         }
     }
 }
 
+/**
+ * 「Hot deals」区块标题：火焰图标 + 标题 + 箭头，整行可点，打开完整的 Hot deals 列表。
+ * The Hot deals section title: a flame, the title and a chevron; the whole row is clickable and opens the full
+ * Hot deals list.
+ */
 @Composable
-private fun DebugRegionPicker(selected: AppRegion, onSelect: (AppRegion) -> Unit) {
+private fun HotDealsHeader(onClick: () -> Unit) {
+    val openLabel = stringResource(R.string.hot_deals_open_label)
+    val accent = MaterialTheme.colorScheme.tertiary
+
     Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
+            .semantics { heading() }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        for (region in AppRegion.entries) {
-            FilterChip(
-                selected = region == selected,
-                onClick = { onSelect(region) },
-                label = { Text(region.apiRegionCode) },
+        // 图标只是装饰，朗读只读标题。
+        // The icons are decorative; only the title is read out.
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(color = accent.copy(alpha = 0.16f), shape = CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.local_fire_department_fill1_24px),
+                contentDescription = null,
+                tint = accent,
             )
         }
+        Text(
+            text = stringResource(R.string.hot_deals_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            painter = painterResource(R.drawable.chevron_right_24px),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
+/**
+ * 调试区：切地区（看各种货币的格式）与 giveaways 的纯文字状态。
+ * The debug area: a region switch (to check each currency's formatting) and the giveaways state as plain text.
+ */
 @Composable
-private fun DebugDealsSection(state: DealLoadState, onRetry: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = "Deals", style = MaterialTheme.typography.titleMedium)
-        when (state) {
-            DealLoadState.Loading -> Text(text = "Loading…")
-            is DealLoadState.Failed -> {
-                Text(text = "Failed: ${state.error}")
-                Button(onClick = onRetry) { Text(text = "Retry") }
-            }
-            is DealLoadState.Loaded -> {
-                if (state.items.isEmpty()) {
-                    Text(text = "(empty)")
-                }
-                for (item in state.items) {
-                    DebugDealRow(item = item)
-                }
+private fun DebugSection(
+    region: AppRegion,
+    onSelectRegion: (AppRegion) -> Unit,
+    design: DealCardDesign,
+    onSelectDesign: (DealCardDesign) -> Unit,
+    giveawaysState: GiveawaysLoadState,
+    onRetryGiveaways: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(top = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HorizontalDivider()
+        Text(text = "Debug", style = MaterialTheme.typography.titleMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (option in DealCardDesign.entries) {
+                FilterChip(
+                    selected = option == design,
+                    onClick = { onSelectDesign(option) },
+                    label = { Text("Design ${option.label}") },
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun DebugDealRow(item: HomeDealItem) {
-    val deal = item.deal.deal
-    val price = "${deal.price.amount} ${deal.price.currency}"
-    val regular = "${deal.regular.amount} ${deal.regular.currency}"
-    val steam = steamLinkText(steam = item.steam)
-    Text(text = "${item.deal.title}\n  $price (was $regular, -${deal.cut}%) · $steam")
-}
-
-private fun steamLinkText(steam: HomeDealItem.SteamLink): String {
-    return when (steam) {
-        HomeDealItem.SteamLink.Pending -> "appID …"
-        is HomeDealItem.SteamLink.Resolved -> "appID ${steam.appID}"
-        HomeDealItem.SteamLink.NotFound -> "appID not found"
-        HomeDealItem.SteamLink.Failed -> "appID failed"
-    }
-}
-
-@Composable
-private fun DebugGiveawaysSection(state: GiveawaysLoadState, onRetry: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = "Giveaways", style = MaterialTheme.typography.titleMedium)
-        when (state) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            for (option in AppRegion.entries) {
+                FilterChip(
+                    selected = option == region,
+                    onClick = { onSelectRegion(option) },
+                    label = { Text(option.apiRegionCode) },
+                )
+            }
+        }
+        Text(text = "Giveaways", style = MaterialTheme.typography.titleSmall)
+        when (giveawaysState) {
             GiveawaysLoadState.Loading -> Text(text = "Loading…")
             is GiveawaysLoadState.Failed -> {
-                Text(text = "Failed: ${state.error}")
-                Button(onClick = onRetry) { Text(text = "Retry") }
+                Text(text = "Failed: ${giveawaysState.error}")
+                Button(onClick = onRetryGiveaways) { Text(text = "Retry") }
             }
             is GiveawaysLoadState.Loaded -> {
-                if (state.giveaways.isEmpty()) {
-                    Text(text = "(empty)")
-                }
-                for (giveaway in state.giveaways) {
+                for (giveaway in giveawaysState.giveaways) {
                     val expiry = giveaway.expiry ?: "no expiry"
                     Text(text = "${giveaway.title}\n  until $expiry")
                 }
@@ -199,15 +321,19 @@ private fun DebugGiveawaysSection(state: GiveawaysLoadState, onRetry: () -> Unit
 
 @Preview
 @Composable
-private fun GamesDebugContentPreview() {
-    SteaLTheme {
-        GamesDebugContent(
-            dealState = DealLoadState.Loaded(items = emptyList()),
+private fun GamesContentPreview() {
+    SteaLTheme(darkTheme = true) {
+        GamesContent(
+            dealState = DealLoadState.Loaded(items = previewDealItems),
             giveawaysState = GiveawaysLoadState.Loading,
             isRefreshing = false,
             region = AppRegion.Australia,
             onSelectRegion = { _ -> },
+            design = DealCardDesign.CoverFirst,
+            onSelectDesign = { _ -> },
             onRefresh = {},
+            onOpenHotDeals = {},
+            onSelectDeal = { _ -> },
             onRetryDeals = {},
             onRetryGiveaways = {},
         )

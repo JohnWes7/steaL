@@ -71,6 +71,35 @@ class ItadDealsTest {
     }
 
     /**
+     * 选图规则：宽卡片优先最大的横幅、竖版卡片优先封面，缺的往后退，一张都没有是 `null`。
+     * Artwork choice: wide cards prefer the largest banner and portrait cards the box art, falling back in order,
+     * and `null` when there is none.
+     */
+    @Test
+    fun artworkUrlsFallBackInOrder() {
+        val response = appNetworkJson.decodeFromString<ItadDealsResponse>(REAL_RESPONSE)
+        val assets = response.list[0].assets
+        assertEquals(assets.banner600, assets.wideArtworkUrl)
+        assertEquals(assets.boxart, assets.portraitArtworkUrl)
+
+        val withoutBoxart = assets.copy(boxart = null)
+        assertEquals(assets.banner600, withoutBoxart.portraitArtworkUrl)
+
+        val onlySmallBanner = ItadAssets(
+            boxart = null,
+            banner145 = assets.banner145,
+            banner300 = null,
+            banner400 = null,
+            banner600 = null,
+        )
+        assertEquals(assets.banner145, onlySmallBanner.wideArtworkUrl)
+
+        val sparse = appNetworkJson.decodeFromString<ItadDealsResponse>(SPARSE_RESPONSE)
+        assertNull(sparse.list[0].assets.wideArtworkUrl)
+        assertNull(sparse.list[0].assets.portraitArtworkUrl)
+    }
+
+    /**
      * 请求体编码出来和 iOS 首页发的一样；没有类型标签时不出现 `tags` 键。
      * The encoded body matches what the iOS home page sends; without genre tags there is no `tags` key.
      */
