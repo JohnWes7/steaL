@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.views.components.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -46,6 +47,11 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  * 失败和空列表的按钮都调 [onRetry]；点卡片调 [onSelect]，去哪里由页面决定。
  * The failure and empty-list buttons both call [onRetry]; tapping a card calls [onSelect] and the page decides
  * where it leads.
+ *
+ * 只有状态的种类变了（如加载中 → 有数据）才淡入淡出；同一种状态的更新（补上 appID 后的新 [DealLoadState.Loaded]）就地刷新，
+ * 卡片不重建。
+ * Only a change in the kind of state (such as loading to loaded) cross-fades; updates within the same kind (a new
+ * [DealLoadState.Loaded] once appIDs resolve) refresh in place without rebuilding the cards.
  */
 @Composable
 fun DealsSectionView(
@@ -54,21 +60,29 @@ fun DealsSectionView(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    when (state) {
-        DealLoadState.Loading -> DealsLoadingPlaceholder(modifier = modifier)
-        is DealLoadState.Failed -> LoadErrorView(error = state.error, onRetry = onRetry, modifier = modifier)
-        is DealLoadState.Loaded -> {
-            if (state.items.isEmpty()) {
-                ContentUnavailableView(
-                    iconRes = R.drawable.money_off_24px,
-                    title = stringResource(R.string.deals_empty_title),
-                    message = stringResource(R.string.deals_empty_message),
-                    actionLabel = stringResource(R.string.action_refresh),
-                    onAction = onRetry,
-                    modifier = modifier,
-                )
-            } else {
-                DealsContent(items = state.items, onSelect = onSelect, modifier = modifier)
+    AnimatedContent(
+        targetState = state,
+        modifier = modifier,
+        label = "dealsSection",
+        contentKey = { targetState -> targetState::class },
+    ) { targetState ->
+        // 读 targetState 而不是 state：淡出中的旧内容要继续显示旧状态。
+        // Reads targetState rather than state, so the outgoing content keeps showing the old state while it fades.
+        when (targetState) {
+            DealLoadState.Loading -> DealsLoadingPlaceholder()
+            is DealLoadState.Failed -> LoadErrorView(error = targetState.error, onRetry = onRetry)
+            is DealLoadState.Loaded -> {
+                if (targetState.items.isEmpty()) {
+                    ContentUnavailableView(
+                        iconRes = R.drawable.money_off_24px,
+                        title = stringResource(R.string.deals_empty_title),
+                        message = stringResource(R.string.deals_empty_message),
+                        actionLabel = stringResource(R.string.action_refresh),
+                        onAction = onRetry,
+                    )
+                } else {
+                    DealsContent(items = targetState.items, onSelect = onSelect)
+                }
             }
         }
     }

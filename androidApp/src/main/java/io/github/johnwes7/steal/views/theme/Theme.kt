@@ -127,8 +127,8 @@ fun SteaLTheme(
     // 2. The colors outside Material only vary with light and dark
     val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
 
-    // 3. 提供两套颜色：Expressive 主题另外带弹簧动效（MotionScheme.expressive）和形状
-    // 3. Provide both color sets; the Expressive theme also brings spring motion (MotionScheme.expressive) and shapes
+    // 3. 提供两套颜色：Expressive 主题另外带弹簧动效（MotionScheme.expressive）
+    // 3. Provide both color sets; the Expressive theme also brings spring motion (MotionScheme.expressive)
     CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,

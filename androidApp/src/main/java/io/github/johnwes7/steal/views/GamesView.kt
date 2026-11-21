@@ -107,7 +107,6 @@ fun GamesView(modifier: Modifier = Modifier) {
  * 页面内容：只接状态和回调，预览直接用它。
  * The screen content, taking only state and callbacks, so previews can use it directly.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GamesContent(
     dealState: DealLoadState,
@@ -159,7 +158,6 @@ private fun GamesContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GamesList(
     dealState: DealLoadState,

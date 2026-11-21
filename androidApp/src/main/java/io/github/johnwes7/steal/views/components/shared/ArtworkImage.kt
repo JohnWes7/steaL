@@ -41,12 +41,11 @@ fun ArtworkImage(
     // A new URL resets the failure flag.
     var hasFailed by remember(url) { mutableStateOf(false) }
     val context = LocalPlatformContext.current
-    val request = remember(url, context) {
+    val request = 
         ImageRequest.Builder(context)
-            .data(url)
-            .crossfade(true)
-            .build()
-    }
+        .data(url)
+        .crossfade(true)
+        .build()
 
     Box(
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
