@@ -16,6 +16,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.views.theme.BrandFontFamily
 import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
@@ -23,24 +24,26 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  * 首页顶栏的品牌头部：绿色标语加「steaL」字标，最后的 L 是品牌蓝。
  * The home page's brand header: the green tagline above the "steaL" wordmark, whose final L is brand blue.
  *
- * 字号固定、不随系统字体放大：常驻顶栏放大会挤掉内容。
- * The sizes are fixed rather than following the system font size, since an enlarged persistent bar crowds out the
- * content.
+ * 字体和字号都固定：字体是 [BrandFontFamily]，不跟手机的系统字体变；字号不随系统字体放大，常驻顶栏放大会挤掉内容。
+ * Both the font and the sizes are fixed: the font is [BrandFontFamily], unaffected by the phone's system font, and the
+ * sizes don't follow the system font size, since an enlarged persistent bar crowds out the content.
  */
 @Composable
 fun GamesHeaderView(modifier: Modifier = Modifier) {
-    // 1. 固定字号和行高：按 dp 换算成 sp，抵消系统字体缩放
-    // 1. Fixed sizes and line heights: dp converted to sp, cancelling the system font scale
+    // 1. 固定字体、字号和行高：字号按 dp 换算成 sp，抵消系统字体缩放
+    // 1. Fixed font, sizes and line heights: sizes converted from dp to sp, cancelling the system font scale
     val density = LocalDensity.current
     // 行高要写明：不写会继承顶栏标题的 28sp 行高，40 的字标超出行框，贴着顶栏底边。
     // Line heights must be explicit: otherwise they inherit the top bar title's 28sp, and the 40 wordmark overflows
     // its line box and sits on the bar's bottom edge.
     val taglineStyle = TextStyle(
+        fontFamily = BrandFontFamily,
         fontSize = with(density) { 13.dp.toSp() },
         lineHeight = with(density) { 16.dp.toSp() },
         fontWeight = FontWeight.Bold,
     )
     val wordmarkStyle = TextStyle(
+        fontFamily = BrandFontFamily,
         fontSize = with(density) { 40.dp.toSp() },
         lineHeight = with(density) { 46.dp.toSp() },
         fontWeight = FontWeight.Bold,
