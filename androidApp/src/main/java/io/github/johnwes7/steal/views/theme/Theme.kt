@@ -4,103 +4,114 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+// MARK: - Material 之外的颜色 / Colors outside Material
+
 /**
- * 浅色配色：iOS 的品牌色对应到 Material 3 的颜色角色。
- * The light scheme, mapping the iOS brand colors onto Material 3 color roles.
+ * Material 配色之外的颜色：品牌字标和额外的语义色，值用 iOS 原色，不进 Material 色阶。
+ * Colors outside the Material scheme: the brand wordmark and extra semantic colors, using the iOS values as-is
+ * rather than Material tonal palettes.
  *
- * 品牌绿是主色，品牌蓝是次色（同 iOS tab 栏：Games 用绿、其他用蓝），iOS 的系统橙是第三色，三者的容器色是从各自色阶取的；占位底色放在 surfaceVariant，
- * 所有 surfaceContainer 都用 iOS 的浮起表面色，让卡片和底部导航栏是白底、页面是浅灰底。
- * Brand green is primary and brand blue is secondary (as in the iOS tab bar: green for Games, blue
- * elsewhere), with the iOS system orange as tertiary; the image placeholder goes in surfaceVariant, and every
- * surfaceContainer uses the iOS elevated surface so cards and the navigation bar sit white on a light gray page.
+ * 界面里经 [ExtendedTheme.colors] 读，不直接用 `Color.kt` 的常量；不跟 [ColorPalette] 和动态配色变。
+ * Read through [ExtendedTheme.colors] in UI code rather than using the `Color.kt` constants directly; these don't
+ * change with the [ColorPalette] or dynamic color.
  */
-private val LightColors = lightColorScheme(
-    primary = BrandGreenLight,
-    onPrimary = OnBrandGreenLight,
-    secondary = BrandBlueLight,
-    onSecondary = OnBrandBlue,
-    tertiary = SystemOrangeLight,
-    onTertiary = OnSystemOrange,
-    primaryContainer = GreenContainerLight,
-    onPrimaryContainer = OnGreenContainerLight,
-    secondaryContainer = BlueContainerLight,
-    onSecondaryContainer = OnBlueContainerLight,
-    tertiaryContainer = OrangeContainerLight,
-    onTertiaryContainer = OnOrangeContainerLight,
-    background = AppBackgroundLight,
-    onBackground = PrimaryTextLight,
-    surface = AppBackgroundLight,
-    onSurface = PrimaryTextLight,
-    onSurfaceVariant = SecondaryTextLight,
-    surfaceVariant = ImagePlaceholderLight,
-    surfaceContainerLowest = SurfaceElevatedLight,
-    surfaceContainerLow = SurfaceElevatedLight,
-    surfaceContainer = SurfaceElevatedLight,
-    surfaceContainerHigh = SurfaceElevatedLight,
-    surfaceContainerHighest = SurfaceElevatedLight,
+@Immutable
+data class ExtendedColors(
+    /**
+     * 品牌绿：只给品牌字标和标语用。
+     * Brand green, only for the wordmark and tagline.
+     */
+    val brandGreen: Color,
+    /**
+     * 品牌蓝：只给品牌字标用。
+     * Brand blue, only for the wordmark.
+     */
+    val brandBlue: Color,
+    /**
+     * 「热门」的圆底，如 Hot deals 标题前的火焰。
+     * The container behind the "hot" accent, such as the flame before the Hot deals title.
+     */
+    val hotContainer: Color,
+    /**
+     * [hotContainer] 上的图标。
+     * Icons on [hotContainer].
+     */
+    val onHotContainer: Color,
+)
+
+private val LightExtendedColors = ExtendedColors(
+    brandGreen = BrandGreenLight,
+    brandBlue = BrandBlueLight,
+    hotContainer = OrangeContainerLight,
+    onHotContainer = OnOrangeContainerLight,
+)
+
+private val DarkExtendedColors = ExtendedColors(
+    brandGreen = BrandGreenDark,
+    brandBlue = BrandBlueDark,
+    hotContainer = OrangeContainerDark,
+    onHotContainer = OnOrangeContainerDark,
 )
 
 /**
- * 深色配色，主色、次色、第三色同 [LightColors]。
- * The dark scheme, with the same primary, secondary and tertiary roles as [LightColors].
- *
- * 表面层级不全用 iOS 的浮起表面色：导航栏和滚动后的顶栏（surfaceContainer）比卡片（surfaceContainerHigh）暗一层，
- * 两者才分得开；卡片上的胶囊用 surfaceContainerHighest。
- * The surface tiers don't all use the iOS elevated surface: the navigation bar and scrolled top bar
- * (surfaceContainer) sit one step darker than cards (surfaceContainerHigh) so they read apart, and pills on cards
- * use surfaceContainerHighest.
+ * 当前主题的 [ExtendedColors]，由 [SteaLTheme] 提供。
+ * The current theme's [ExtendedColors], provided by [SteaLTheme].
  */
-private val DarkColors = darkColorScheme(
-    primary = BrandGreenDark,
-    onPrimary = OnBrandGreenDark,
-    secondary = BrandBlueDark,
-    onSecondary = OnBrandBlue,
-    tertiary = SystemOrangeDark,
-    onTertiary = OnSystemOrange,
-    primaryContainer = GreenContainerDark,
-    onPrimaryContainer = OnGreenContainerDark,
-    secondaryContainer = BlueContainerDark,
-    onSecondaryContainer = OnBlueContainerDark,
-    tertiaryContainer = OrangeContainerDark,
-    onTertiaryContainer = OnOrangeContainerDark,
-    background = AppBackgroundDark,
-    onBackground = PrimaryTextDark,
-    surface = AppBackgroundDark,
-    onSurface = PrimaryTextDark,
-    onSurfaceVariant = SecondaryTextDark,
-    surfaceVariant = ImagePlaceholderDark,
-    surfaceContainerLowest = SurfaceContainerLowestDark,
-    surfaceContainerLow = SurfaceContainerLowDark,
-    surfaceContainer = SurfaceContainerDark,
-    surfaceContainerHigh = SurfaceElevatedDark,
-    surfaceContainerHighest = SurfaceContainerHighestDark,
-)
+val LocalExtendedColors = staticCompositionLocalOf {
+    ExtendedColors(
+        brandGreen = Color.Unspecified,
+        brandBlue = Color.Unspecified,
+        hotContainer = Color.Unspecified,
+        onHotContainer = Color.Unspecified,
+    )
+}
 
 /**
- * App 的 Material 3 主题，默认用品牌色。
- * The app's Material 3 theme, using the brand colors by default.
+ * Material 之外的主题值的入口，用法同 `MaterialTheme.colorScheme`。
+ * Entry point for theme values outside Material, used like `MaterialTheme.colorScheme`.
+ */
+object ExtendedTheme {
+    /**
+     * 当前主题的额外颜色。
+     * The current theme's extra colors.
+     */
+    val colors: ExtendedColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalExtendedColors.current
+}
+
+// MARK: - 主题 / Theme
+
+/**
+ * App 的 Material 3 主题。
+ * The app's Material 3 theme.
  *
- * [dynamicColor] 为 `true` 且系统是 Android 12 以上时改用按壁纸生成的动态配色；默认关掉，
- * 保持和 iOS 一样的品牌观感，以后做成设置项时由调用方传进来。
- * When [dynamicColor] is `true` on Android 12 and later, the wallpaper-based dynamic scheme is used
- * instead; it is off by default to keep the same brand look as iOS, and a future setting will pass it in.
- *
- * [darkTheme] 默认跟随系统。
- * [darkTheme] follows the system by default.
+ * [palette] 选用哪套配色，默认 [ColorPalette.ThemeBuilder]。[dynamicColor] 为 `true` 且系统是 Android 12 以上时改用
+ * 按壁纸生成的动态配色，[palette] 不起作用；默认关掉，保持品牌色。[darkTheme] 默认跟随系统。
+ * [palette] picks the color palette, [ColorPalette.ThemeBuilder] by default. When [dynamicColor] is `true` on
+ * Android 12 and later, the wallpaper-based dynamic scheme replaces [palette]; it is off by default to keep the brand
+ * colors. [darkTheme] follows the system by default.
  */
 @Composable
 fun SteaLTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    palette: ColorPalette = ColorPalette.ThemeBuilder,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    // 1. 选 Material 配色：动态配色，或 palette 的那一套
+    // 1. Pick the Material scheme: dynamic, or the one from palette
     val supportsDynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val useDynamicColor = dynamicColor && supportsDynamicColor
 
@@ -109,14 +120,20 @@ fun SteaLTheme(
         val context = LocalContext.current
         colorScheme = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
-        colorScheme = if (darkTheme) DarkColors else LightColors
+        colorScheme = palette.colorScheme(darkTheme = darkTheme)
     }
 
-    // Expressive 主题：同样的颜色和字体，加上 Expressive 的弹簧动效（MotionScheme.expressive）和形状。
-    // The Expressive theme: the same colors and type, plus Expressive spring motion (MotionScheme.expressive) and shapes.
-    MaterialExpressiveTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content,
-    )
+    // 2. Material 之外的颜色只分浅色、深色
+    // 2. The colors outside Material only vary with light and dark
+    val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
+
+    // 3. 提供两套颜色：Expressive 主题另外带弹簧动效（MotionScheme.expressive）和形状
+    // 3. Provide both color sets; the Expressive theme also brings spring motion (MotionScheme.expressive) and shapes
+    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
+        MaterialExpressiveTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            content = content,
+        )
+    }
 }

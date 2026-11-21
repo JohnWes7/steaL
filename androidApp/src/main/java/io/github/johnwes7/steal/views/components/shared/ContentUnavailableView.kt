@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -84,14 +83,7 @@ fun ContentUnavailableView(
         )
         if (actionLabel != null && onAction != null) {
             Spacer(modifier = Modifier.height(12.dp))
-            // Material 默认的 tonal 底色是紫色系，这里换成品牌蓝的浅底（同底部导航栏的选中胶囊）。
-            // Material's default tonal container is purple; use a light brand-blue fill instead (as the nav bar pill does).
-            val brandBlue = MaterialTheme.colorScheme.secondary
-            val buttonColors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = brandBlue.copy(alpha = 0.16f),
-                contentColor = brandBlue,
-            )
-            FilledTonalButton(onClick = onAction, colors = buttonColors) {
+            FilledTonalButton(onClick = onAction) {
                 Text(text = actionLabel)
             }
         }

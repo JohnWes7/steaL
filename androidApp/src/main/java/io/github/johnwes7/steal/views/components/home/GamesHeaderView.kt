@@ -16,6 +16,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -50,7 +51,7 @@ fun GamesHeaderView(modifier: Modifier = Modifier) {
     val appName = stringResource(R.string.app_name)
     val body = appName.dropLast(1)
     val lastLetter = appName.takeLast(1)
-    val brandBlue = MaterialTheme.colorScheme.secondary
+    val brandBlue = ExtendedTheme.colors.brandBlue
     val wordmark = buildAnnotatedString {
         append(body)
         withStyle(SpanStyle(color = brandBlue)) {
@@ -64,7 +65,7 @@ fun GamesHeaderView(modifier: Modifier = Modifier) {
         Text(
             text = stringResource(R.string.games_header_tagline),
             style = taglineStyle,
-            color = MaterialTheme.colorScheme.primary,
+            color = ExtendedTheme.colors.brandGreen,
         )
         Text(
             text = wordmark,

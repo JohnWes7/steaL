@@ -60,6 +60,7 @@ import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadState
 import io.github.johnwes7.steal.views.components.home.DealsSectionView
 import io.github.johnwes7.steal.views.components.home.GamesHeaderView
+import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -225,13 +226,13 @@ private fun HotDealsHeader(onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .background(color = MaterialTheme.colorScheme.tertiaryContainer, shape = CircleShape),
+                .background(color = ExtendedTheme.colors.hotContainer, shape = CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(R.drawable.local_fire_department_fill1_24px),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                tint = ExtendedTheme.colors.onHotContainer,
             )
         }
         Text(
