@@ -94,6 +94,12 @@ kotlin {
                 // StateFlow、launch 等协程 API，ViewModel 直接用到。
                 // Coroutine APIs such as StateFlow and launch, used directly by the view models.
                 implementation(libs.kotlinx.coroutines.core)
+                // 设置的存储（Preferences DataStore）；用 api 是因为 AppContainer 的公开构造参数是 DataStore<Preferences>，
+                // 平台入口要建好传进来。
+                // Settings storage (Preferences DataStore); api because AppContainer's public constructor takes a
+                // DataStore<Preferences>, which the platform entry point creates and passes in.
+                api(libs.androidx.datastore.core)
+                api(libs.androidx.datastore.preferences.core)
             }
         }
 
