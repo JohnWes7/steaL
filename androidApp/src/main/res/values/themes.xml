@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.SteaL" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- App 主题：界面都由 Compose 画，这里只管窗口底色（启动、切换时露出来的那一块），深浅跟 values-night 走 / App theme: Compose draws the UI, so this only sets the window background (visible while launching or switching), light or dark via values-night -->
+    <style name="Theme.SteaL" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+
+    <!-- 启动主题：MainActivity 启动时用，installSplashScreen() 之后换成 postSplashScreenTheme / Splash theme: used as MainActivity starts, replaced by postSplashScreenTheme after installSplashScreen() -->
+    <style name="Theme.SteaL.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/window_background</item>
+        <!-- 默认是系统通用图标，改成 App 图标 / The default is the generic system icon; use the app icon -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.SteaL</item>
+    </style>
 </resources>

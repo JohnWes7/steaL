@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 窗口和启动画面的底色：默认配色（ThemeBuilder）深色的 background / Window and splash screen background: the default palette's (ThemeBuilder) dark background -->
+    <color name="window_background">#11150C</color>
+</resources>

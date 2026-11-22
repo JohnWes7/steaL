@@ -42,12 +42,12 @@ class RootViewModel(settingsRepository: SettingsRepository) : ViewModel() {
         data class Loaded(val settings: AppSettings) : SettingsLoadState
     }
 
-    // MARK: - 对外状态 / Exposed state
-
     private val loadedStates: Flow<SettingsLoadState> = settingsRepository.settings.map { settings ->
         SettingsLoadState.Loaded(settings)
     }
 
+    // MARK: - 对外状态 / Exposed state
+    
     /**
      * 当前的设置。
      * The current settings.
