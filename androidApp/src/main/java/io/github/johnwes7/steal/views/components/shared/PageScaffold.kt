@@ -132,7 +132,7 @@ fun PageScaffold(
 @Composable
 fun rememberBarBlurStyle(tint: State<Color>, blurRadius: Dp = 20.dp): HazeBlurStyle {
     val backgroundColor = MaterialTheme.colorScheme.background
-    return remember(backgroundColor, tint) {
+    return remember(backgroundColor, tint, blurRadius) {
         HazeBlurStyle {
             backgroundColor(backgroundColor)
             colorEffects(listOf(HazeColorEffect.tint(tint.value.copy(alpha = BAR_TINT_ALPHA))))
@@ -157,9 +157,7 @@ fun rememberBarBlurStyle(tint: State<Color>, blurRadius: Dp = 20.dp): HazeBlurSt
 private fun rememberTopBarBlurStyle(scrollState: ScrollableState): HazeBlurStyle {
     // 1. 内容有没有滚到顶栏下面
     // 1. Whether content has scrolled under the top bar
-    val isScrolledUnder by remember(scrollState) {
-        computedStateOf { scrollState.canScrollBackward }
-    }
+    val isScrolledUnder = scrollState.canScrollBackward
 
     // 2. 叠色，换色时渐变（同 Material TopAppBar 自己换色的动画）
     // 2. The tint, fading between colors (the same animation Material TopAppBar uses for its own color change)
