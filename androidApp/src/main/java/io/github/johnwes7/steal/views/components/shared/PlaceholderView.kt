@@ -3,6 +3,7 @@ package io.github.johnwes7.steal.views.components.shared
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,6 +15,9 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
 /**
  * 还没做的页面的占位：页面背景上居中显示 [title]。
  * A stand-in for a screen not built yet: [title] centered on the page background.
+ *
+ * 背景铺到 tab 栏后面，标题在 tab 栏上方的区域里居中。
+ * The background extends behind the tab bar while the title centers in the area above it.
  */
 @Composable
 fun PlaceholderView(
@@ -23,7 +27,8 @@ fun PlaceholderView(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(bottom = LocalTabBarHeight.current),
         contentAlignment = Alignment.Center,
     ) {
         Text(

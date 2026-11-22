@@ -1,7 +1,8 @@
 package io.github.johnwes7.steal.views
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -12,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -21,6 +23,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.hazeBlur
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import io.github.johnwes7.steal.LocalAppContainer
 import io.github.johnwes7.steal.config.Config
 import io.github.johnwes7.steal.navigation.AppTab
@@ -32,6 +38,8 @@ import io.github.johnwes7.steal.navigation.SearchRoute
 import io.github.johnwes7.steal.navigation.WishlistRoute
 import io.github.johnwes7.steal.navigation.rememberNavigationState
 import io.github.johnwes7.steal.shared.di.AppContainer
+import io.github.johnwes7.steal.views.components.shared.LocalTabBarHeight
+import io.github.johnwes7.steal.views.components.shared.rememberBarBlurStyle
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -73,8 +81,14 @@ fun MainTabView() {
         }
     }
 
-    // 页面自己处理顶部系统栏的留白，所以 Scaffold 不再加内容边距，只让出底部导航栏的高度。
-    // Screens handle the top system bar themselves, so Scaffold adds no content insets beyond the navigation bar.
+    // tab 栏是毛玻璃：页面铺满到 tab 栏后面，tab 栏模糊它后面的页面。
+    // The tab bar is frosted: pages extend behind it and the bar blurs the page underneath.
+    val hazeState = rememberHazeState()
+    val tabBarTint = rememberUpdatedState(MaterialTheme.colorScheme.surfaceContainer)
+    val tabBarBlurStyle = rememberBarBlurStyle(tint = tabBarTint)
+
+    // 页面自己处理顶部系统栏的留白，所以 Scaffold 不加系统栏的内容边距。
+    // Screens handle the top system bar themselves, so Scaffold adds no system bar insets to the content.
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
         bottomBar = {
@@ -82,15 +96,23 @@ fun MainTabView() {
                 tabs = tabs,
                 selectedRoute = navigationState.topLevelRoute,
                 onSelect = { route -> navigator.navigate(route) },
+                modifier = Modifier.hazeBlur(input = HazeInput.Backdrop(hazeState), style = tabBarBlurStyle),
             )
         },
     ) { innerPadding ->
         val entries = navigationState.toDecoratedEntries(entryProvider)
-        NavDisplay(
-            entries = entries,
-            onBack = { navigator.goBack() },
-            modifier = Modifier.padding(innerPadding),
-        )
+        // 页面不垫高，由 TabPageScaffold 按 LocalTabBarHeight 在内容底部让出 tab 栏。
+        // Pages aren't padded here; TabPageScaffold clears the tab bar at the bottom of the content using
+        // LocalTabBarHeight.
+        CompositionLocalProvider(LocalTabBarHeight provides innerPadding.calculateBottomPadding()) {
+            NavDisplay(
+                entries = entries,
+                onBack = { navigator.goBack() },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(hazeState),
+            )
+        }
     }
 }
 
@@ -98,14 +120,16 @@ fun MainTabView() {
  * 底部导航栏：显示 [tabs]，高亮 [selectedRoute]，点击时调 [onSelect]。
  * The bottom navigation bar: shows [tabs], highlights [selectedRoute], and calls [onSelect] on tap.
  *
- * 选中色同 iOS：在 Games 用品牌绿（主色），其他 tab 用品牌蓝（次色）。
- * The selected color matches iOS: brand green (primary) on Games, brand blue (secondary) on other tabs.
+ * 选中色同 iOS：在 Games 用品牌绿（主色），其他 tab 用品牌蓝（次色）。栏本身透明，背景由调用方经 [modifier] 加的模糊层画。
+ * The selected color matches iOS: brand green (primary) on Games, brand blue (secondary) on other tabs. The bar
+ * itself is transparent; the caller draws its background with a blur layer through [modifier].
  */
 @Composable
 private fun MainNavigationBar(
     tabs: List<AppTab>,
     selectedRoute: NavKey,
     onSelect: (NavKey) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val isOnGames = selectedRoute == GamesRoute
     val colorScheme = MaterialTheme.colorScheme
@@ -121,7 +145,7 @@ private fun MainNavigationBar(
         indicatorColor = indicatorColor,
     )
 
-    NavigationBar {
+    NavigationBar(modifier = modifier, containerColor = Color.Transparent) {
         for (tab in tabs) {
             val isSelected = tab.route == selectedRoute
             val iconRes = if (isSelected) tab.selectedIconRes else tab.iconRes
@@ -160,10 +184,13 @@ private fun MainTabViewPreview() {
 @Composable
 private fun MainNavigationBarPreview() {
     SteaLTheme {
+        // 预览里没有模糊层，用导航栏的底色代替。
+        // Previews have no blur layer, so the navigation bar's color stands in.
         MainNavigationBar(
             tabs = AppTab.entries,
             selectedRoute = WishlistRoute,
             onSelect = { _ -> },
+            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
         )
     }
 }
