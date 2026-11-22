@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,6 +39,7 @@ import io.github.johnwes7.steal.navigation.SettingsRoute
 import io.github.johnwes7.steal.navigation.WishlistRoute
 import io.github.johnwes7.steal.navigation.rememberNavigationState
 import io.github.johnwes7.steal.shared.di.AppContainer
+import io.github.johnwes7.steal.shared.services.createSettingsDataStore
 import io.github.johnwes7.steal.views.components.shared.LocalTabBarHeight
 import io.github.johnwes7.steal.views.components.shared.rememberBarBlurStyle
 import io.github.johnwes7.steal.views.theme.SteaLTheme
@@ -172,7 +174,14 @@ private fun MainTabViewPreview() {
     // 预览不经过 SteaLApplication，要自己建一个容器；首页会真的发请求，预览环境连不上网就显示失败。
     // Previews skip SteaLApplication, so they build their own container; the home page really fetches, and shows
     // a failure when the preview environment has no network.
-    val appContainer = remember { AppContainer(logsRequests = false, itadApiKey = Config.ITAD_API_KEY) }
+    val context = LocalContext.current
+    val appContainer = remember {
+        AppContainer(
+            logsRequests = false,
+            itadApiKey = Config.ITAD_API_KEY,
+            settingsDataStore = createSettingsDataStore(context = context),
+        )
+    }
     CompositionLocalProvider(LocalAppContainer provides appContainer) {
         SteaLTheme {
             MainTabView()

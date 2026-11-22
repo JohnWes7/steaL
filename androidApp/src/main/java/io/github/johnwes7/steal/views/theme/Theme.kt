@@ -13,6 +13,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import io.github.johnwes7.steal.shared.models.settings.ColorPalette
 
 // MARK: - Material 之外的颜色 / Colors outside Material
 

@@ -4,45 +4,22 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import io.github.johnwes7.steal.shared.models.settings.ColorPalette
 
 /**
- * App 可选的配色方案，都由品牌绿（Primary）和品牌蓝（Secondary）生成。
- * The app's selectable color palettes, all generated from brand green (primary) and brand blue (secondary).
+ * 这套配色在浅色或深色下的 [ColorScheme]。
+ * This palette's [ColorScheme] in light or dark mode.
  *
- * 每套都写全浅色、深色两份 [ColorScheme]，彼此不共用值：改一套不会带动别的。
- * Each palette spells out full light and dark [ColorScheme]s and shares no values with the others, so changing one
- * never affects the rest.
+ * 每套都写全浅色、深色两份，彼此不共用值：改一套不会带动别的。`when` 要覆盖每一套，`shared` 加了新配色而这里没写色值时编译不过。
+ * Each palette spells out full light and dark schemes and shares no values with the others, so changing one never
+ * affects the rest. The `when` must cover every palette, so adding one in `shared` without colors here fails to
+ * compile.
  */
-enum class ColorPalette {
-    /**
-     * Theme Builder 导出的配色（开 Color Match），表面带一点绿；默认用它。
-     * The Theme Builder export (Color Match on), with slightly green surfaces; the default.
-     */
-    ThemeBuilder,
-
-    /**
-     * 同 [ThemeBuilder]，表面和文字换成 iOS 那种偏蓝的中性灰。
-     * Same as [ThemeBuilder], with the surfaces and text in iOS's bluish neutral gray.
-     */
-    ThemeBuilderIosGray,
-
-    /**
-     * 容器直接用品牌色、容器上的字接近黑（对比度最高），表面的绿比 [ThemeBuilder] 淡。
-     * Brand colors used as-is for containers with near-black content on them (the highest contrast), and surfaces
-     * less green than [ThemeBuilder].
-     */
-    SimulatedC;
-
-    /**
-     * 这套配色在浅色或深色下的 [ColorScheme]。
-     * This palette's [ColorScheme] in light or dark mode.
-     */
-    fun colorScheme(darkTheme: Boolean): ColorScheme {
-        return when (this) {
-            ThemeBuilder -> if (darkTheme) ThemeBuilderDarkColors else ThemeBuilderLightColors
-            ThemeBuilderIosGray -> if (darkTheme) ThemeBuilderIosGrayDarkColors else ThemeBuilderIosGrayLightColors
-            SimulatedC -> if (darkTheme) SimulatedCDarkColors else SimulatedCLightColors
-        }
+fun ColorPalette.colorScheme(darkTheme: Boolean): ColorScheme {
+    return when (this) {
+        ColorPalette.ThemeBuilder -> if (darkTheme) ThemeBuilderDarkColors else ThemeBuilderLightColors
+        ColorPalette.ThemeBuilderIosGray -> if (darkTheme) ThemeBuilderIosGrayDarkColors else ThemeBuilderIosGrayLightColors
+        ColorPalette.SimulatedC -> if (darkTheme) SimulatedCDarkColors else SimulatedCLightColors
     }
 }
 

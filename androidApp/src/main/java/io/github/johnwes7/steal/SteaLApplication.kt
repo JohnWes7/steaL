@@ -5,6 +5,7 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import io.github.johnwes7.steal.config.Config
 import io.github.johnwes7.steal.shared.di.AppContainer
+import io.github.johnwes7.steal.shared.services.createSettingsDataStore
 
 /**
  * 自定义的 `Application`：持有全 App 唯一的 [AppContainer]。
@@ -21,11 +22,24 @@ class SteaLApplication : Application() {
     /**
      * 全 App 共用的 Service 与 ViewModel 工厂；调试版打印 HTTP 请求与响应。
      * The services and view model factories the whole app shares; debug builds log HTTP requests and responses.
+     *
+     * 在 [onCreate] 里建好，比任何 Activity 都早，Activity 里可以直接读。
+     * Created in [onCreate], before any Activity exists, so activities can read it directly.
      */
-    val appContainer: AppContainer = AppContainer(
-        logsRequests = BuildConfig.DEBUG,
-        itadApiKey = Config.ITAD_API_KEY,
-    )
+    lateinit var appContainer: AppContainer
+        private set
+
+    override fun onCreate() {
+        super.onCreate()
+        // 要在 onCreate 里建，不能写成属性初始值：设置的 DataStore 要用 Context 找文件，属性初始化时 Context 还没准备好。
+        // Built in onCreate rather than as a property initializer: the settings DataStore needs the Context to find
+        // its file, and the Context isn't ready while properties initialize.
+        appContainer = AppContainer(
+            logsRequests = BuildConfig.DEBUG,
+            itadApiKey = Config.ITAD_API_KEY,
+            settingsDataStore = createSettingsDataStore(context = this),
+        )
+    }
 }
 
 /**
