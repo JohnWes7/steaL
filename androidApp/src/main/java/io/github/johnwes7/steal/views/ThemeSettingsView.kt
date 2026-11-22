@@ -11,6 +11,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import io.github.johnwes7.steal.R
 import io.github.johnwes7.steal.views.components.shared.PageBackButton
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
+import io.github.johnwes7.steal.views.components.shared.PageTopBarStyle
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -31,6 +32,7 @@ fun ThemeSettingsView(
         scrollState = listState,
         modifier = modifier,
         navigationIcon = { PageBackButton(onClick = onBack) },
+        topBarStyle = PageTopBarStyle.Collapsing,
     ) { contentPadding ->
         LazyColumn(
             state = listState,

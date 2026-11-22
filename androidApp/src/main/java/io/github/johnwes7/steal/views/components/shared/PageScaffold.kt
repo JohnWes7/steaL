@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -73,6 +75,26 @@ val LocalBarBlurSettings: ProvidableCompositionLocal<BarBlurSettings> =
 private const val BAR_FALLBACK_ALPHA = 0.95f
 
 /**
+ * [PageScaffold] 顶栏的样式。
+ * The style of [PageScaffold]'s top bar.
+ */
+enum class PageTopBarStyle {
+    /**
+     * 一行，高度随 header 撑开；tab 的根页面用，header 是 `PageHeaderView` 这类自带字号的大头部。
+     * One row whose height follows the header; for tab root screens, whose header is a large header with its own
+     * type sizes, such as `PageHeaderView`.
+     */
+    Small,
+
+    /**
+     * 两行：标题在返回箭头下面一行，内容往上滑时收成一行；推进来的页面用，header 是普通的 `Text`（字号由顶栏给）。
+     * Two rows: the title sits in a row below the back arrow and collapses into one row as content scrolls up; for
+     * pushed screens, whose header is a plain `Text` (the bar supplies its type sizes).
+     */
+    Collapsing,
+}
+
+/**
  * 页面的骨架：毛玻璃顶栏叠在内容上，[header] 放在顶栏的标题位，[navigationIcon] 放在标题左边。
  * The skeleton of a page: a frosted top bar over the content, with [header] in the bar's title slot and
  * [navigationIcon] before it.
@@ -88,6 +110,11 @@ private const val BAR_FALLBACK_ALPHA = 0.95f
  * content applies it inside the scroll (such as a list's contentPadding) so it passes behind both bars and its
  * last item still scrolls into view; static content applies it with an outer `Modifier.padding`. The top bar
  * changes color once [scrollState] leaves its start.
+ *
+ * [topBarStyle] 是 [PageTopBarStyle.Collapsing] 时顶栏靠嵌套滚动收起，下拉刷新拉动的距离也会被算进去，所以有下拉刷新的页面用
+ * [PageTopBarStyle.Small]。
+ * With [PageTopBarStyle.Collapsing] the bar collapses through nested scrolling, which also counts a pull-to-refresh
+ * drag, so screens with pull to refresh use [PageTopBarStyle.Small].
  */
 @Composable
 fun PageScaffold(
@@ -95,6 +122,7 @@ fun PageScaffold(
     scrollState: ScrollableState,
     modifier: Modifier = Modifier,
     navigationIcon: @Composable () -> Unit = {},
+    topBarStyle: PageTopBarStyle = PageTopBarStyle.Small,
     content: @Composable (contentPadding: PaddingValues) -> Unit,
 ) {
     // 1. 模糊的来源和顶栏的样式
@@ -110,25 +138,54 @@ fun PageScaffold(
     val sideInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
     val contentInsets = sideInsets.add(WindowInsets(bottom = tabBarHeight))
 
-    // 3. 内容铺满整页、顶栏叠在上面；没有 bottomBar 的 Scaffold 会把 contentInsets 的底部也算进给内容的 padding
-    // 3. Content fills the page under the top bar; a Scaffold without a bottomBar adds the bottom of contentInsets
+    // 3. 两行的顶栏要一个收起行为，并经嵌套滚动收到内容的滚动（官方 exitUntilCollapsed 示例的写法）
+    // 3. The two-row bar needs a collapse behavior that receives the content's scrolling through nested scroll
+    //    (as in the official exitUntilCollapsed sample)
+    val collapseBehavior = if (topBarStyle == PageTopBarStyle.Collapsing) {
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    } else {
+        null
+    }
+    val scaffoldModifier = if (collapseBehavior != null) {
+        modifier.nestedScroll(collapseBehavior.nestedScrollConnection)
+    } else {
+        modifier
+    }
+
+    // 4. 内容铺满整页、顶栏叠在上面；没有 bottomBar 的 Scaffold 会把 contentInsets 的底部也算进给内容的 padding
+    // 4. Content fills the page under the top bar; a Scaffold without a bottomBar adds the bottom of contentInsets
     //    to the padding it hands to content
     Scaffold(
-        modifier = modifier,
+        modifier = scaffoldModifier,
         topBar = {
-            // 底色由 barBackground 画（模糊层或实心色），顶栏自己透明。
-            // barBackground draws the background (blur or a solid color), so the bar itself is transparent.
-            TopAppBar(
-                title = header,
-                navigationIcon = navigationIcon,
-                modifier = Modifier.barBackground(
-                    isBlurEnabled = barBlurSettings.isEnabled,
-                    hazeState = hazeState,
-                    blurStyle = topBarBlurStyle,
-                    tint = topBarTint,
-                ),
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            // 底色由 barBackground 画（模糊层或实心色），顶栏自己透明；两行的顶栏收起时也会换容器色，所以两种都设透明。
+            // barBackground draws the background (blur or a solid color), so the bar itself is transparent; the
+            // two-row bar also switches container color as it collapses, so both colors are transparent.
+            val barModifier = Modifier.barBackground(
+                isBlurEnabled = barBlurSettings.isEnabled,
+                hazeState = hazeState,
+                blurStyle = topBarBlurStyle,
+                tint = topBarTint,
             )
+            val barColors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent,
+            )
+            when (topBarStyle) {
+                PageTopBarStyle.Small -> TopAppBar(
+                    title = header,
+                    navigationIcon = navigationIcon,
+                    modifier = barModifier,
+                    colors = barColors,
+                )
+                PageTopBarStyle.Collapsing -> MediumFlexibleTopAppBar(
+                    title = header,
+                    navigationIcon = navigationIcon,
+                    modifier = barModifier,
+                    colors = barColors,
+                    scrollBehavior = collapseBehavior,
+                )
+            }
         },
         contentWindowInsets = contentInsets,
     ) { innerPadding ->
