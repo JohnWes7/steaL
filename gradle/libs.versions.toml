@@ -19,6 +19,7 @@ kotlinxCoroutines = "1.11.0"
 ktor = "3.6.1"
 kermit = "2.2.0"
 coil = "3.6.3"
+haze = "2.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -64,6 +65,8 @@ kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
 # 网络图片：Coil 3 的 Compose 组件与 OkHttp 网络层（官方 Getting started 的 Android 写法）/ Network images: Coil 3 for Compose with its OkHttp network layer
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
+haze-blur = { group = "dev.chrisbanes.haze", name = "haze-blur", version.ref = "haze" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

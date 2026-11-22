@@ -69,6 +69,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.haze)
+    implementation(libs.haze.blur)
     implementation(libs.kotlinx.serialization.core)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
