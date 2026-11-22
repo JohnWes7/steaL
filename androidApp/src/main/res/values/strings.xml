@@ -31,11 +31,42 @@
 
     <!-- 通用操作 / Common actions -->
     <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_retry">Retry</string>
 
     <!-- 设置 / Settings -->
     <string name="settings_theme_and_color">Theme &amp; color</string>
+    <string name="settings_requires_android_12">Requires Android 12 or later</string>
+
+    <!-- 主题与色彩：外观 / Theme & color: appearance -->
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System default</string>
+    <string name="settings_theme_system_short">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_dynamic_color">Dynamic color</string>
+    <string name="settings_dynamic_color_summary">Use colors from your wallpaper</string>
+
+    <!-- 主题与色彩：调色板 / Theme & color: palette -->
+    <string name="settings_section_palette">Color palette</string>
+    <string name="settings_palette_unavailable">Unavailable while dynamic color is on</string>
+    <string name="settings_palette_theme_builder">Theme Builder</string>
+    <string name="settings_palette_ios_gray">iOS gray</string>
+    <string name="settings_palette_simulated_c">Simulated C</string>
+
+    <!-- 主题与色彩：毛玻璃 / Theme & color: frosted glass -->
+    <string name="settings_section_frosted_glass">Frosted glass</string>
+    <string name="settings_frosted_bars">Frosted bars</string>
+    <string name="settings_frosted_bars_summary">Blur content behind the top bar and navigation bar</string>
+    <string name="settings_frosted_bars_off_hint">Turn on frosted bars to adjust these</string>
+    <string name="settings_blur_radius">Blur radius</string>
+    <string name="settings_tint_opacity">Tint opacity</string>
+    <string name="settings_noise">Noise</string>
+    <string name="settings_value_dp">%1$d dp</string>
+    <string name="settings_value_percent">%1$d%%</string>
+    <string name="settings_reset_to_defaults">Reset to defaults</string>
 
     <!-- 加载失败，四种原因同 LoadError / Load failures, one per LoadError case -->
     <string name="load_error_offline_title">You\'re offline</string>
