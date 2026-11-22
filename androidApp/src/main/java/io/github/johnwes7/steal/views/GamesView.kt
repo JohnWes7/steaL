@@ -55,7 +55,7 @@ import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadState
 import io.github.johnwes7.steal.views.components.home.DealsSectionView
 import io.github.johnwes7.steal.views.components.home.GamesHeaderView
-import io.github.johnwes7.steal.views.components.shared.TabPageScaffold
+import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
@@ -122,7 +122,7 @@ private fun GamesContent(
     val listState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
 
-    TabPageScaffold(
+    PageScaffold(
         header = { GamesHeaderView() },
         scrollState = listState,
         modifier = modifier,

@@ -37,8 +37,8 @@ data object WishlistRoute : NavKey
 data object SalesRoute : NavKey
 
 /**
- * Profile tab 的根页面。
- * The root screen of the Profile tab.
+ * Settings tab 的根页面。
+ * The root screen of the Settings tab.
  */
 @Serializable
-data object ProfileRoute : NavKey
+data object SettingsRoute : NavKey

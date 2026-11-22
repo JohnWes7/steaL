@@ -6,7 +6,7 @@
     <string name="tab_search">Search</string>
     <string name="tab_wishlist">Wishlist</string>
     <string name="tab_sales">Sales</string>
-    <string name="tab_profile">Profile</string>
+    <string name="tab_settings">Settings</string>
 
     <!-- 首页顶栏 / Home header -->
     <string name="games_header_tagline">STEAM PRICE TRACKER</string>

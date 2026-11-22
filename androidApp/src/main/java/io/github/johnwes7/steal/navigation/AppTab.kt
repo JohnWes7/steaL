@@ -43,10 +43,10 @@ enum class AppTab(
         iconRes = R.drawable.calendar_month_24px,
         selectedIconRes = R.drawable.calendar_month_fill1_24px,
     ),
-    Profile(
-        route = ProfileRoute,
-        labelRes = R.string.tab_profile,
-        iconRes = R.drawable.person_24px,
-        selectedIconRes = R.drawable.person_fill1_24px,
+    Settings(
+        route = SettingsRoute,
+        labelRes = R.string.tab_settings,
+        iconRes = R.drawable.settings_24px,
+        selectedIconRes = R.drawable.settings_fill1_24px,
     ),
 }

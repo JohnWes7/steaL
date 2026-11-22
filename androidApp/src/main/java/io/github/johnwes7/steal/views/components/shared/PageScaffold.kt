@@ -43,23 +43,17 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  * The height of the tab bar (with the gesture bar below it), which tab pages leave clear at the bottom; 0 when
  * there is no tab bar, such as in previews.
  *
- * 页面一般不直接读它，而是用 [TabPageScaffold] 给的 contentPadding。
- * Pages normally don't read it directly; they use the contentPadding [TabPageScaffold] provides.
+ * 页面一般不直接读它，而是用 [PageScaffold] 给的 contentPadding。
+ * Pages normally don't read it directly; they use the contentPadding [PageScaffold] provides.
  */
 val LocalTabBarHeight: ProvidableCompositionLocal<Dp> = compositionLocalOf { 0.dp }
-
-/**
- * 顶栏的高度：放得下标语加字标两行的页面头部。
- * The top bar's height, fitting a two-line page header of tagline plus wordmark.
- */
-private val TOP_BAR_HEIGHT = 80.dp
 
 /**
  * 栏的模糊层上叠色的不透明度：越高越接近实心的栏，越低后面的内容颜色透得越多。
  * The opacity of the color over a bar's blur: higher looks closer to a solid bar, lower lets more of the content
  * behind show through.
  */
-private const val BAR_TINT_ALPHA = 0.8f
+private const val BAR_TINT_ALPHA = 0.1f
 
 /**
  * 不能模糊时（Android 11 及以下）栏的叠色不透明度，接近实心，保证栏上的字看得清。
@@ -69,8 +63,8 @@ private const val BAR_TINT_ALPHA = 0.8f
 private const val BAR_FALLBACK_ALPHA = 0.95f
 
 /**
- * tab 页的骨架：毛玻璃顶栏叠在内容上，[header] 放在顶栏的标题位。
- * The skeleton of a tab page: a frosted top bar over the content, with [header] in the bar's title slot.
+ * 页面的骨架：毛玻璃顶栏叠在内容上，[header] 放在顶栏的标题位。
+ * The skeleton of a page: a frosted top bar over the content, with [header] in the bar's title slot.
  *
  * [content] 收到的 contentPadding 含顶栏、tab 栏和横屏时左右刘海的留白：会滑动的内容把它加在滚动里面（如列表的
  * contentPadding），内容才会滚到两条栏后面、最后一项也滑得出来；不滑动的内容用外层 `Modifier.padding`。
@@ -81,7 +75,7 @@ private const val BAR_FALLBACK_ALPHA = 0.95f
  * changes color once [scrollState] leaves its start.
  */
 @Composable
-fun TabPageScaffold(
+fun PageScaffold(
     header: @Composable () -> Unit,
     scrollState: ScrollableState,
     modifier: Modifier = Modifier,
@@ -109,7 +103,6 @@ fun TabPageScaffold(
             TopAppBar(
                 title = header,
                 modifier = Modifier.hazeBlur(input = HazeInput.Backdrop(hazeState), style = topBarBlurStyle),
-                expandedHeight = TOP_BAR_HEIGHT,
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
@@ -137,13 +130,14 @@ fun TabPageScaffold(
  * (Android 11 and below) it uses a nearly solid [tint].
  */
 @Composable
-fun rememberBarBlurStyle(tint: State<Color>): HazeBlurStyle {
+fun rememberBarBlurStyle(tint: State<Color>, blurRadius: Dp = 20.dp): HazeBlurStyle {
     val backgroundColor = MaterialTheme.colorScheme.background
     return remember(backgroundColor, tint) {
         HazeBlurStyle {
             backgroundColor(backgroundColor)
             colorEffects(listOf(HazeColorEffect.tint(tint.value.copy(alpha = BAR_TINT_ALPHA))))
             fallbackColorEffect(HazeColorEffect.tint(tint.value.copy(alpha = BAR_FALLBACK_ALPHA)))
+            blurRadius(blurRadius)
         }
     }
 }
@@ -184,10 +178,10 @@ private fun rememberTopBarBlurStyle(scrollState: ScrollableState): HazeBlurStyle
 
 @Preview
 @Composable
-private fun TabPageScaffoldPreview() {
+private fun PageScaffoldPreview() {
     SteaLTheme(darkTheme = true) {
         val listState = rememberLazyListState()
-        TabPageScaffold(
+        PageScaffold(
             header = { Text(text = "Header") },
             scrollState = listState,
         ) { contentPadding ->

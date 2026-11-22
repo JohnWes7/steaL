@@ -32,9 +32,9 @@ import io.github.johnwes7.steal.config.Config
 import io.github.johnwes7.steal.navigation.AppTab
 import io.github.johnwes7.steal.navigation.GamesRoute
 import io.github.johnwes7.steal.navigation.Navigator
-import io.github.johnwes7.steal.navigation.ProfileRoute
 import io.github.johnwes7.steal.navigation.SalesRoute
 import io.github.johnwes7.steal.navigation.SearchRoute
+import io.github.johnwes7.steal.navigation.SettingsRoute
 import io.github.johnwes7.steal.navigation.WishlistRoute
 import io.github.johnwes7.steal.navigation.rememberNavigationState
 import io.github.johnwes7.steal.shared.di.AppContainer
@@ -74,7 +74,7 @@ fun MainTabView() {
             is SearchRoute -> NavEntry(key) { SearchView() }
             is WishlistRoute -> NavEntry(key) { WishlistView() }
             is SalesRoute -> NavEntry(key) { SaleEventsView() }
-            is ProfileRoute -> NavEntry(key) { ProfileView() }
+            is SettingsRoute -> NavEntry(key) { SettingsView() }
             // 漏写页面时直接崩溃，开发时立刻发现（同官方 entryProvider DSL 的默认 fallback）。
             // Crash on a missing screen so it shows up during development (same as the DSL's default fallback).
             else -> error("Unknown route: $key")
@@ -101,8 +101,8 @@ fun MainTabView() {
         },
     ) { innerPadding ->
         val entries = navigationState.toDecoratedEntries(entryProvider)
-        // 页面不垫高，由 TabPageScaffold 按 LocalTabBarHeight 在内容底部让出 tab 栏。
-        // Pages aren't padded here; TabPageScaffold clears the tab bar at the bottom of the content using
+        // 页面不垫高，由 PageScaffold 按 LocalTabBarHeight 在内容底部让出 tab 栏。
+        // Pages aren't padded here; PageScaffold clears the tab bar at the bottom of the content using
         // LocalTabBarHeight.
         CompositionLocalProvider(LocalTabBarHeight provides innerPadding.calculateBottomPadding()) {
             NavDisplay(
