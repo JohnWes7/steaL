@@ -27,8 +27,12 @@
     <string name="price_free">Free</string>
 
     <!-- 通用操作 / Common actions -->
+    <string name="action_back">Back</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_retry">Retry</string>
+
+    <!-- 设置 / Settings -->
+    <string name="settings_theme_and_color">Theme &amp; color</string>
 
     <!-- 加载失败，四种原因同 LoadError / Load failures, one per LoadError case -->
     <string name="load_error_offline_title">You\'re offline</string>

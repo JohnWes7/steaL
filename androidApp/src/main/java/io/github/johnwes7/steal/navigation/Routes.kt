@@ -42,3 +42,10 @@ data object SalesRoute : NavKey
  */
 @Serializable
 data object SettingsRoute : NavKey
+
+/**
+ * 「主题与色彩」设置页，从 Settings 根页面推入。
+ * The "Theme & color" settings screen, pushed from the Settings root screen.
+ */
+@Serializable
+data object ThemeSettingsRoute : NavKey

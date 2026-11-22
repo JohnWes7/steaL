@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -26,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -36,6 +40,7 @@ import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import io.github.johnwes7.steal.R
 import io.github.johnwes7.steal.shared.models.settings.BarBlurSettings
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
@@ -68,8 +73,13 @@ val LocalBarBlurSettings: ProvidableCompositionLocal<BarBlurSettings> =
 private const val BAR_FALLBACK_ALPHA = 0.95f
 
 /**
- * 页面的骨架：毛玻璃顶栏叠在内容上，[header] 放在顶栏的标题位。
- * The skeleton of a page: a frosted top bar over the content, with [header] in the bar's title slot.
+ * 页面的骨架：毛玻璃顶栏叠在内容上，[header] 放在顶栏的标题位，[navigationIcon] 放在标题左边。
+ * The skeleton of a page: a frosted top bar over the content, with [header] in the bar's title slot and
+ * [navigationIcon] before it.
+ *
+ * 推进来的页面要自己传返回箭头（Material 的顶栏不会像 iOS 那样自动加）；tab 的根页面不传。
+ * Pushed screens pass their own back arrow (Material's top bar doesn't add one the way iOS does); tab root screens
+ * pass nothing.
  *
  * [content] 收到的 contentPadding 含顶栏、tab 栏和横屏时左右刘海的留白：会滑动的内容把它加在滚动里面（如列表的
  * contentPadding），内容才会滚到两条栏后面、最后一项也滑得出来；不滑动的内容用外层 `Modifier.padding`。
@@ -84,6 +94,7 @@ fun PageScaffold(
     header: @Composable () -> Unit,
     scrollState: ScrollableState,
     modifier: Modifier = Modifier,
+    navigationIcon: @Composable () -> Unit = {},
     content: @Composable (contentPadding: PaddingValues) -> Unit,
 ) {
     // 1. 模糊的来源和顶栏的样式
@@ -109,6 +120,7 @@ fun PageScaffold(
             // barBackground draws the background (blur or a solid color), so the bar itself is transparent.
             TopAppBar(
                 title = header,
+                navigationIcon = navigationIcon,
                 modifier = Modifier.barBackground(
                     isBlurEnabled = barBlurSettings.isEnabled,
                     hazeState = hazeState,
@@ -129,6 +141,20 @@ fun PageScaffold(
         ) {
             content(innerPadding)
         }
+    }
+}
+
+/**
+ * 推进来的页面顶栏左边的返回箭头，传给 [PageScaffold] 的 navigationIcon。
+ * The back arrow at the start of a pushed screen's top bar, passed to [PageScaffold]'s navigationIcon.
+ */
+@Composable
+fun PageBackButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            painter = painterResource(R.drawable.arrow_back_24px),
+            contentDescription = stringResource(R.string.action_back),
+        )
     }
 }
 
