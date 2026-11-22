@@ -1,13 +1,18 @@
 package io.github.johnwes7.steal.shared.di
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.johnwes7.steal.shared.services.ItadApi
+import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamApi
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
 import io.github.johnwes7.steal.shared.services.createHttpClient
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
+import io.github.johnwes7.steal.shared.viewmodels.RootViewModel
+import io.github.johnwes7.steal.shared.viewmodels.ThemeSettingsViewModel
 import io.ktor.client.HttpClient
 
 /**
@@ -18,11 +23,17 @@ import io.ktor.client.HttpClient
  * The platform entry point creates exactly one (in `SteaLApplication` on Android): every instance brings its own
  * HTTP client and set of services.
  *
- * [logsRequests] 决定是否打印 HTTP 请求与响应，调试版传 `true`；[itadApiKey] 由平台从自己的配置读出来传入。
+ * [logsRequests] 决定是否打印 HTTP 请求与响应，调试版传 `true`；[itadApiKey] 由平台从自己的配置读出来传入；
+ * [settingsDataStore] 由平台建好传入（文件放在哪里各平台不同），容器只用这一份。
  * [logsRequests] decides whether HTTP requests and responses are logged (debug builds pass `true`); the platform
- * reads [itadApiKey] from its own configuration.
+ * reads [itadApiKey] from its own configuration; the platform creates [settingsDataStore] (where the file lives
+ * differs per platform), and the container uses only that one.
  */
-class AppContainer(logsRequests: Boolean, itadApiKey: String) {
+class AppContainer(
+    logsRequests: Boolean,
+    itadApiKey: String,
+    settingsDataStore: DataStore<Preferences>,
+) {
 
     /**
      * 所有 Service 共用的 HTTP 客户端，连接可以复用。
@@ -49,12 +60,38 @@ class AppContainer(logsRequests: Boolean, itadApiKey: String) {
     val steamAppIDResolver: SteamAppIDResolver = SteamAppIDResolver(itadApi = itadApi, steamApi = steamApi)
 
     /**
+     * 用户设置的读写。
+     * Reads and writes the user's settings.
+     */
+    val settingsRepository: SettingsRepository = SettingsRepository(dataStore = settingsDataStore)
+
+    /**
+     * App 最外层 [RootViewModel] 的工厂，交给平台入口。
+     * The factory for the app's outermost [RootViewModel], used by the platform entry point.
+     */
+    val rootViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            RootViewModel(settingsRepository = settingsRepository)
+        }
+    }
+
+    /**
      * 首页 [GamesViewModel] 的工厂，交给页面的 `viewModel(factory = …)`。
      * The factory for the home page's [GamesViewModel], passed to the page's `viewModel(factory = …)`.
      */
     val gamesViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         initializer {
             GamesViewModel(itadApi = itadApi, steamAppIDResolver = steamAppIDResolver)
+        }
+    }
+
+    /**
+     * 「主题与色彩」设置页 [ThemeSettingsViewModel] 的工厂。
+     * The factory for the "Theme & color" settings screen's [ThemeSettingsViewModel].
+     */
+    val themeSettingsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            ThemeSettingsViewModel(settingsRepository = settingsRepository)
         }
     }
 }

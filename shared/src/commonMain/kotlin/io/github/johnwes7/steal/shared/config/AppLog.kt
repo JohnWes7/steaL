@@ -41,4 +41,10 @@ object AppLog {
      * The home page, Hot Deals included: failures loading deals and giveaways or resolving appIDs.
      */
     val games: Logger = Logger.withTag("Games")
+
+    /**
+     * 设置：读写存储的失败。
+     * Settings: failures reading or writing storage.
+     */
+    val settings: Logger = Logger.withTag("Settings")
 }
