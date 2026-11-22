@@ -22,20 +22,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.computedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import io.github.johnwes7.steal.shared.models.settings.BarBlurSettings
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -49,11 +50,15 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
 val LocalTabBarHeight: ProvidableCompositionLocal<Dp> = compositionLocalOf { 0.dp }
 
 /**
- * 栏的模糊层上叠色的不透明度：越高越接近实心的栏，越低后面的内容颜色透得越多。
- * The opacity of the color over a bar's blur: higher looks closer to a solid bar, lower lets more of the content
- * behind show through.
+ * 顶栏和 tab 栏的毛玻璃设置，由 App 最外层按用户设置提供；没提供时（如预览）是默认值。
+ * The frosted glass settings for the top bar and tab bar, provided at the app's root from the user's settings;
+ * the defaults when nothing provides it, such as in previews.
+ *
+ * 只有画栏的地方读它（[PageScaffold] 的顶栏、`MainTabView` 的 tab 栏），页面不读。
+ * Only the code that draws the bars reads it ([PageScaffold]'s top bar and `MainTabView`'s tab bar); pages don't.
  */
-private const val BAR_TINT_ALPHA = 0.1f
+val LocalBarBlurSettings: ProvidableCompositionLocal<BarBlurSettings> =
+    compositionLocalOf { BarBlurSettings.DEFAULT }
 
 /**
  * 不能模糊时（Android 11 及以下）栏的叠色不透明度，接近实心，保证栏上的字看得清。
@@ -84,7 +89,9 @@ fun PageScaffold(
     // 1. 模糊的来源和顶栏的样式
     // 1. The blur source and the top bar's style
     val hazeState = rememberHazeState()
-    val topBarBlurStyle = rememberTopBarBlurStyle(scrollState = scrollState)
+    val barBlurSettings = LocalBarBlurSettings.current
+    val topBarTint = rememberTopBarTint(scrollState = scrollState)
+    val topBarBlurStyle = rememberBarBlurStyle(tint = topBarTint, settings = barBlurSettings)
 
     // 2. 内容要让开的：tab 栏和横屏时左右的刘海；顶栏的高度 Scaffold 自己会算进去
     // 2. What content must clear: the tab bar and side cutouts in landscape; Scaffold adds the top bar itself
@@ -98,11 +105,16 @@ fun PageScaffold(
     Scaffold(
         modifier = modifier,
         topBar = {
-            // 底色由模糊层画，顶栏自己透明。
-            // The blur layer draws the background, so the bar itself is transparent.
+            // 底色由 barBackground 画（模糊层或实心色），顶栏自己透明。
+            // barBackground draws the background (blur or a solid color), so the bar itself is transparent.
             TopAppBar(
                 title = header,
-                modifier = Modifier.hazeBlur(input = HazeInput.Backdrop(hazeState), style = topBarBlurStyle),
+                modifier = Modifier.barBackground(
+                    isBlurEnabled = barBlurSettings.isEnabled,
+                    hazeState = hazeState,
+                    blurStyle = topBarBlurStyle,
+                    tint = topBarTint,
+                ),
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
@@ -121,31 +133,57 @@ fun PageScaffold(
 }
 
 /**
- * 栏（顶栏、tab 栏）的毛玻璃样式：页面底色打底，模糊的内容上半透明地叠一层 [tint]。
+ * 栏（顶栏、tab 栏）的毛玻璃样式：页面底色打底，模糊的内容上半透明地叠一层 [tint]；半径、叠色、噪点来自 [settings]。
  * A bar's frosted style (top bar or tab bar): the page background underneath, with [tint] laid translucently over
- * the blurred content.
+ * the blurred content; the radius, tint opacity and noise come from [settings].
  *
  * 样式里读的是 [tint] 的当前值，颜色变化时 Haze 直接重画、不用重组；不能模糊时（Android 11 及以下）用接近实心的 [tint]。
  * The style reads [tint]'s current value, so Haze redraws on color changes without recomposing; without blur
  * (Android 11 and below) it uses a nearly solid [tint].
  */
 @Composable
-fun rememberBarBlurStyle(tint: State<Color>, blurRadius: Dp = 20.dp): HazeBlurStyle {
+fun rememberBarBlurStyle(tint: State<Color>, settings: BarBlurSettings): HazeBlurStyle {
     val backgroundColor = MaterialTheme.colorScheme.background
-    return remember(backgroundColor, tint, blurRadius) {
+    return remember(backgroundColor, tint, settings) {
+        // 设置里存的是整数（dp 和百分数），换成 Haze 要的单位。
+        // Settings store whole numbers (dp and percentages); convert them to the units Haze takes.
+        val blurRadius = settings.radiusDp.dp
+        val tintAlpha = settings.tintPercent / 100f
+        val noiseFactor = settings.noisePercent / 100f
         HazeBlurStyle {
             backgroundColor(backgroundColor)
-            colorEffects(listOf(HazeColorEffect.tint(tint.value.copy(alpha = BAR_TINT_ALPHA))))
+            colorEffects(listOf(HazeColorEffect.tint(tint.value.copy(alpha = tintAlpha))))
             fallbackColorEffect(HazeColorEffect.tint(tint.value.copy(alpha = BAR_FALLBACK_ALPHA)))
             blurRadius(blurRadius)
+            noiseFactor(noiseFactor)
         }
     }
 }
 
 /**
- * 顶栏的毛玻璃样式：内容在顶部时叠色和页面底色一样，滚到顶栏下面后换成导航栏那一层的灰。
- * The top bar's frosted style: the tint matches the page background while content is at its start, then turns
- * the navigation bar's gray once content scrolls under the bar.
+ * 栏的背景：[isBlurEnabled] 时模糊 [hazeState] 里的内容（样式 [blurStyle]），关掉时画实心的 [tint]。
+ * A bar's background: blurs the content in [hazeState] with [blurStyle] when [isBlurEnabled], or draws a solid
+ * [tint] when it is off.
+ *
+ * 实心色在绘制阶段读 [tint]，颜色渐变时只重画、不重组。
+ * The solid color reads [tint] in the draw phase, so a color fade only redraws without recomposing.
+ */
+fun Modifier.barBackground(
+    isBlurEnabled: Boolean,
+    hazeState: HazeState,
+    blurStyle: HazeBlurStyle,
+    tint: State<Color>,
+): Modifier {
+    if (isBlurEnabled) {
+        return this.hazeBlur(input = HazeInput.Backdrop(hazeState), style = blurStyle)
+    }
+    return this.drawBehind { drawRect(color = tint.value) }
+}
+
+/**
+ * 顶栏的叠色：内容在顶部时和页面底色一样，滚到顶栏下面后换成导航栏那一层的灰。
+ * The top bar's tint: the page background while content is at its start, then the navigation bar's gray once
+ * content scrolls under the bar.
  *
  * 「滚到下面」直接看 [scrollState] 能不能往回滚，不用 `TopAppBarDefaults.pinnedScrollBehavior`：
  * 它把下拉刷新拉动的距离也算成滚动，松手后顶栏一直停在滚动后的颜色。
@@ -154,7 +192,7 @@ fun rememberBarBlurStyle(tint: State<Color>, blurRadius: Dp = 20.dp): HazeBlurSt
  * its scrolled color after release.
  */
 @Composable
-private fun rememberTopBarBlurStyle(scrollState: ScrollableState): HazeBlurStyle {
+private fun rememberTopBarTint(scrollState: ScrollableState): State<Color> {
     // 1. 内容有没有滚到顶栏下面
     // 1. Whether content has scrolled under the top bar
     val isScrolledUnder = scrollState.canScrollBackward
@@ -163,15 +201,11 @@ private fun rememberTopBarBlurStyle(scrollState: ScrollableState): HazeBlurStyle
     // 2. The tint, fading between colors (the same animation Material TopAppBar uses for its own color change)
     val colorScheme = MaterialTheme.colorScheme
     val targetTint = if (isScrolledUnder) colorScheme.surfaceContainer else colorScheme.background
-    val tint = animateColorAsState(
+    return animateColorAsState(
         targetValue = targetTint,
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "topBarTint",
     )
-
-    // 3. 建样式
-    // 3. Build the style
-    return rememberBarBlurStyle(tint = tint)
 }
 
 @Preview

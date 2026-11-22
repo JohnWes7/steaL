@@ -20,6 +20,7 @@ import io.github.johnwes7.steal.shared.models.settings.AppTheme
 import io.github.johnwes7.steal.shared.viewmodels.RootViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RootViewModel.SettingsLoadState
 import io.github.johnwes7.steal.views.MainTabView
+import io.github.johnwes7.steal.views.components.shared.LocalBarBlurSettings
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -78,10 +79,14 @@ class MainActivity : ComponentActivity() {
                     applyNightMode(theme = settings.theme)
                 }
 
-                // 在根上放一次，所有页面都能读到，同 SwiftUI 在 RootView 上 .environment(...)。
-                // Provided once at the root so every screen can read it, like .environment(...) on SwiftUI's
-                // RootView.
-                CompositionLocalProvider(LocalAppContainer provides appContainer) {
+                // 在根上放一次，下面都能读到，同 SwiftUI 在 RootView 上 .environment(...)：容器给页面取 ViewModel，
+                // 毛玻璃设置给两条栏。
+                // Provided once at the root for everything below, like .environment(...) on SwiftUI's RootView: the
+                // container lets screens get their view models, and the blur settings reach both bars.
+                CompositionLocalProvider(
+                    LocalAppContainer provides appContainer,
+                    LocalBarBlurSettings provides settings.barBlur,
+                ) {
                     SteaLTheme(
                         darkTheme = darkTheme,
                         palette = settings.palette,

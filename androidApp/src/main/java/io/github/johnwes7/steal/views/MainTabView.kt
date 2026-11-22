@@ -24,8 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
-import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import io.github.johnwes7.steal.LocalAppContainer
@@ -40,7 +38,9 @@ import io.github.johnwes7.steal.navigation.WishlistRoute
 import io.github.johnwes7.steal.navigation.rememberNavigationState
 import io.github.johnwes7.steal.shared.di.AppContainer
 import io.github.johnwes7.steal.shared.services.createSettingsDataStore
+import io.github.johnwes7.steal.views.components.shared.LocalBarBlurSettings
 import io.github.johnwes7.steal.views.components.shared.LocalTabBarHeight
+import io.github.johnwes7.steal.views.components.shared.barBackground
 import io.github.johnwes7.steal.views.components.shared.rememberBarBlurStyle
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
@@ -83,11 +83,13 @@ fun MainTabView() {
         }
     }
 
-    // tab 栏是毛玻璃：页面铺满到 tab 栏后面，tab 栏模糊它后面的页面。
-    // The tab bar is frosted: pages extend behind it and the bar blurs the page underneath.
+    // tab 栏是毛玻璃：页面铺满到 tab 栏后面，tab 栏模糊它后面的页面；用户关掉毛玻璃时是实心的叠色。
+    // The tab bar is frosted: pages extend behind it and the bar blurs the page underneath; a solid tint when the
+    // user turns frosting off.
     val hazeState = rememberHazeState()
+    val barBlurSettings = LocalBarBlurSettings.current
     val tabBarTint = rememberUpdatedState(MaterialTheme.colorScheme.surfaceContainer)
-    val tabBarBlurStyle = rememberBarBlurStyle(tint = tabBarTint)
+    val tabBarBlurStyle = rememberBarBlurStyle(tint = tabBarTint, settings = barBlurSettings)
 
     // 页面自己处理顶部系统栏的留白，所以 Scaffold 不加系统栏的内容边距。
     // Screens handle the top system bar themselves, so Scaffold adds no system bar insets to the content.
@@ -98,7 +100,12 @@ fun MainTabView() {
                 tabs = tabs,
                 selectedRoute = navigationState.topLevelRoute,
                 onSelect = { route -> navigator.navigate(route) },
-                modifier = Modifier.hazeBlur(input = HazeInput.Backdrop(hazeState), style = tabBarBlurStyle),
+                modifier = Modifier.barBackground(
+                    isBlurEnabled = barBlurSettings.isEnabled,
+                    hazeState = hazeState,
+                    blurStyle = tabBarBlurStyle,
+                    tint = tabBarTint,
+                ),
             )
         },
     ) { innerPadding ->
