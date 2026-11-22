@@ -142,59 +142,32 @@ private fun GamesContent(
             ),
             scrollBehavior = scrollBehavior,
         )
-        GamesList(
-            dealState = dealState,
-            giveawaysState = giveawaysState,
+        PullToRefreshBox(
             isRefreshing = isRefreshing,
-            region = region,
-            onSelectRegion = onSelectRegion,
             onRefresh = onRefresh,
-            onOpenHotDeals = onOpenHotDeals,
-            onSelectDeal = onSelectDeal,
-            onRetryDeals = onRetryDeals,
-            onRetryGiveaways = onRetryGiveaways,
-            modifier = Modifier.windowInsetsPadding(sideInsets),
-        )
-    }
-}
-
-@Composable
-private fun GamesList(
-    dealState: DealLoadState,
-    giveawaysState: GiveawaysLoadState,
-    isRefreshing: Boolean,
-    region: AppRegion,
-    onSelectRegion: (AppRegion) -> Unit,
-    onRefresh: () -> Unit,
-    onOpenHotDeals: () -> Unit,
-    onSelectDeal: (HomeDealItem) -> Unit,
-    onRetryDeals: () -> Unit,
-    onRetryGiveaways: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        modifier = modifier.fillMaxSize(),
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .windowInsetsPadding(sideInsets)
+                .fillMaxSize(),
         ) {
-            item(key = "hotDealsHeader") {
-                HotDealsHeader(onClick = onOpenHotDeals)
-            }
-            item(key = "deals") {
-                DealsSectionView(state = dealState, onSelect = onSelectDeal, onRetry = onRetryDeals)
-            }
-            item(key = "debug") {
-                DebugSection(
-                    region = region,
-                    onSelectRegion = onSelectRegion,
-                    giveawaysState = giveawaysState,
-                    onRetryGiveaways = onRetryGiveaways,
-                )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                item(key = "hotDealsHeader") {
+                    HotDealsHeader(onClick = onOpenHotDeals)
+                }
+                item(key = "deals") {
+                    DealsSectionView(state = dealState, onSelect = onSelectDeal, onRetry = onRetryDeals)
+                }
+                item(key = "debug") {
+                    DebugSection(
+                        region = region,
+                        onSelectRegion = onSelectRegion,
+                        giveawaysState = giveawaysState,
+                        onRetryGiveaways = onRetryGiveaways,
+                    )
+                }
             }
         }
     }
