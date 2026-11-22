@@ -14,6 +14,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.views.components.shared.PageHeaderView
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
@@ -32,7 +33,7 @@ fun SettingsView(
 ) {
     val listState = rememberLazyListState()
     PageScaffold(
-        header = { Text(text = stringResource(R.string.tab_settings)) },
+        header = { PageHeaderView(title = stringResource(R.string.tab_settings)) },
         scrollState = listState,
         modifier = modifier,
     ) { contentPadding ->

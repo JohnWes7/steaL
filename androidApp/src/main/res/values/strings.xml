@@ -11,6 +11,9 @@
     <!-- 首页顶栏 / Home header -->
     <string name="games_header_tagline">STEAM PRICE TRACKER</string>
 
+    <!-- 其他 tab 根页面的顶栏 / Header on the other tab root screens -->
+    <string name="page_header_tagline">STEAL</string>
+
     <!-- 首页 Hot Deals / Home: Hot Deals -->
     <string name="hot_deals_title">Hot deals</string>
     <string name="hot_deals_open_label">Show all hot deals</string>
