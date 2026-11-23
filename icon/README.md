@@ -10,6 +10,11 @@ icon/
     3-percent.svg    % 号（深绿 #14301C 描边，用图形画、不依赖字体）
   AppIcon.icon/    Icon Composer 文档包（iOS），和 iosApp/steaL/AppIcon.icon 保持一致
   preview.svg      带背景和圆角的平面合成图，只用来看布局，不是最终效果
+  android/         Android 自适应图标的三层（由 generate.py 生成，不要手改）
+    generate.py      python3 icon/android/generate.py
+    background.svg   铺满 108dp 的渐变
+    foreground.svg   蒸汽 + 标签 + %，缩放到中间直径 60dp 的圆（安全区是 66dp）
+    monochrome.svg   主题图标用的单色层：白色剪影，绳孔和 % 号挖空
 ```
 
 | 项目 | 值 |
@@ -31,6 +36,17 @@ icon/
    `cp iosApp/steaL/AppIcon.icon/icon.json icon/AppIcon.icon/`。
 4. `preview.svg` 是手写的合成图，图层或位置改了要手动跟着改（蒸汽组的 `translate(0 -25)` 对应 `icon.json` 的上移）。
 5. 重新导出 App 内的图标快照（见下面「App 内显示的图标副本」）。
+
+## Android 自适应图标
+
+Android 不用 Icon Composer 的渲染结果（Liquid Glass 和 iOS 圆角会画死在图里），直接从图层几何生成三层 SVG：
+三层都是 108×108dp，启动器只露出中间 72dp，**图形要放进中间直径 66dp 的圆**（[Adaptive icons](https://developer.android.com/develop/ui/views/launch/icon_design_adaptive)：
+「It must not exceed 66x66 dp」）。启动画面只露出中间 2/3（[Splash screen](https://developer.android.com/develop/ui/views/launch/splash-screen)），比 66dp 宽松。
+
+- `generate.py` 里抄了 `layers/*.svg` 的几何（含蒸汽上移 25），**改了图层要同步改脚本里的常量**，再重新生成。
+- 输出只用 path / 线性渐变 / evenodd 挖洞，不用 `mask` 和 `transform`：VectorDrawable 不支持 mask。
+  标签的绳孔、单色层里的 % 号都是 evenodd 的子路径；% 号的斜杠挖空用圆头胶囊的轮廓。
+- `SAFE_RADIUS_DP` 是图形外接圆的半径（dp）：33 = 用满安全区；现在是 30，和 iOS 图标里图形占的比例一样（2026-11-23 用户从两种大小里选的）。
 
 ## 命令行渲染（不用开 Icon Composer）
 
