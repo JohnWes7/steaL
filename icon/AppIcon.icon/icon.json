@@ -20,8 +20,15 @@
       "layers" : [
         {
           "glass" : false,
-          "image-name" : "1-steam 2.svg",
-          "name" : "1-steam 2"
+          "image-name" : "1-steam.svg",
+          "name" : "1-steam",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -25
+            ]
+          }
         }
       ],
       "shadow" : {
@@ -56,6 +63,7 @@
       "layers" : [
         {
           "glass" : false,
+          "hidden" : false,
           "image-name" : "2-tag.svg",
           "name" : "2-tag"
         }

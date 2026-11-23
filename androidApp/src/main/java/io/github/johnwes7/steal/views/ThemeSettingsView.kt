@@ -21,7 +21,6 @@ import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
@@ -49,6 +48,7 @@ import io.github.johnwes7.steal.shared.viewmodels.ThemeSettingsViewModel
 import io.github.johnwes7.steal.views.components.settings.BarBlurSliders
 import io.github.johnwes7.steal.views.components.settings.PaletteSwatch
 import io.github.johnwes7.steal.views.components.settings.SettingsSectionHeader
+import io.github.johnwes7.steal.views.components.settings.SwitchSegmentedListItem
 import io.github.johnwes7.steal.views.components.shared.PageBackButton
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.components.shared.PageTopBarStyle
@@ -160,7 +160,7 @@ fun ThemeSettingsContent(
     val isPaletteEnabled = !isDynamicColorOn
     val areBlurValuesEnabled = supportsBlur && settings.barBlur.isEnabled
     val canResetBlur = areBlurValuesEnabled && !settings.barBlur.hasDefaultValues()
-    val itemColors = settingsItemColors()
+    val segmentedListItemColors = settingsItemColors()
     val groupModifier = Modifier.padding(horizontal = 16.dp)
     val groupArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
 
@@ -175,10 +175,11 @@ fun ThemeSettingsContent(
         // Appearance: light / dark / system, and dynamic color
         item {
             SettingsSectionHeader(title = stringResource(R.string.settings_section_appearance))
+            
             Column(modifier = groupModifier, verticalArrangement = groupArrangement) {
                 SegmentedListItem(
                     shapes = ListItemDefaults.segmentedShapes(index = 0, count = 2),
-                    colors = itemColors,
+                    colors = segmentedListItemColors,
                 ) {
                     Column {
                         Text(text = stringResource(R.string.settings_theme))
@@ -186,7 +187,7 @@ fun ThemeSettingsContent(
                         ThemeButtonGroup(selected = settings.theme, onSelect = callbacks.onThemeChange)
                     }
                 }
-                SwitchSettingItem(
+                SwitchSegmentedListItem(
                     title = stringResource(R.string.settings_dynamic_color),
                     summary = availableSummary(
                         isSupported = supportsDynamicColor,
@@ -195,8 +196,8 @@ fun ThemeSettingsContent(
                     checked = isDynamicColorOn,
                     enabled = supportsDynamicColor,
                     onCheckedChange = callbacks.onDynamicColorChange,
-                    index = 1,
-                    count = 2,
+                    shapes = ListItemDefaults.segmentedShapes(index = 1, count = 2),
+                    colors = segmentedListItemColors,
                 )
             }
         }
@@ -205,6 +206,7 @@ fun ThemeSettingsContent(
         // Palette: disabled while dynamic color is on
         item {
             SettingsSectionHeader(title = stringResource(R.string.settings_section_palette))
+            
             Column(modifier = groupModifier) {
                 val unavailableReason = stringResource(R.string.settings_palette_unavailable)
                 val supportingContent: (@Composable () -> Unit)? = if (isPaletteEnabled) {
@@ -214,7 +216,7 @@ fun ThemeSettingsContent(
                 }
                 SegmentedListItem(
                     shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
-                    colors = itemColors,
+                    colors = segmentedListItemColors,
                     enabled = isPaletteEnabled,
                     supportingContent = supportingContent,
                 ) {
@@ -231,8 +233,10 @@ fun ThemeSettingsContent(
         // Frosted glass: the master switch, three sliders and reset
         item {
             SettingsSectionHeader(title = stringResource(R.string.settings_section_frosted_glass))
+            
             Column(modifier = groupModifier, verticalArrangement = groupArrangement) {
-                SwitchSettingItem(
+                
+                SwitchSegmentedListItem(
                     title = stringResource(R.string.settings_frosted_bars),
                     summary = availableSummary(
                         isSupported = supportsBlur,
@@ -241,9 +245,10 @@ fun ThemeSettingsContent(
                     checked = settings.barBlur.isEnabled,
                     enabled = supportsBlur,
                     onCheckedChange = callbacks.onBarBlurEnabledChange,
-                    index = 0,
-                    count = 3,
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 3),
+                    colors = segmentedListItemColors,
                 )
+                
                 // 系统不支持模糊时原因已写在开关上；这里只在开关关着时提示先打开。
                 // When the system can't blur, the switch already says why; this only hints to turn the switch on.
                 val offHint = stringResource(R.string.settings_frosted_bars_off_hint)
@@ -253,9 +258,11 @@ fun ThemeSettingsContent(
                 } else {
                     null
                 }
+                
+                // three sliders: radius, tint, noise; only call the callbacks when the user releases the slider
                 SegmentedListItem(
                     shapes = ListItemDefaults.segmentedShapes(index = 1, count = 3),
-                    colors = itemColors,
+                    colors = segmentedListItemColors,
                     enabled = areBlurValuesEnabled,
                     supportingContent = slidersSupportingContent,
                 ) {
@@ -267,10 +274,12 @@ fun ThemeSettingsContent(
                         onNoiseChange = callbacks.onBarBlurNoiseChange,
                     )
                 }
+                
+                // reset
                 SegmentedListItem(
                     onClick = callbacks.onResetBarBlur,
                     shapes = ListItemDefaults.segmentedShapes(index = 2, count = 3),
-                    colors = itemColors,
+                    colors = segmentedListItemColors,
                     enabled = canResetBlur,
                 ) {
                     Text(text = stringResource(R.string.settings_reset_to_defaults))
@@ -314,38 +323,6 @@ private fun availableSummary(isSupported: Boolean, summary: String): String {
         return summary
     }
     return stringResource(R.string.settings_requires_android_12)
-}
-
-/**
- * 带开关的一行：点整行切换，右边的 `Switch` 只显示状态。
- * A row with a switch: tapping anywhere in the row toggles it, and the `Switch` on the right only shows the state.
- *
- * 用 `onClick` 重载而不是 `checked` 重载：后者是给多选列表的，打开时整行会换成选中的容器色。
- * Uses the `onClick` overload rather than the `checked` one, which is meant for multi-select lists and turns the
- * whole row the selected container color when on.
- */
-@Composable
-private fun SwitchSettingItem(
-    title: String,
-    summary: String,
-    checked: Boolean,
-    enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    index: Int,
-    count: Int,
-) {
-    SegmentedListItem(
-        onClick = { onCheckedChange(!checked) },
-        shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
-        colors = settingsItemColors(),
-        enabled = enabled,
-        supportingContent = { Text(text = summary) },
-        trailingContent = {
-            Switch(checked = checked, onCheckedChange = null, enabled = enabled)
-        },
-    ) {
-        Text(text = title)
-    }
 }
 
 /**
