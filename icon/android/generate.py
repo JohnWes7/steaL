@@ -1,5 +1,6 @@
-"""生成 Android 自适应图标的三层（background / foreground / monochrome）：
-icon/android/ 下的 SVG（看效果用）和 androidApp 的 VectorDrawable（res/drawable/ic_launcher_*.xml）。
+"""生成 Android 图标：自适应图标的三层（background / foreground / monochrome）、Android 7.x 的位图。
+输出 icon/android/ 下的 SVG（看效果用）、androidApp 的 VectorDrawable（res/drawable/ic_launcher_*.xml）
+和 res/mipmap-*dpi/ic_launcher.png（用本机 Chrome 无界面模式渲染，要装 Google Chrome）。
 
 几何数据抄自 icon/layers/*.svg（1024 画布），加上 icon.json 里蒸汽上移的 25pt；
 输出画布是 108×108（单位 = dp），图形整体缩放到中间直径 60dp 的圆里（官方安全区是 66dp）。
@@ -9,11 +10,23 @@ icon/android/ 下的 SVG（看效果用）和 androidApp 的 VectorDrawable（re
 """
 
 import math
+import subprocess
+import tempfile
 from pathlib import Path
 
-OUTPUT_DIR = Path(__file__).parent
+OUTPUT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = OUTPUT_DIR.parent.parent
 DRAWABLE_DIR = REPO_ROOT / "androidApp/src/main/res/drawable"
+RES_DIR = REPO_ROOT / "androidApp/src/main/res"
+CHROME = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+
+# Android 8.0 以下没有自适应图标，用各密度的位图：48dp 在各密度下的像素。
+LEGACY_SIZES = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
+# 位图的画布 48，圆角方 44（四周留 2）、圆角半径 11；里面放自适应图标中间可见的 72dp。
+LEGACY_CANVAS = 48
+LEGACY_INSET = 2
+LEGACY_CORNER = 11
+VISIBLE_DP = 72
 
 CANVAS_DP = 108
 CENTER_DP = CANVAS_DP / 2
@@ -397,6 +410,58 @@ def vector_background():
     return vector_document(body, uses_aapt=True)
 
 
+# --- Android 7.x 的位图 ---
+
+def legacy_svg(foreground, pixel_size):
+    """背景 + 前景裁成圆角方，画布 48、输出 pixel_size 像素。"""
+    side = LEGACY_CANVAS - LEGACY_INSET * 2
+    scale = side / VISIBLE_DP
+    hidden = (CANVAS_DP - VISIBLE_DP) / 2
+    stop_y = fmt(CANVAS_DP * BACKGROUND_STOP)
+    shapes = "\n".join(svg_shape(shape) for shape in foreground)
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {LEGACY_CANVAS} {LEGACY_CANVAS}" '
+        f'width="{pixel_size}" height="{pixel_size}">\n'
+        '  <defs>\n'
+        f'    <clipPath id="shape"><rect x="{LEGACY_INSET}" y="{LEGACY_INSET}" width="{side}" height="{side}" rx="{LEGACY_CORNER}"/></clipPath>\n'
+        f'    <linearGradient id="bg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="{stop_y}">\n'
+        f'      <stop offset="0" stop-color="{BACKGROUND_TOP}"/>\n'
+        f'      <stop offset="1" stop-color="{BACKGROUND_BOTTOM}"/>\n'
+        '    </linearGradient>\n'
+        '  </defs>\n'
+        '  <g clip-path="url(#shape)">\n'
+        f'    <g transform="translate({LEGACY_INSET} {LEGACY_INSET}) scale({fmt(scale)}) translate({fmt(-hidden)} {fmt(-hidden)})">\n'
+        f'  <path fill="url(#bg)" d="{BACKGROUND_PATH}"/>\n'
+        f'{shapes}\n'
+        '    </g>\n'
+        '  </g>\n'
+        '</svg>\n'
+    )
+
+
+def render_png(svg_text, pixel_size, output):
+    """用 Chrome 无界面截图把 SVG 画成透明底的 PNG（qlmanage 会把透明处填白）。"""
+    with tempfile.TemporaryDirectory() as folder:
+        svg_path = Path(folder) / "icon.svg"
+        svg_path.write_text(svg_text)
+        command = [
+            str(CHROME), "--headless", "--disable-gpu", "--hide-scrollbars",
+            "--default-background-color=00000000",
+            f"--window-size={pixel_size},{pixel_size}",
+            f"--screenshot={output}",
+            svg_path.as_uri(),
+        ]
+        subprocess.run(command, check=True, capture_output=True)
+
+
+def legacy_outputs(foreground):
+    for density, pixel_size in LEGACY_SIZES.items():
+        output = RES_DIR / f"mipmap-{density}" / "ic_launcher.png"
+        output.parent.mkdir(exist_ok=True)
+        render_png(legacy_svg(foreground, pixel_size), pixel_size, output)
+        print(f"wrote {output.relative_to(REPO_ROOT)}")
+
+
 def main():
     fit = Fit()
     foreground = foreground_shapes(fit)
@@ -408,10 +473,12 @@ def main():
         DRAWABLE_DIR / "ic_launcher_background.xml": vector_background(),
         DRAWABLE_DIR / "ic_launcher_foreground.xml": vector_shapes(foreground),
         DRAWABLE_DIR / "ic_launcher_monochrome.xml": vector_shapes(monochrome),
+        OUTPUT_DIR / "legacy.svg": legacy_svg(foreground, 192),
     }
     for path, text in outputs.items():
         path.write_text(text)
         print(f"wrote {path.relative_to(REPO_ROOT)}")
+    legacy_outputs(foreground)
     print(f"center on 1024 canvas: {fit.center}, scale: {fit.scale:.5f} dp per unit")
 
 

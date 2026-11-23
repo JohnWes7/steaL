@@ -16,6 +16,7 @@ icon/
     background.svg   铺满 108dp 的渐变
     foreground.svg   蒸汽 + 标签 + %，缩放到中间直径 60dp 的圆（安全区是 66dp）
     monochrome.svg   主题图标用的单色层：白色剪影，绳孔和 % 号挖空
+    legacy.svg       Android 7.x 用的圆角方位图（背景 + 前景），generate.py 用 Chrome 渲染成 mipmap-*dpi/ic_launcher.png
 ```
 
 | 项目 | 值 |
@@ -47,6 +48,7 @@ Android 不用 Icon Composer 的渲染结果（Liquid Glass 和 iOS 圆角会画
 - `generate.py` 里抄了 `layers/*.svg` 的几何（含蒸汽上移 25），**改了图层要同步改脚本里的常量**，再重新生成。
 - 输出只用 path / 线性渐变 / evenodd 挖洞，不用 `mask` 和 `transform`：VectorDrawable 不支持 mask。
   标签的绳孔、单色层里的 % 号都是 evenodd 的子路径；% 号的斜杠挖空用圆头胶囊的轮廓。
+- Android 7.x（minSdk 24）没有自适应图标，用 `mipmap-*dpi/ic_launcher.png`（48dp 在 5 种密度下的像素）。位图由本机 **Google Chrome 无界面模式**渲染（透明底）；`qlmanage` 会把透明处填白，不能用。
 - `SAFE_RADIUS_DP` 是图形外接圆的半径（dp）：33 = 用满安全区；现在是 30，和 iOS 图标里图形占的比例一样（2026-11-23 用户从两种大小里选的）。
 
 ## 命令行渲染（不用开 Icon Composer）
