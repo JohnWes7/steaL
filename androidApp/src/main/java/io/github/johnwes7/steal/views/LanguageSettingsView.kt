@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.shared.models.settings.AppLanguage
 import io.github.johnwes7.steal.views.components.shared.PageBackButton
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.components.shared.PageTopBarStyle
@@ -41,4 +42,20 @@ fun LanguageSettingsView(
         ) {
         }
     }
+}
+
+// MARK: - 显示名字 / Display name
+
+/**
+ * 语言在设置里显示的名字；`null`（跟随系统）显示「System default」。
+ * The name a language shows in settings; `null` (following the system) shows "System default".
+ */
+@Composable
+fun languageLabel(language: AppLanguage?): String {
+    val resourceId = when (language) {
+        null -> R.string.settings_language_system_default
+        AppLanguage.English -> R.string.language_name_english
+        AppLanguage.SimplifiedChinese -> R.string.language_name_simplified_chinese
+    }
+    return stringResource(resourceId)
 }

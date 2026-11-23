@@ -69,6 +69,10 @@
 
     <!-- 语言 / Language -->
     <string name="settings_language">Language</string>
+    <string name="settings_language_system_default">System default</string>
+    <!-- 语言名用它自己的语言写，不翻译（同系统的语言列表） / Language names are written in their own language and never translated, as in the system's language list -->
+    <string name="language_name_english" translatable="false">English</string>
+    <string name="language_name_simplified_chinese" translatable="false">简体中文</string>
 
     <!-- 加载失败，四种原因同 LoadError / Load failures, one per LoadError case -->
     <string name="load_error_offline_title">You\'re offline</string>

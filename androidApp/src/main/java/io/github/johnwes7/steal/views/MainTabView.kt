@@ -79,7 +79,10 @@ fun MainTabView() {
             is WishlistRoute -> NavEntry(key) { WishlistView() }
             is SalesRoute -> NavEntry(key) { SaleEventsView() }
             is SettingsRoute -> NavEntry(key) {
-                SettingsView(onOpenThemeSettings = { navigator.navigate(ThemeSettingsRoute) })
+                SettingsView(
+                    onOpenThemeSettings = { navigator.navigate(ThemeSettingsRoute) },
+                    onOpenLanguageSettings = { navigator.navigate(LanguageSettingsRoute) },
+                )
             }
             is ThemeSettingsRoute -> NavEntry(key) { ThemeSettingsView(onBack = { navigator.goBack() }) }
             is LanguageSettingsRoute -> NavEntry(key) { LanguageSettingsView(onBack = { navigator.goBack() }) }
