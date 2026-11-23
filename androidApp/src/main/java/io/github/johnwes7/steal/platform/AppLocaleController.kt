@@ -2,6 +2,7 @@ package io.github.johnwes7.steal.platform
 
 import android.app.Activity
 import android.app.LocaleManager
+import android.content.ComponentCallbacks
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
@@ -10,9 +11,14 @@ import android.os.Build
 import android.os.LocaleList
 import androidx.annotation.MainThread
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
 import androidx.core.content.edit
 import io.github.johnwes7.steal.shared.models.settings.AppLanguage
 import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * 存放 App 自己选的语言的 SharedPreferences 文件名。
@@ -49,34 +55,54 @@ class AppLocaleController(context: Context) {
     private val preferences: SharedPreferences =
         appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    init {
-        migrateToSystemIfNeeded()
-    }
+    private val _language: MutableStateFlow<AppLanguage?>
 
     /**
-     * 当前单独给 App 选的语言；`null` 表示跟随系统。
-     * The language currently chosen for the app alone; `null` means following the system.
+     * 当前单独给 App 选的语言，`null` 表示跟随系统；在 App 里或系统设置里改了都会更新。
+     * The language currently chosen for the app alone, `null` meaning following the system; updates whether it
+     * changes in the app or in system settings.
      *
-     * 选的标签不在 [AppLanguage] 里（比如用 adb 设的）也返回 `null`。
+     * 选的标签不在 [AppLanguage] 里（比如用 adb 设的）也是 `null`。
      * Also `null` when the chosen tag is not one of [AppLanguage], for example one set through adb.
      */
-    val language: AppLanguage?
-        get() {
-            val languageTag = currentLanguageTag()
-            if (languageTag == null) {
-                return null
+    val language: StateFlow<AppLanguage?>
+
+    init {
+        // 1. 迁移：要在第一次读语言之前
+        // 1. Migrate: before the language is first read
+        migrateToSystemIfNeeded()
+
+        // 2. 读一次当前语言
+        // 2. Read the current language once
+        _language = MutableStateFlow(readLanguage())
+        language = _language.asStateFlow()
+
+        // 3. 监听配置变化：13 以上改 App 语言（在 App 里或系统设置里）时系统会改 App 的配置，这里重读。
+        //    controller 和 App 活得一样久，不用注销
+        // 3. Watch configuration changes: on 13 and later, changing the app language (in the app or in system
+        //    settings) changes the app's configuration, so read it again. The controller lives as long as the app,
+        //    so it never unregisters
+        appContext.registerComponentCallbacks(object : ComponentCallbacks {
+            override fun onConfigurationChanged(newConfig: Configuration) {
+                _language.value = readLanguage()
             }
-            return AppLanguage.fromLanguageTag(languageTag)
-        }
+
+            @Suppress("OVERRIDE_DEPRECATION")
+            override fun onLowMemory() {
+                // 接口要求实现，用不到。
+                // Required by the interface; not used.
+            }
+        })
+    }
 
     /**
      * 把 App 的语言改成 [language]（`null` = 跟随系统），界面会重建成新语言；和当前一样就什么也不做。
      * Changes the app's language to [language] (`null` follows the system) and rebuilds the UI in it; does nothing
      * when it is already the current one.
      *
-     * Android 13 以上由系统重建 Activity；12 及以下保存后调 [activity] 的 `recreate()`。
-     * On Android 13 and later the system recreates the Activity; on 12 and earlier this saves and then calls
-     * `recreate()` on [activity].
+     * Android 13 以上交给系统，界面按新配置重画；12 及以下保存后调 [activity] 的 `recreate()`。
+     * On Android 13 and later this hands it to the system and the UI redraws with the new configuration; on 12 and
+     * earlier this saves and then calls `recreate()` on [activity].
      */
     @MainThread
     fun setLanguage(activity: Activity, language: AppLanguage?) {
@@ -103,6 +129,11 @@ class AppLocaleController(context: Context) {
                     putString(KEY_LANGUAGE_TAG, language.languageTag)
                 }
             }
+            // 12 及以下系统不知道换了语言，不会调 onConfigurationChanged，要自己更新；在 recreate 之前，新 Activity
+            // 一收集就是新值。
+            // On 12 and earlier the system doesn't know the language changed and won't call onConfigurationChanged,
+            // so update it here, before recreate, so the new Activity collects the new value.
+            _language.value = language
             activity.recreate()
         }
     }
@@ -146,6 +177,18 @@ class AppLocaleController(context: Context) {
         val overrideConfiguration = Configuration()
         overrideConfiguration.setLocales(locales)
         return base.createConfigurationContext(overrideConfiguration)
+    }
+
+    /**
+     * 从系统（13 以上）或 SharedPreferences（12 及以下）读当前选的语言。
+     * Reads the current choice from the system (13 and later) or SharedPreferences (12 and earlier).
+     */
+    private fun readLanguage(): AppLanguage? {
+        val languageTag = currentLanguageTag()
+        if (languageTag == null) {
+            return null
+        }
+        return AppLanguage.fromLanguageTag(languageTag)
     }
 
     /**
@@ -201,3 +244,31 @@ class AppLocaleController(context: Context) {
         return appContext.getSystemService(LocaleManager::class.java)
     }
 }
+
+/**
+ * 页面看到的 App 语言：当前选的语言和换语言的方法。
+ * The app language as screens see it: the current choice and a way to change it.
+ */
+data class AppLanguageSetting(
+    /**
+     * 当前单独给 App 选的语言；`null` 表示跟随系统。
+     * The language currently chosen for the app alone; `null` means following the system.
+     */
+    val language: AppLanguage?,
+    /**
+     * 换成另一种语言（`null` = 跟随系统），界面随后换成新语言。
+     * Switches to another language (`null` follows the system); the UI then changes to it.
+     */
+    val setLanguage: (AppLanguage?) -> Unit,
+)
+
+/**
+ * 让页面读到 [AppLanguageSetting]，在 `MainActivity` 根上提供一次。
+ * Lets screens read the [AppLanguageSetting]; provided once at the root in `MainActivity`.
+ *
+ * 语言会变，所以用 `compositionLocalOf`：值一换，只有读它的地方重组。不给默认值，忘了提供就直接报错。
+ * The language changes, so this uses `compositionLocalOf`: a new value recomposes only the places that read it.
+ * There is no default value, so forgetting to provide it fails right away.
+ */
+val LocalAppLanguageSetting: ProvidableCompositionLocal<AppLanguageSetting> =
+    compositionLocalOf { error("No AppLanguageSetting provided") }

@@ -17,6 +17,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.johnwes7.steal.platform.AppLanguageSetting
+import io.github.johnwes7.steal.platform.LocalAppLanguageSetting
 import io.github.johnwes7.steal.shared.models.settings.AppTheme
 import io.github.johnwes7.steal.shared.viewmodels.RootViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RootViewModel.SettingsLoadState
@@ -75,6 +77,7 @@ class MainActivity : ComponentActivity() {
         // 3. 设置读到后套主题、显示主框架
         // 3. Once the settings are read, apply the theme and show the main frame
         val appContainer = (application as SteaLApplication).appContainer
+        val localeController = (application as SteaLApplication).localeController
         setContent {
             val settingsState by rootViewModel.settingsState.collectAsStateWithLifecycle()
             val loadedState = settingsState
@@ -89,13 +92,23 @@ class MainActivity : ComponentActivity() {
                     applyNightMode(theme = settings.theme)
                 }
 
+                val appLanguage by localeController.language.collectAsStateWithLifecycle()
+                val appLanguageSetting = AppLanguageSetting(
+                    language = appLanguage,
+                    setLanguage = { newLanguage ->
+                        localeController.setLanguage(activity = this@MainActivity, language = newLanguage)
+                    },
+                )
+
                 // 在根上放一次，下面都能读到，同 SwiftUI 在 RootView 上 .environment(...)：容器给页面取 ViewModel，
-                // 毛玻璃设置给两条栏。
+                // 毛玻璃设置给两条栏，语言给设置页。
                 // Provided once at the root for everything below, like .environment(...) on SwiftUI's RootView: the
-                // container lets screens get their view models, and the blur settings reach both bars.
+                // container lets screens get their view models, the blur settings reach both bars, and the language
+                // reaches the settings screens.
                 CompositionLocalProvider(
                     LocalAppContainer provides appContainer,
                     LocalBarBlurSettings provides settings.barBlur,
+                    LocalAppLanguageSetting provides appLanguageSetting,
                 ) {
                     SteaLTheme(
                         darkTheme = darkTheme,
