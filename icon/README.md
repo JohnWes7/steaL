@@ -11,7 +11,8 @@ icon/
   AppIcon.icon/    Icon Composer 文档包（iOS），和 iosApp/steaL/AppIcon.icon 保持一致
   preview.svg      带背景和圆角的平面合成图，只用来看布局，不是最终效果
   android/         Android 自适应图标的三层（由 generate.py 生成，不要手改）
-    generate.py      python3 icon/android/generate.py
+    generate.py      python3 icon/android/generate.py：同时写这里的 SVG 和
+                     androidApp/src/main/res/drawable/ic_launcher_{background,foreground,monochrome}.xml
     background.svg   铺满 108dp 的渐变
     foreground.svg   蒸汽 + 标签 + %，缩放到中间直径 60dp 的圆（安全区是 66dp）
     monochrome.svg   主题图标用的单色层：白色剪影，绳孔和 % 号挖空

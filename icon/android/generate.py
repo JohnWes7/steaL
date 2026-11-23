@@ -1,8 +1,9 @@
-"""生成 Android 自适应图标的三层 SVG（foreground / background / monochrome）。
+"""生成 Android 自适应图标的三层（background / foreground / monochrome）：
+icon/android/ 下的 SVG（看效果用）和 androidApp 的 VectorDrawable（res/drawable/ic_launcher_*.xml）。
 
 几何数据抄自 icon/layers/*.svg（1024 画布），加上 icon.json 里蒸汽上移的 25pt；
 输出画布是 108×108（单位 = dp），图形整体缩放到中间直径 60dp 的圆里（官方安全区是 66dp）。
-输出只用 path / 线性渐变 / evenodd 挖洞，不用 mask 和 transform，方便转成 VectorDrawable。
+只用 path / 线性渐变 / evenodd 挖洞，不用 mask 和 transform：VectorDrawable 不支持 mask。
 
 用法：python3 icon/android/generate.py
 """
@@ -11,6 +12,8 @@ import math
 from pathlib import Path
 
 OUTPUT_DIR = Path(__file__).parent
+REPO_ROOT = OUTPUT_DIR.parent.parent
+DRAWABLE_DIR = REPO_ROOT / "androidApp/src/main/res/drawable"
 
 CANVAS_DP = 108
 CENTER_DP = CANVAS_DP / 2
@@ -213,7 +216,96 @@ def percent_shapes(fit):
     return line_points, ring_centers
 
 
-# --- 三个 SVG ---
+# --- 三层的图形：每层是一列 Shape，再分别写成 SVG 和 VectorDrawable ---
+
+class Shape:
+    """一条 path：填充或描边（两者只用其一）。"""
+
+    def __init__(self, data, fill=None, even_odd=False, stroke=None, stroke_width=None,
+                 stroke_opacity=1.0, round_cap=False, round_join=False):
+        self.data = data
+        self.fill = fill
+        self.even_odd = even_odd
+        self.stroke = stroke
+        self.stroke_width = stroke_width
+        self.stroke_opacity = stroke_opacity
+        self.round_cap = round_cap
+        self.round_join = round_join
+
+
+def foreground_shapes(fit):
+    steam_width = fit.length(STEAM_WIDTH)
+    tag_width = fit.length(TAG_STROKE_WIDTH * TAG_SCALE)
+    percent_width = fit.length(PERCENT_WIDTH)
+    ring_radius = fit.length(PERCENT_RING_RADIUS)
+    outline = tag_outline(fit)
+    hole_center, hole_radius = tag_hole(fit)
+    line_points, ring_centers = percent_shapes(fit)
+
+    shapes = []
+    for data in steam_paths(fit):
+        shapes.append(Shape(data, stroke=STEAM_COLOR, stroke_width=steam_width,
+                            stroke_opacity=STEAM_OPACITY, round_cap=True))
+    # 标签：填充带绳孔（evenodd），描边单独一条 path（描边只画外轮廓，不画孔）。
+    tag_fill = f"{polygon_path(outline)} {circle_path(hole_center, hole_radius)}"
+    shapes.append(Shape(tag_fill, fill=TAG_COLOR, even_odd=True))
+    shapes.append(Shape(polygon_path(outline), stroke=TAG_COLOR, stroke_width=tag_width, round_join=True))
+    percent_data = f"M{pt(line_points[0])} L{pt(line_points[1])}"
+    for center in ring_centers:
+        percent_data += " " + circle_path(center, ring_radius)
+    shapes.append(Shape(percent_data, stroke=PERCENT_COLOR, stroke_width=percent_width, round_cap=True))
+    return shapes
+
+
+def monochrome_shapes(fit):
+    """单色层：系统只看形状、自己上色，所以 % 号要从标签里挖掉才看得出来。"""
+    steam_width = fit.length(STEAM_WIDTH)
+    tag_width = fit.length(TAG_STROKE_WIDTH * TAG_SCALE)
+    half_percent = fit.length(PERCENT_WIDTH) / 2
+    ring_radius = fit.length(PERCENT_RING_RADIUS)
+    outline = tag_outline(fit)
+    hole_center, hole_radius = tag_hole(fit)
+    line_points, ring_centers = percent_shapes(fit)
+
+    shapes = []
+    for data in steam_paths(fit):
+        shapes.append(Shape(data, stroke=MONOCHROME_COLOR, stroke_width=steam_width, round_cap=True))
+    # evenodd：标签轮廓 − 绳孔 − 斜杠 − 圆环（外圆挖掉、内圆补回来）。
+    cutouts = [circle_path(hole_center, hole_radius), capsule_path(line_points[0], line_points[1], half_percent)]
+    for center in ring_centers:
+        cutouts.append(circle_path(center, ring_radius + half_percent))
+        cutouts.append(circle_path(center, ring_radius - half_percent))
+    tag_fill = polygon_path(outline) + " " + " ".join(cutouts)
+    shapes.append(Shape(tag_fill, fill=MONOCHROME_COLOR, even_odd=True))
+    shapes.append(Shape(polygon_path(outline), stroke=MONOCHROME_COLOR, stroke_width=tag_width, round_join=True))
+    return shapes
+
+
+BACKGROUND_PATH = f"M0,0 L{CANVAS_DP},0 L{CANVAS_DP},{CANVAS_DP} L0,{CANVAS_DP} Z"
+
+
+# --- SVG ---
+
+def svg_shape(shape):
+    attributes = []
+    if shape.fill:
+        attributes.append(f'fill="{shape.fill}"')
+        if shape.even_odd:
+            attributes.append('fill-rule="evenodd"')
+    else:
+        attributes.append('fill="none"')
+    if shape.stroke:
+        attributes.append(f'stroke="{shape.stroke}"')
+        if shape.stroke_opacity != 1.0:
+            attributes.append(f'stroke-opacity="{fmt(shape.stroke_opacity)}"')
+        attributes.append(f'stroke-width="{fmt(shape.stroke_width)}"')
+        if shape.round_cap:
+            attributes.append('stroke-linecap="round"')
+        if shape.round_join:
+            attributes.append('stroke-linejoin="round"')
+    attributes.append(f'd="{shape.data}"')
+    return "  <path " + " ".join(attributes) + "/>"
+
 
 def svg_document(body):
     return (
@@ -222,92 +314,104 @@ def svg_document(body):
     )
 
 
-def background_body():
+def svg_shapes(shapes):
+    lines = [svg_shape(shape) for shape in shapes]
+    return svg_document("\n".join(lines) + "\n")
+
+
+def svg_background():
     stop_y = fmt(CANVAS_DP * BACKGROUND_STOP)
-    return (
+    body = (
         '  <defs>\n'
         f'    <linearGradient id="bg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="{stop_y}">\n'
         f'      <stop offset="0" stop-color="{BACKGROUND_TOP}"/>\n'
         f'      <stop offset="1" stop-color="{BACKGROUND_BOTTOM}"/>\n'
         '    </linearGradient>\n'
         '  </defs>\n'
-        f'  <path fill="url(#bg)" d="M0,0 L{CANVAS_DP},0 L{CANVAS_DP},{CANVAS_DP} L0,{CANVAS_DP} Z"/>\n'
+        f'  <path fill="url(#bg)" d="{BACKGROUND_PATH}"/>\n'
+    )
+    return svg_document(body)
+
+
+# --- VectorDrawable ---
+
+GENERATED_NOTE = "<!-- 由 icon/android/generate.py 生成，不要手改 / Generated by icon/android/generate.py; do not edit -->"
+
+
+def vector_shape(shape):
+    attributes = [f'android:pathData="{shape.data}"']
+    if shape.fill:
+        attributes.append(f'android:fillColor="{shape.fill}"')
+        if shape.even_odd:
+            attributes.append('android:fillType="evenOdd"')
+    if shape.stroke:
+        attributes.append(f'android:strokeColor="{shape.stroke}"')
+        if shape.stroke_opacity != 1.0:
+            attributes.append(f'android:strokeAlpha="{fmt(shape.stroke_opacity)}"')
+        attributes.append(f'android:strokeWidth="{fmt(shape.stroke_width)}"')
+        if shape.round_cap:
+            attributes.append('android:strokeLineCap="round"')
+        if shape.round_join:
+            attributes.append('android:strokeLineJoin="round"')
+    joined = "\n        ".join(attributes)
+    return f"    <path\n        {joined} />"
+
+
+def vector_document(body, uses_aapt=False):
+    aapt = '\n    xmlns:aapt="http://schemas.android.com/aapt"' if uses_aapt else ""
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        f'{GENERATED_NOTE}\n'
+        f'<vector xmlns:android="http://schemas.android.com/apk/res/android"{aapt}\n'
+        f'    android:width="{CANVAS_DP}dp"\n'
+        f'    android:height="{CANVAS_DP}dp"\n'
+        f'    android:viewportWidth="{CANVAS_DP}"\n'
+        f'    android:viewportHeight="{CANVAS_DP}">\n'
+        f'{body}'
+        '</vector>\n'
     )
 
 
-def foreground_body(fit):
-    steam_width = fmt(fit.length(STEAM_WIDTH))
-    tag_width = fmt(fit.length(TAG_STROKE_WIDTH * TAG_SCALE))
-    percent_width = fmt(fit.length(PERCENT_WIDTH))
-    ring_radius = fit.length(PERCENT_RING_RADIUS)
-    outline = tag_outline(fit)
-    hole_center, hole_radius = tag_hole(fit)
-    line_points, ring_centers = percent_shapes(fit)
+def vector_shapes(shapes):
+    lines = [vector_shape(shape) for shape in shapes]
+    return vector_document("\n".join(lines) + "\n")
 
-    lines = []
-    for data in steam_paths(fit):
-        lines.append(
-            f'  <path fill="none" stroke="{STEAM_COLOR}" stroke-opacity="{STEAM_OPACITY}" '
-            f'stroke-width="{steam_width}" stroke-linecap="round" d="{data}"/>'
-        )
-    # 标签：填充带绳孔（evenodd），描边单独一条 path（描边只画外轮廓，不画孔）。
-    tag_fill = f"{polygon_path(outline)} {circle_path(hole_center, hole_radius)}"
-    lines.append(f'  <path fill="{TAG_COLOR}" fill-rule="evenodd" d="{tag_fill}"/>')
-    lines.append(
-        f'  <path fill="none" stroke="{TAG_COLOR}" stroke-width="{tag_width}" '
-        f'stroke-linejoin="round" d="{polygon_path(outline)}"/>'
+
+def vector_background():
+    stop_y = fmt(CANVAS_DP * BACKGROUND_STOP)
+    body = (
+        f'    <path android:pathData="{BACKGROUND_PATH}">\n'
+        '        <aapt:attr name="android:fillColor">\n'
+        '            <gradient\n'
+        '                android:type="linear"\n'
+        '                android:startX="0"\n'
+        '                android:startY="0"\n'
+        '                android:endX="0"\n'
+        f'                android:endY="{stop_y}">\n'
+        f'                <item android:offset="0" android:color="{BACKGROUND_TOP}" />\n'
+        f'                <item android:offset="1" android:color="{BACKGROUND_BOTTOM}" />\n'
+        '            </gradient>\n'
+        '        </aapt:attr>\n'
+        '    </path>\n'
     )
-    percent_data = f"M{pt(line_points[0])} L{pt(line_points[1])}"
-    for center in ring_centers:
-        percent_data += " " + circle_path(center, ring_radius)
-    lines.append(
-        f'  <path fill="none" stroke="{PERCENT_COLOR}" stroke-width="{percent_width}" '
-        f'stroke-linecap="round" d="{percent_data}"/>'
-    )
-    return "\n".join(lines) + "\n"
-
-
-def monochrome_body(fit):
-    """单色层：系统只看形状、自己上色，所以 % 号要从标签里挖掉才看得出来。"""
-    steam_width = fmt(fit.length(STEAM_WIDTH))
-    tag_width = fmt(fit.length(TAG_STROKE_WIDTH * TAG_SCALE))
-    half_percent = fit.length(PERCENT_WIDTH) / 2
-    ring_radius = fit.length(PERCENT_RING_RADIUS)
-    outline = tag_outline(fit)
-    hole_center, hole_radius = tag_hole(fit)
-    line_points, ring_centers = percent_shapes(fit)
-
-    lines = []
-    for data in steam_paths(fit):
-        lines.append(
-            f'  <path fill="none" stroke="{MONOCHROME_COLOR}" stroke-width="{steam_width}" '
-            f'stroke-linecap="round" d="{data}"/>'
-        )
-    # evenodd：标签轮廓 − 绳孔 − 斜杠 − 圆环（外圆挖掉、内圆补回来）。
-    cutouts = [circle_path(hole_center, hole_radius), capsule_path(line_points[0], line_points[1], half_percent)]
-    for center in ring_centers:
-        cutouts.append(circle_path(center, ring_radius + half_percent))
-        cutouts.append(circle_path(center, ring_radius - half_percent))
-    tag_fill = polygon_path(outline) + " " + " ".join(cutouts)
-    lines.append(f'  <path fill="{MONOCHROME_COLOR}" fill-rule="evenodd" d="{tag_fill}"/>')
-    lines.append(
-        f'  <path fill="none" stroke="{MONOCHROME_COLOR}" stroke-width="{tag_width}" '
-        f'stroke-linejoin="round" d="{polygon_path(outline)}"/>'
-    )
-    return "\n".join(lines) + "\n"
+    return vector_document(body, uses_aapt=True)
 
 
 def main():
     fit = Fit()
+    foreground = foreground_shapes(fit)
+    monochrome = monochrome_shapes(fit)
     outputs = {
-        "background.svg": background_body(),
-        "foreground.svg": foreground_body(fit),
-        "monochrome.svg": monochrome_body(fit),
+        OUTPUT_DIR / "background.svg": svg_background(),
+        OUTPUT_DIR / "foreground.svg": svg_shapes(foreground),
+        OUTPUT_DIR / "monochrome.svg": svg_shapes(monochrome),
+        DRAWABLE_DIR / "ic_launcher_background.xml": vector_background(),
+        DRAWABLE_DIR / "ic_launcher_foreground.xml": vector_shapes(foreground),
+        DRAWABLE_DIR / "ic_launcher_monochrome.xml": vector_shapes(monochrome),
     }
-    for name, body in outputs.items():
-        path = OUTPUT_DIR / name
-        path.write_text(svg_document(body))
-        print(f"wrote {path}")
+    for path, text in outputs.items():
+        path.write_text(text)
+        print(f"wrote {path.relative_to(REPO_ROOT)}")
     print(f"center on 1024 canvas: {fit.center}, scale: {fit.scale:.5f} dp per unit")
 
 
