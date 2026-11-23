@@ -49,3 +49,10 @@ data object SettingsRoute : NavKey
  */
 @Serializable
 data object ThemeSettingsRoute : NavKey
+
+/**
+ * 「语言」单选页，从 Settings 根页面推入。
+ * The "Language" single-choice screen, pushed from the Settings root screen.
+ */
+@Serializable
+data object LanguageSettingsRoute : NavKey

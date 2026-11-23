@@ -33,6 +33,7 @@ import io.github.johnwes7.steal.navigation.GamesRoute
 import io.github.johnwes7.steal.navigation.Navigator
 import io.github.johnwes7.steal.navigation.SalesRoute
 import io.github.johnwes7.steal.navigation.SearchRoute
+import io.github.johnwes7.steal.navigation.LanguageSettingsRoute
 import io.github.johnwes7.steal.navigation.SettingsRoute
 import io.github.johnwes7.steal.navigation.ThemeSettingsRoute
 import io.github.johnwes7.steal.navigation.WishlistRoute
@@ -81,6 +82,7 @@ fun MainTabView() {
                 SettingsView(onOpenThemeSettings = { navigator.navigate(ThemeSettingsRoute) })
             }
             is ThemeSettingsRoute -> NavEntry(key) { ThemeSettingsView(onBack = { navigator.goBack() }) }
+            is LanguageSettingsRoute -> NavEntry(key) { LanguageSettingsView(onBack = { navigator.goBack() }) }
             // 漏写页面时直接崩溃，开发时立刻发现（同官方 entryProvider DSL 的默认 fallback）。
             // Crash on a missing screen so it shows up during development (same as the DSL's default fallback).
             else -> error("Unknown route: $key")

@@ -15,7 +15,7 @@
     <string name="page_header_tagline">STEAL</string>
 
     <!-- 首页 Hot Deals / Home: Hot Deals -->
-    <string name="hot_deals_title">Hot deals</string>
+    <string name="hot_deals_title">Hot Deals</string>
     <string name="hot_deals_open_label">Show all hot deals</string>
     <string name="deals_loading">Loading deals</string>
     <string name="deals_empty_title">No deals found</string>
@@ -66,6 +66,9 @@
     <string name="settings_value_dp">%1$d dp</string>
     <string name="settings_value_percent">%1$d%%</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
+
+    <!-- 语言 / Language -->
+    <string name="settings_language">Language</string>
 
     <!-- 加载失败，四种原因同 LoadError / Load failures, one per LoadError case -->
     <string name="load_error_offline_title">You\'re offline</string>
