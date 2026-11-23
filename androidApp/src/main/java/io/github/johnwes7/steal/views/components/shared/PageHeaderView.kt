@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.johnwes7.steal.R
-import io.github.johnwes7.steal.views.theme.BrandFontFamily
+import io.github.johnwes7.steal.views.theme.brandFontFamilyFor
 import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
@@ -40,9 +40,11 @@ fun PageHeaderView(title: String, modifier: Modifier = Modifier) {
  * The brand header layout: the green [tagline] above the large [title]; shared by the home page and the tab root
  * screens so they match in size.
  *
- * 字体和字号都固定：字体是 [BrandFontFamily]，不跟手机的系统字体变；字号不随系统字体放大，常驻顶栏放大会挤掉内容。
- * Both the font and the sizes are fixed: the font is [BrandFontFamily], unaffected by the phone's system font, and the
- * sizes don't follow the system font size, since an enlarged persistent bar crowds out the content.
+ * 字体和字号都固定：字体是打包的 Roboto Bold，含汉字的文字用打包的 Noto Sans SC Bold（见 [brandFontFamilyFor]），
+ * 不跟手机的系统字体变；字号不随系统字体放大，常驻顶栏放大会挤掉内容。
+ * Both the font and the sizes are fixed: the bundled Roboto Bold, or the bundled Noto Sans SC Bold for text with
+ * Chinese characters (see [brandFontFamilyFor]), unaffected by the phone's system font; the sizes don't follow the
+ * system font size, since an enlarged persistent bar crowds out the content.
  */
 @Composable
 fun BrandHeader(
@@ -57,13 +59,13 @@ fun BrandHeader(
     // Line heights must be explicit: otherwise they inherit the top bar title's 28sp, and the 40 title overflows its
     // line box and sits on the bar's bottom edge.
     val taglineStyle = TextStyle(
-        fontFamily = BrandFontFamily,
+        fontFamily = brandFontFamilyFor(text = tagline),
         fontSize = with(density) { 13.dp.toSp() },
         lineHeight = with(density) { 16.dp.toSp() },
         fontWeight = FontWeight.Bold,
     )
     val titleStyle = TextStyle(
-        fontFamily = BrandFontFamily,
+        fontFamily = brandFontFamilyFor(text = title.text),
         fontSize = with(density) { 40.dp.toSp() },
         lineHeight = with(density) { 46.dp.toSp() },
         fontWeight = FontWeight.Bold,
