@@ -58,6 +58,14 @@ android {
         // AGP does not generate BuildConfig by default; custom fields need it turned on.
         buildConfig = true
     }
+    // App Bundle 默认按语言拆分，手机只下载系统语言的资源；App 里能单独选语言，所以所有语言都要打进去。
+    // App Bundles split by language by default, so phones download only the system language's resources; the app
+    // can pick its own language, so every language has to be included.
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
 }
 
 dependencies {
