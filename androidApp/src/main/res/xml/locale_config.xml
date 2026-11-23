@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App 支持的界面语言，Android 13+ 的系统设置「应用 → steaL → 语言」按这份列出可选项。第一项是 res/values/ 的语言（找不到翻译时退回它）。 -->
+<!-- The app's UI languages, listed as choices in Android 13+ system settings (Apps > steaL > Language). The first is the language of res/values/, which missing translations fall back to. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="zh-Hans" />
+</locale-config>

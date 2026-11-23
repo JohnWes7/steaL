@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- android:name 指定自定义 Application，它持有全 App 的 AppContainer / android:name points at the custom Application, which holds the app's AppContainer -->
+    <!-- localeConfig：Android 13+ 系统设置里可以单独给 App 选语言，选项见 locale_config.xml / localeConfig: lets Android 13+ system settings pick a language for this app alone, from the choices in locale_config.xml -->
     <application
         android:name=".SteaLApplication"
         android:allowBackup="true"
@@ -13,6 +14,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locale_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.SteaL">
         <!-- 启动时用带启动画面的主题，MainActivity 的 installSplashScreen() 再换回 Theme.SteaL / Starts with the splash theme; installSplashScreen() in MainActivity switches back to Theme.SteaL -->
