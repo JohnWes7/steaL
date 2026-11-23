@@ -65,7 +65,7 @@ fun SettingsContent(
 ) {
     LazyColumn(
         state = listState,
-        contentPadding = contentPadding + PaddingValues(bottom = 24.dp),
+        contentPadding = contentPadding + PaddingValues(bottom = 24.dp, top = 24.dp),
         modifier = modifier.fillMaxSize(),
     ) {
         item {
