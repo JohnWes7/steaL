@@ -1,6 +1,7 @@
 package io.github.johnwes7.steal
 
 import android.app.UiModeManager
+import android.content.Context
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -47,6 +48,15 @@ class MainActivity : ComponentActivity() {
      */
     private val rootViewModel: RootViewModel by viewModels {
         (application as SteaLApplication).appContainer.rootViewModelFactory
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        // Android 12 及以下在这里换成 App 选的语言；13 以上系统已经换好，原样传下去。
+        // On Android 12 and earlier this switches to the app's chosen language; on 13 and later the system already
+        // has, so it passes through unchanged.
+        val application = newBase.applicationContext as SteaLApplication
+        val localizedContext = application.localeController.wrapBaseContext(base = newBase)
+        super.attachBaseContext(localizedContext)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
