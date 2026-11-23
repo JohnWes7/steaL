@@ -2,6 +2,7 @@ package io.github.johnwes7.steal.views
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import io.github.johnwes7.steal.R
 import io.github.johnwes7.steal.views.components.shared.PageHeaderView
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
@@ -58,7 +60,7 @@ fun SettingsContent(
 ) {
     LazyColumn(
         state = listState,
-        contentPadding = contentPadding,
+        contentPadding = contentPadding + PaddingValues(bottom = 24.dp),
         modifier = modifier.fillMaxSize(),
     ) {
         item {

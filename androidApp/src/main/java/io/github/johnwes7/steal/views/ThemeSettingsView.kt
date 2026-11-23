@@ -11,13 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
@@ -49,6 +49,7 @@ import io.github.johnwes7.steal.views.components.settings.BarBlurSliders
 import io.github.johnwes7.steal.views.components.settings.PaletteSwatch
 import io.github.johnwes7.steal.views.components.settings.SettingsSectionHeader
 import io.github.johnwes7.steal.views.components.settings.SwitchSegmentedListItem
+import io.github.johnwes7.steal.views.components.settings.settingsItemColors
 import io.github.johnwes7.steal.views.components.shared.PageBackButton
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.components.shared.PageTopBarStyle
@@ -168,7 +169,7 @@ fun ThemeSettingsContent(
     // 2. The three groups
     LazyColumn(
         state = listState,
-        contentPadding = contentPadding,
+        contentPadding = contentPadding + PaddingValues(bottom = 24.dp),
         modifier = modifier.fillMaxSize(),
     ) {
         // 外观：深浅色三选一、动态配色
@@ -286,32 +287,10 @@ fun ThemeSettingsContent(
                 }
             }
         }
-
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
-        }
     }
 }
 
 // MARK: - 行 / Rows
-
-/**
- * 这一页卡片的颜色：卡片用 `surfaceContainerHigh`（默认是 `surface`，和页面背景同色，看不出卡片）。
- * The card colors for this screen: `surfaceContainerHigh` cards (the default `surface` matches the page background,
- * hiding the cards).
- *
- * 禁用时底色不变、只有文字变淡（同 Material 的默认和系统设置），所以禁用底色也要设成同一个颜色。
- * A disabled row keeps its card color and only its text dims (as in Material's defaults and the system Settings
- * app), so the disabled container gets the same color.
- */
-@Composable
-private fun settingsItemColors(): ListItemColors {
-    val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    return ListItemDefaults.segmentedColors(
-        containerColor = cardColor,
-        disabledContainerColor = cardColor,
-    )
-}
 
 /**
  * 系统支持时显示 [summary]，不支持时换成「需要 Android 12 以上」。

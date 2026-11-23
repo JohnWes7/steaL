@@ -28,6 +28,24 @@ import androidx.compose.ui.unit.dp
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
+ * 设置页卡片的颜色：卡片用 `surfaceContainerHigh`（默认是 `surface`，和页面背景同色，看不出卡片）。
+ * The card colors for settings screens: `surfaceContainerHigh` cards (the default `surface` matches the page
+ * background, hiding the cards).
+ *
+ * 禁用时底色不变、只有文字变淡（同 Material 的默认和系统设置），所以禁用底色也要设成同一个颜色。
+ * A disabled row keeps its card color and only its text dims (as in Material's defaults and the system Settings
+ * app), so the disabled container gets the same color.
+ */
+@Composable
+fun settingsItemColors(): ListItemColors {
+    val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    return ListItemDefaults.segmentedColors(
+        containerColor = cardColor,
+        disabledContainerColor = cardColor,
+    )
+}
+
+/**
  * 带开关的 `SegmentedListItem`：点整行切换，右边的 `Switch` 只显示状态。
  * A `SegmentedListItem` with a switch: tapping anywhere in the row toggles it, and the `Switch` on the right only
  * shows the state.
@@ -67,11 +85,7 @@ fun SwitchSegmentedListItem(
 @Composable
 private fun SwitchSegmentedListItemPreview() {
     SteaLTheme(darkTheme = true) {
-        val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        val colors = ListItemDefaults.segmentedColors(
-            containerColor = cardColor,
-            disabledContainerColor = cardColor,
-        )
+        val colors = settingsItemColors()
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background)
@@ -111,11 +125,7 @@ private fun SwitchSegmentedListItemPreview() {
 @Composable
 private fun SegmentedListItemOverloadsPreview() {
     SteaLTheme(darkTheme = true) {
-        val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        val colors = ListItemDefaults.segmentedColors(
-            containerColor = cardColor,
-            disabledContainerColor = cardColor,
-        )
+        val colors = settingsItemColors()
         val labelStyle = MaterialTheme.typography.titleSmall
         val labelColor = MaterialTheme.colorScheme.primary
         val singleOptions = listOf("Theme Builder", "iOS gray", "Simulated C")
