@@ -287,13 +287,21 @@ fun ThemeSettingsContent(
 // MARK: - 行 / Rows
 
 /**
- * 这一页卡片的颜色：卡片用 `surfaceContainerHigh`（默认是 `surface`，深色下和页面背景同色，看不出卡片）。
- * The card colors for this screen: `surfaceContainerHigh` cards (the default `surface` matches the page background
- * in dark mode, hiding the cards).
+ * 这一页卡片的颜色：卡片用 `surfaceContainerHigh`（默认是 `surface`，和页面背景同色，看不出卡片）。
+ * The card colors for this screen: `surfaceContainerHigh` cards (the default `surface` matches the page background,
+ * hiding the cards).
+ *
+ * 禁用时底色不变、只有文字变淡（同 Material 的默认和系统设置），所以禁用底色也要设成同一个颜色。
+ * A disabled row keeps its card color and only its text dims (as in Material's defaults and the system Settings
+ * app), so the disabled container gets the same color.
  */
 @Composable
 private fun settingsItemColors(): ListItemColors {
-    return ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    return ListItemDefaults.segmentedColors(
+        containerColor = cardColor,
+        disabledContainerColor = cardColor,
+    )
 }
 
 /**

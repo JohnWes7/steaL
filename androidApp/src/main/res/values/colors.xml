@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 窗口和启动画面的底色：默认配色（ThemeBuilder）浅色的 background；深色在 values-night / Window and splash screen background: the default palette's (ThemeBuilder) light background; dark is in values-night -->
-    <color name="window_background">#F7FBEC</color>
+    <!-- 窗口和启动画面的底色：M3 中性色阶浅色第 98 档、彩度 0 的灰。任何配色（含动态配色）的背景都是这一档亮度，只差色调，启动画面切过去几乎不跳；深色在 values-night / Window and splash screen background: the M3 neutral tone 98 gray with zero chroma. Every palette's background, dynamic color included, uses this tone and only differs in hue, so the switch from the splash screen barely shows; dark is in values-night -->
+    <color name="window_background">#F9F9F9</color>
 </resources>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 窗口和启动画面的底色：默认配色（ThemeBuilder）深色的 background / Window and splash screen background: the default palette's (ThemeBuilder) dark background -->
-    <color name="window_background">#11150C</color>
+    <!-- 窗口和启动画面的底色：M3 中性色阶深色第 6 档、彩度 0 的灰，理由同 values/colors.xml / Window and splash screen background: the M3 neutral tone 6 gray with zero chroma, for the same reason as values/colors.xml -->
+    <color name="window_background">#131313</color>
 </resources>
