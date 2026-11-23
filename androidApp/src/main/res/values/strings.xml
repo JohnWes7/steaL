@@ -1,5 +1,6 @@
 <resources>
-    <string name="app_name">steaL</string>
+    <!-- 标了 translatable="false" 的是品牌名、专有名词或只有数字格式，各语言一样，不进翻译文件 / Strings marked translatable="false" are brand names, proper nouns or number formats that are the same in every language and stay out of translation files -->
+    <string name="app_name" translatable="false">steaL</string>
 
     <!-- 底部导航栏 / Bottom navigation bar -->
     <string name="tab_games">Games</string>
@@ -9,10 +10,10 @@
     <string name="tab_settings">Settings</string>
 
     <!-- 首页顶栏 / Home header -->
-    <string name="games_header_tagline">STEAM PRICE TRACKER</string>
+    <string name="games_header_tagline" translatable="false">STEAM PRICE TRACKER</string>
 
     <!-- 其他 tab 根页面的顶栏 / Header on the other tab root screens -->
-    <string name="page_header_tagline">STEAL</string>
+    <string name="page_header_tagline" translatable="false">STEAL</string>
 
     <!-- 首页 Hot Deals / Home: Hot Deals -->
     <string name="hot_deals_title">Hot Deals</string>
@@ -20,11 +21,11 @@
     <string name="deals_loading">Loading deals</string>
     <string name="deals_empty_title">No deals found</string>
     <string name="deals_empty_message">There are no discounted games to show right now. Try again later.</string>
-    <string name="deal_discount_badge">-%1$d%%</string>
+    <string name="deal_discount_badge" translatable="false">-%1$d%%</string>
     <string name="deal_regular_price_description">Was %1$s</string>
     <string name="deal_quality_all_time_low">All-time low</string>
     <string name="deal_quality_three_month_low">3-month low</string>
-    <string name="deal_quality_steam">Steam</string>
+    <string name="deal_quality_steam" translatable="false">Steam</string>
 
     <!-- 价格 / Prices -->
     <string name="price_free">Free</string>
@@ -51,9 +52,9 @@
     <!-- 主题与色彩：调色板 / Theme & color: palette -->
     <string name="settings_section_palette">Color palette</string>
     <string name="settings_palette_unavailable">Unavailable while dynamic color is on</string>
-    <string name="settings_palette_theme_builder">Theme Builder</string>
+    <string name="settings_palette_theme_builder" translatable="false">Theme Builder</string>
     <string name="settings_palette_ios_gray">iOS gray</string>
-    <string name="settings_palette_simulated_c">Simulated C</string>
+    <string name="settings_palette_simulated_c" translatable="false">Simulated C</string>
 
     <!-- 主题与色彩：毛玻璃 / Theme & color: frosted glass -->
     <string name="settings_section_frosted_glass">Frosted glass</string>
@@ -63,8 +64,8 @@
     <string name="settings_blur_radius">Blur radius</string>
     <string name="settings_tint_opacity">Tint opacity</string>
     <string name="settings_noise">Noise</string>
-    <string name="settings_value_dp">%1$d dp</string>
-    <string name="settings_value_percent">%1$d%%</string>
+    <string name="settings_value_dp" translatable="false">%1$d dp</string>
+    <string name="settings_value_percent" translatable="false">%1$d%%</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
 
     <!-- 语言 / Language -->

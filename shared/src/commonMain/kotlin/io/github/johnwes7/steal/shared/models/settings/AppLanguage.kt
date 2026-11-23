@@ -10,8 +10,8 @@ package io.github.johnwes7.steal.shared.models.settings
  */
 enum class AppLanguage(
     /**
-     * BCP 47 语言标签，和 Android `locale_config.xml` 里列的一致，如 `zh-Hans`。
-     * The BCP 47 language tag, matching the list in Android's `locale_config.xml`, such as `zh-Hans`.
+     * BCP 47 语言标签，和 Android 的翻译目录对应（`zh-Hans` ↔ `values-b+zh+Hans`）。
+     * The BCP 47 language tag, matching an Android translation folder (`zh-Hans` ↔ `values-b+zh+Hans`).
      */
     val languageTag: String,
 ) {

@@ -58,6 +58,14 @@ android {
         // AGP does not generate BuildConfig by default; custom fields need it turned on.
         buildConfig = true
     }
+    // 按 res/values-* 目录自动生成 App 支持的语言列表（Android 13+ 系统设置里给 App 选语言用），默认语言写在
+    // res/resources.properties；加了新的翻译目录就会自动出现在列表里。
+    // Generates the app's language list (for picking the app language in Android 13+ system settings) from the
+    // res/values-* folders, with the default language in res/resources.properties; a new translation folder shows
+    // up in the list automatically.
+    androidResources {
+        generateLocaleConfig = true
+    }
     // App Bundle 默认按语言拆分，手机只下载系统语言的资源；App 里能单独选语言，所以所有语言都要打进去。
     // App Bundles split by language by default, so phones download only the system language's resources; the app
     // can pick its own language, so every language has to be included.
