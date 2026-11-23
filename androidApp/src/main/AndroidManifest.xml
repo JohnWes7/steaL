@@ -13,7 +13,6 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SteaL">
         <!-- 启动时用带启动画面的主题，MainActivity 的 installSplashScreen() 再换回 Theme.SteaL / Starts with the splash theme; installSplashScreen() in MainActivity switches back to Theme.SteaL -->
