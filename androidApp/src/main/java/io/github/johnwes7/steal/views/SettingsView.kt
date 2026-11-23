@@ -2,20 +2,24 @@ package io.github.johnwes7.steal.views
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.views.components.settings.SettingsIcon
+import io.github.johnwes7.steal.views.components.settings.settingsItemColors
 import io.github.johnwes7.steal.views.components.shared.PageHeaderView
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.theme.SteaLTheme
@@ -48,8 +52,9 @@ fun SettingsView(
 }
 
 /**
- * 设置的分组列表；每行的文字和推入的页面标题一致。
- * The list of setting groups; each row's text matches the title of the screen it pushes.
+ * 设置的分组列表：每行是一张圆角分段卡片（圆形图标 + 标题 + 摘要），标题和推入的页面标题一致。
+ * The list of setting groups: each row is a rounded segmented card (circular icon, title and summary) whose title
+ * matches the title of the screen it pushes.
  */
 @Composable
 fun SettingsContent(
@@ -64,13 +69,17 @@ fun SettingsContent(
         modifier = modifier.fillMaxSize(),
     ) {
         item {
-            ListItem(
+            SegmentedListItem(
                 onClick = onOpenThemeSettings,
-                leadingContent = {
-                    Icon(painter = painterResource(R.drawable.palette_24px), contentDescription = null)
-                },
-                content = { Text(text = stringResource(R.string.settings_theme_and_color)) },
-            )
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                colors = settingsItemColors(),
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                leadingContent = { SettingsIcon(painter = painterResource(R.drawable.palette_24px)) },
+                supportingContent = { Text(text = stringResource(R.string.settings_theme_and_color_summary)) },
+            ) {
+                Text(text = stringResource(R.string.settings_theme_and_color))
+            }
         }
     }
 }

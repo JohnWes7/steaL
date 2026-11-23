@@ -36,6 +36,7 @@
 
     <!-- 设置 / Settings -->
     <string name="settings_theme_and_color">Theme &amp; color</string>
+    <string name="settings_theme_and_color_summary">Appearance, palette, frosted glass</string>
     <string name="settings_requires_android_12">Requires Android 12 or later</string>
 
     <!-- 主题与色彩：外观 / Theme & color: appearance -->
