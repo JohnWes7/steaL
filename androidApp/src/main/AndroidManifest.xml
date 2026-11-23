@@ -20,12 +20,13 @@
         <!-- 启动时用带启动画面的主题，MainActivity 的 installSplashScreen() 再换回 Theme.SteaL / Starts with the splash theme; installSplashScreen() in MainActivity switches back to Theme.SteaL -->
         <!-- configChanges="uiMode"：深浅变化（系统切换、App 调 setApplicationNightMode）不重建 Activity，由 Compose 按设置重画；重建会闪一帧黑屏 / configChanges="uiMode": light/dark changes (system switch, or the app calling setApplicationNightMode) don't recreate the Activity, Compose redraws from the settings instead; recreating flashes a black frame -->
         <!-- locale|layoutDirection：Android 13+ 改 App 语言时也不重建，Compose 读新的 LocalConfiguration 重画（两项要一起写，换语言可能改文字方向）；12 及以下由 AppLocaleController 主动 recreate，不受这里影响 / locale|layoutDirection: changing the app language on Android 13+ doesn't recreate either, Compose redraws from the new LocalConfiguration (both are needed, as a new language can change the text direction); on 12 and earlier AppLocaleController calls recreate itself, which ignores this -->
+        <!-- screenLayout：冷启动后第一次配置变化（如改语言）时 screenLayout 的 compactNeeded 标记会消失，不加的话那一次会重建、闪一下；真正的尺寸变化（转屏、分屏）还会改 screenSize，照样重建 / screenLayout: on the first configuration change after a cold start (such as a language change) the compactNeeded flag in screenLayout disappears, which would otherwise recreate the Activity once and flash; real size changes (rotation, split screen) also change screenSize and still recreate -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.SteaL.Starting"
-            android:configChanges="uiMode|locale|layoutDirection"
+            android:configChanges="uiMode|locale|layoutDirection|screenLayout"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

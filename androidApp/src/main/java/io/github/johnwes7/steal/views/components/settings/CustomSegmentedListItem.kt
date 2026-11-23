@@ -28,20 +28,32 @@ import androidx.compose.ui.unit.dp
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
- * 设置页卡片的颜色：卡片用 `surfaceContainerHigh`（默认是 `surface`，和页面背景同色，看不出卡片）。
+ * 设置页卡片的颜色：卡片用 `surfaceContainerHigh`（默认是 `surface`，和页面背景同色，看不出卡片），单选选中的卡片用
+ * 亮一级的 `surfaceContainerHighest`。
  * The card colors for settings screens: `surfaceContainerHigh` cards (the default `surface` matches the page
- * background, hiding the cards).
+ * background, hiding the cards), and a one-step-brighter `surfaceContainerHighest` for the selected card in a
+ * single-choice list.
  *
- * 禁用时底色不变、只有文字变淡（同 Material 的默认和系统设置），所以禁用底色也要设成同一个颜色。
+ * 禁用时底色不变、只有文字变淡（同 Material 的默认和系统设置），所以禁用底色也要设成同一个颜色。选中的默认是
+ * `secondaryContainer`，我们的配色里它就是品牌蓝，太抢眼；换了底色，文字和图标也要换成配普通卡片的颜色。
  * A disabled row keeps its card color and only its text dims (as in Material's defaults and the system Settings
- * app), so the disabled container gets the same color.
+ * app), so the disabled container gets the same color. Selection defaults to `secondaryContainer`, which is the
+ * brand blue in our palettes and too loud; with a different container, the text and icons switch to the colors of
+ * a normal card as well.
  */
 @Composable
 fun settingsItemColors(): ListItemColors {
-    val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val colorScheme = MaterialTheme.colorScheme
+    val cardColor = colorScheme.surfaceContainerHigh
     return ListItemDefaults.segmentedColors(
         containerColor = cardColor,
         disabledContainerColor = cardColor,
+        selectedContainerColor = colorScheme.surfaceContainerHighest,
+        selectedContentColor = colorScheme.onSurface,
+        selectedLeadingContentColor = colorScheme.onSurfaceVariant,
+        selectedTrailingContentColor = colorScheme.onSurfaceVariant,
+        selectedSupportingContentColor = colorScheme.onSurfaceVariant,
+        selectedOverlineContentColor = colorScheme.onSurfaceVariant,
     )
 }
 
