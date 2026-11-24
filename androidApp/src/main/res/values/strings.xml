@@ -77,6 +77,16 @@
     <string name="settings_value_percent" translatable="false">%1$d%%</string>
     <string name="settings_reset_to_defaults">Reset to defaults</string>
 
+    <!-- 地区（地区名同 iOS 的 AppRegion.displayName） / Region (names match iOS's AppRegion.displayName) -->
+    <string name="settings_region">Region &amp; currency</string>
+    <string name="region_name_australia">Australia</string>
+    <string name="region_name_china">China</string>
+    <string name="region_name_united_states">United States</string>
+    <string name="region_name_united_kingdom">United Kingdom</string>
+    <string name="region_name_japan">Japan</string>
+    <string name="region_name_korea">Korea</string>
+    <string name="region_name_europe">Europe</string>
+
     <!-- 语言 / Language -->
     <string name="settings_language">Language</string>
     <string name="settings_language_system_default">System default</string>

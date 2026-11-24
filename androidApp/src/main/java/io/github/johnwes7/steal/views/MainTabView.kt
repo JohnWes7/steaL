@@ -34,6 +34,7 @@ import io.github.johnwes7.steal.navigation.Navigator
 import io.github.johnwes7.steal.navigation.SalesRoute
 import io.github.johnwes7.steal.navigation.SearchRoute
 import io.github.johnwes7.steal.navigation.LanguageSettingsRoute
+import io.github.johnwes7.steal.navigation.RegionSettingsRoute
 import io.github.johnwes7.steal.navigation.SettingsRoute
 import io.github.johnwes7.steal.navigation.ThemeSettingsRoute
 import io.github.johnwes7.steal.navigation.WishlistRoute
@@ -80,10 +81,12 @@ fun MainTabView() {
             is SalesRoute -> NavEntry(key) { SaleEventsView() }
             is SettingsRoute -> NavEntry(key) {
                 SettingsView(
+                    onOpenRegionSettings = { navigator.navigate(RegionSettingsRoute) },
                     onOpenThemeSettings = { navigator.navigate(ThemeSettingsRoute) },
                     onOpenLanguageSettings = { navigator.navigate(LanguageSettingsRoute) },
                 )
             }
+            is RegionSettingsRoute -> NavEntry(key) { RegionSettingsView(onBack = { navigator.goBack() }) }
             is ThemeSettingsRoute -> NavEntry(key) { ThemeSettingsView(onBack = { navigator.goBack() }) }
             is LanguageSettingsRoute -> NavEntry(key) { LanguageSettingsView(onBack = { navigator.goBack() }) }
             // 漏写页面时直接崩溃，开发时立刻发现（同官方 entryProvider DSL 的默认 fallback）。

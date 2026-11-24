@@ -11,7 +11,9 @@ import io.github.johnwes7.steal.shared.services.SteamApi
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
 import io.github.johnwes7.steal.shared.services.createHttpClient
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
+import io.github.johnwes7.steal.shared.viewmodels.RegionSettingsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RootViewModel
+import io.github.johnwes7.steal.shared.viewmodels.SettingsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.ThemeSettingsViewModel
 import io.ktor.client.HttpClient
 
@@ -86,6 +88,26 @@ class AppContainer(
                 steamAppIDResolver = steamAppIDResolver,
                 settingsRepository = settingsRepository,
             )
+        }
+    }
+
+    /**
+     * Settings tab 根页面 [SettingsViewModel] 的工厂。
+     * The factory for the Settings tab root screen's [SettingsViewModel].
+     */
+    val settingsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            SettingsViewModel(settingsRepository = settingsRepository)
+        }
+    }
+
+    /**
+     * 「地区与货币」单选页 [RegionSettingsViewModel] 的工厂。
+     * The factory for the "Region & currency" screen's [RegionSettingsViewModel].
+     */
+    val regionSettingsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            RegionSettingsViewModel(settingsRepository = settingsRepository)
         }
     }
 

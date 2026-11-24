@@ -44,6 +44,13 @@ data object SalesRoute : NavKey
 data object SettingsRoute : NavKey
 
 /**
+ * 「地区与货币」单选页，从 Settings 根页面推入。
+ * The "Region & currency" single-choice screen, pushed from the Settings root screen.
+ */
+@Serializable
+data object RegionSettingsRoute : NavKey
+
+/**
  * 「主题与色彩」设置页，从 Settings 根页面推入。
  * The "Theme & color" settings screen, pushed from the Settings root screen.
  */

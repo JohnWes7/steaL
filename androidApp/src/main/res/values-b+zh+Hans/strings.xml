@@ -63,6 +63,16 @@
     <string name="settings_noise">噪点</string>
     <string name="settings_reset_to_defaults">恢复默认</string>
 
+    <!-- 地区 / Region -->
+    <string name="settings_region">地区与货币</string>
+    <string name="region_name_australia">澳大利亚</string>
+    <string name="region_name_china">中国</string>
+    <string name="region_name_united_states">美国</string>
+    <string name="region_name_united_kingdom">英国</string>
+    <string name="region_name_japan">日本</string>
+    <string name="region_name_korea">韩国</string>
+    <string name="region_name_europe">欧洲</string>
+
     <!-- 语言 / Language -->
     <string name="settings_language">语言</string>
     <string name="settings_language_system_default">系统默认</string>
