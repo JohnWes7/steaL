@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.views
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -35,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -161,6 +163,9 @@ private fun GamesContent(
                 item(key = "deals") {
                     DealsSectionView(state = dealState, onSelect = onSelectDeal, onRetry = onRetryDeals)
                 }
+                item(key = "giveawaysHeader") {
+                    GiveawaysHeader()
+                }
                 item(key = "debug") {
                     DebugSection(
                         region = region,
@@ -174,6 +179,8 @@ private fun GamesContent(
     }
 }
 
+// MARK: - 区块标题 / Section titles
+
 /**
  * 「Hot deals」区块标题：火焰图标 + 标题 + 箭头，整行可点，打开完整的 Hot deals 列表。
  * The Hot deals section title: a flame, the title and a chevron; the whole row is clickable and opens the full
@@ -181,13 +188,61 @@ private fun GamesContent(
  */
 @Composable
 private fun HotDealsHeader(onClick: () -> Unit) {
-    val openLabel = stringResource(R.string.hot_deals_open_label)
+    SectionHeader(
+        title = stringResource(R.string.hot_deals_title),
+        iconRes = R.drawable.local_fire_department_fill1_24px,
+        iconContainerColor = ExtendedTheme.colors.hotContainer,
+        iconColor = ExtendedTheme.colors.onHotContainer,
+        onClickLabel = stringResource(R.string.hot_deals_open_label),
+        onClick = onClick,
+    )
+}
+
+/**
+ * 「Giveaways」区块标题：礼物图标 + 标题，不可点，上面多留一段和 Hot deals 拉开。
+ * The Giveaways section title: a gift and the title, not clickable, with extra space above to set it apart from
+ * Hot deals.
+ */
+@Composable
+private fun GiveawaysHeader() {
+    SectionHeader(
+        title = stringResource(R.string.giveaways_title),
+        iconRes = R.drawable.featured_seasonal_and_gifts_24px,
+        iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
+        iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+}
+
+/**
+ * 首页的区块标题：圆底图标 + 标题；给了 [onClick] 时整行可点、右边加箭头，[onClickLabel] 是朗读时说的点了会怎样。
+ * A home section title: an icon on a circle and the title; with [onClick] the whole row is clickable and gains a
+ * chevron, and [onClickLabel] is what screen readers say the click does.
+ */
+@Composable
+private fun SectionHeader(
+    title: String,
+    @DrawableRes iconRes: Int,
+    iconContainerColor: Color,
+    iconColor: Color,
+    modifier: Modifier = Modifier,
+    onClickLabel: String? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    // 只有可点的标题才裁圆角、加点击：按下的水波纹要有圆角。
+    // Only a clickable title gets the rounded clip and the click, so its press ripple has rounded corners.
+    val clickModifier = if (onClick == null) {
+        Modifier
+    } else {
+        Modifier
+            .clip(MaterialTheme.shapes.large)
+            .clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick)
+    }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
-            .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
+            .then(clickModifier)
             .semantics { heading() }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -198,27 +253,29 @@ private fun HotDealsHeader(onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .background(color = ExtendedTheme.colors.hotContainer, shape = CircleShape),
+                .background(color = iconContainerColor, shape = CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                painter = painterResource(R.drawable.local_fire_department_fill1_24px),
+                painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = ExtendedTheme.colors.onHotContainer,
+                tint = iconColor,
             )
         }
         Text(
-            text = stringResource(R.string.hot_deals_title),
+            text = title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f),
         )
-        Icon(
-            painter = painterResource(R.drawable.chevron_right_24px),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (onClick != null) {
+            Icon(
+                painter = painterResource(R.drawable.chevron_right_24px),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
