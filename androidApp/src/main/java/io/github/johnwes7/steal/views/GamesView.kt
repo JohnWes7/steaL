@@ -37,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -50,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnwes7.steal.LocalAppContainer
 import io.github.johnwes7.steal.R
 import io.github.johnwes7.steal.previews.previewDealItems
+import io.github.johnwes7.steal.shared.config.AppLog
 import io.github.johnwes7.steal.shared.models.app.HomeDealItem
 import io.github.johnwes7.steal.shared.models.itad.ItadGiveaway
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
@@ -87,8 +90,12 @@ fun GamesView(modifier: Modifier = Modifier) {
         viewModel.loadIfNeeded(region = region)
     }
 
-    // 4. 状态和操作交给内容函数显示；Hot deals 列表页和详情页还没做，点了先不做事
-    // 4. Hand the state and actions to the content function; the Hot deals list and detail pages don't exist yet
+    // 4. 取打开外部链接用的 UriHandler：giveaway 的领取页在 App 外面打开
+    // 4. Get the UriHandler for external links: giveaway claim pages open outside the app
+    val uriHandler = LocalUriHandler.current
+
+    // 5. 状态和操作交给内容函数显示；Hot deals 列表页和详情页还没做，点了先不做事
+    // 5. Hand the state and actions to the content function; the Hot deals list and detail pages don't exist yet
     GamesContent(
         dealState = dealState,
         giveawaysState = giveawaysState,
@@ -98,11 +105,26 @@ fun GamesView(modifier: Modifier = Modifier) {
         onRefresh = { viewModel.refresh(region = region) },
         onOpenHotDeals = {},
         onSelectDeal = { _ -> },
-        onOpenGiveaway = { _ -> },
+        onOpenGiveaway = { giveaway -> openClaimPage(uriHandler = uriHandler, url = giveaway.url) },
         onRetryDeals = { viewModel.retryDeals(region = region) },
         onRetryGiveaways = { viewModel.retryGiveaways() },
         modifier = modifier,
     )
+}
+
+/**
+ * 在 App 外打开 giveaway 的领取页（默认浏览器，或能处理这个链接的商店 App）。
+ * Opens a giveaway's claim page outside the app, in the default browser or a store app that handles the link.
+ *
+ * 手机上没有 App 能打开时，[UriHandler.openUri] 抛 `IllegalArgumentException`，这里只记日志、不做别的。
+ * When nothing on the phone can open it, [UriHandler.openUri] throws `IllegalArgumentException`; this only logs it.
+ */
+private fun openClaimPage(uriHandler: UriHandler, url: String) {
+    try {
+        uriHandler.openUri(url)
+    } catch (error: IllegalArgumentException) {
+        AppLog.games.e(error) { "打不开领取页 / Can't open the claim page: $url" }
+    }
 }
 
 /**
