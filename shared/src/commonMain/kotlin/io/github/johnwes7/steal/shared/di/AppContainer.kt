@@ -81,7 +81,11 @@ class AppContainer(
      */
     val gamesViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         initializer {
-            GamesViewModel(itadApi = itadApi, steamAppIDResolver = steamAppIDResolver)
+            GamesViewModel(
+                itadApi = itadApi,
+                steamAppIDResolver = steamAppIDResolver,
+                settingsRepository = settingsRepository,
+            )
         }
     }
 

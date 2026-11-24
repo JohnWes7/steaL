@@ -11,12 +11,15 @@ import io.github.johnwes7.steal.shared.models.itad.ItadGiveaway
 import io.github.johnwes7.steal.shared.models.itad.ItadShopRef
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.services.ItadApi
+import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
@@ -24,12 +27,16 @@ import kotlinx.coroutines.launch
  * 首页的状态：Hot Deals 前 5 条与 Giveaways 两个区块，各自加载、失败、重试，互不影响。
  * The home page's state: the first five Hot Deals and the Giveaways, each loading, failing and retrying on its own.
  *
- * 请求跑在 `viewModelScope` 里，切 tab 不会中断，页面出栈（ViewModel 被清掉）时才取消。
+ * 请求跑在 `viewModelScope` 里，切 tab 不会中断，页面出栈（ViewModel 被清掉）时才取消。地区由 ViewModel 自己订阅
+ * 设置，所以在设置页改了地区，首页不在屏幕上也会重新加载。
  * Requests run in `viewModelScope`: switching tabs does not stop them; they are cancelled when the page is popped.
+ * The view model subscribes to the region in the settings itself, so changing it on the settings screen reloads
+ * the home page even while it is off screen.
  */
 class GamesViewModel(
     private val itadApi: ItadApi,
     private val steamAppIDResolver: SteamAppIDResolver,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     // MARK: - 状态类型 / State types
@@ -113,8 +120,15 @@ class GamesViewModel(
     // MARK: - 内部记录 / Internal bookkeeping
 
     /**
-     * 当前内容属于哪个地区；`null` 表示还没加载过。
-     * The region the current content belongs to; `null` before the first load.
+     * 是否已经开始订阅地区，保证只订阅一次。
+     * Whether the region subscription has started, so it starts only once.
+     */
+    private var isObservingRegion: Boolean = false
+
+    /**
+     * 最近从设置收到的地区，当前（或正在加载的）deals 属于它；`null` 表示还没收到。
+     * The region last received from the settings, which the current (or loading) deals belong to; `null` until the
+     * first one arrives.
      */
     private var loadedRegion: AppRegion? = null
 
@@ -125,48 +139,42 @@ class GamesViewModel(
     // MARK: - 界面调用 / Called by the UI
 
     /**
-     * 第一次调用时加载两个区块，地区变了只重新加载 deals；这个地区已经加载过就什么也不做。
-     * Loads both sections on the first call and only the deals when the region changes; does nothing for a region
-     * already loaded.
+     * 开始加载：第一次调用时订阅设置里的地区，之后再调用什么也不做。
+     * Starts loading: the first call subscribes to the region in the settings, and later calls do nothing.
      *
-     * 页面每次出现都会调用，所以要幂等：切 tab、从详情页返回都不重新请求。
-     * The page calls this every time it appears, so it is idempotent: switching tabs or coming back does not refetch.
+     * 页面每次出现都会调用（切 tab 回来、转屏、从别的页面返回），所以要幂等。
+     * The page calls this every time it appears (back from another tab, after rotation, back from another screen),
+     * so it is idempotent.
      */
-    fun loadIfNeeded(region: AppRegion) {
-        // 1. 这个地区加载过就跳过，没有就记下
-        // 1. Skip a region already loaded; otherwise record it
-        if (region == loadedRegion) {
+    fun loadIfNeeded() {
+        if (isObservingRegion) {
             return
         }
-        val isFirstLoad = loadedRegion == null
-        loadedRegion = region
+        isObservingRegion = true
 
-        // 2. 加载 deals
-        // 2. Load the deals
-        loadDeals(region = region, showsLoading = true)
-
-        // 3. giveaways 只在第一次加载：请求不分地区
-        // 3. Giveaways only on the first load: the request has no region
-        if (isFirstLoad) {
-            loadGiveaways(showsLoading = true)
+        viewModelScope.launch {
+            observeRegion()
         }
     }
 
     /**
-     * 下拉刷新：两个区块连同 appID 都重查，旧内容留到新数据回来；已经在刷新时再调用不做事。
-     * Pull to refresh: refetches both sections and the appIDs, keeping the old content until new data arrives; does
-     * nothing while already refreshing.
+     * 下拉刷新：按当前地区，两个区块连同 appID 都重查，旧内容留到新数据回来；还没收到地区、或已经在刷新时不做事。
+     * Pull to refresh: refetches both sections and the appIDs for the current region, keeping the old content until
+     * new data arrives; does nothing before the region arrives or while already refreshing.
      *
      * 补 appID 失败的卡片也靠它重试。
      * It is also how cards whose appID lookup failed get retried.
      */
-    fun refresh(region: AppRegion) {
-        // 1. 正在刷新就跳过，否则记下地区、开始转圈
-        // 1. Skip if already refreshing; otherwise record the region and start the spinner
+    fun refresh() {
+        // 1. 还没收到地区、或正在刷新就跳过，否则开始转圈
+        // 1. Skip before the region arrives or while refreshing; otherwise start the spinner
+        val region = loadedRegion
+        if (region == null) {
+            return
+        }
         if (_isRefreshing.value) {
             return
         }
-        loadedRegion = region
         _isRefreshing.value = true
 
         // 2. 两个区块都重查，不切 Loading：旧内容留着
@@ -183,10 +191,14 @@ class GamesViewModel(
     }
 
     /**
-     * deals 失败后的重试：切回 Loading 重新请求。
-     * Retries the deals after a failure, showing Loading again.
+     * deals 失败后的重试：按当前地区切回 Loading 重新请求。
+     * Retries the deals after a failure for the current region, showing Loading again.
      */
-    fun retryDeals(region: AppRegion) {
+    fun retryDeals() {
+        val region = loadedRegion
+        if (region == null) {
+            return
+        }
         loadDeals(region = region, showsLoading = true)
     }
 
@@ -196,6 +208,42 @@ class GamesViewModel(
      */
     fun retryGiveaways() {
         loadGiveaways(showsLoading = true)
+    }
+
+    // MARK: - 订阅地区 / Region subscription
+
+    /**
+     * 一直收集设置里的地区，每来一个和上次不同的地区就加载一次；`viewModelScope` 取消时才结束。
+     * Collects the region from the settings until `viewModelScope` is cancelled, loading once for each region that
+     * differs from the last.
+     */
+    private suspend fun observeRegion() {
+        val regions = settingsRepository.settings.map { settings -> settings.region }
+        // 改深浅、毛玻璃这些别的设置时整份设置会再发一次，地区没变就跳过。
+        // Changing another setting (theme, frosted bars) emits the whole settings again; skip an unchanged region.
+        val changedRegions = regions.distinctUntilChanged()
+        changedRegions.collect { region -> loadSections(region = region) }
+    }
+
+    /**
+     * 按 [region] 加载：deals 每次都重新加载，giveaways 只在第一次加载。
+     * Loads for [region]: the deals every time, the giveaways only the first time.
+     */
+    private fun loadSections(region: AppRegion) {
+        // 1. 记下地区：刷新和重试用它
+        // 1. Record the region: refresh and retry use it
+        val isFirstLoad = loadedRegion == null
+        loadedRegion = region
+
+        // 2. 加载 deals
+        // 2. Load the deals
+        loadDeals(region = region, showsLoading = true)
+
+        // 3. giveaways 只在第一次加载：请求不分地区
+        // 3. Giveaways only on the first load: the request has no region
+        if (isFirstLoad) {
+            loadGiveaways(showsLoading = true)
+        }
     }
 
     // MARK: - 每个区块的请求 / Per-section requests

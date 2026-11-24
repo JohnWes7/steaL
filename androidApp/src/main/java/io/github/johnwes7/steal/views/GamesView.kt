@@ -3,10 +3,8 @@ package io.github.johnwes7.steal.views
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,10 +14,7 @@ import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,9 +24,6 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,7 +47,6 @@ import io.github.johnwes7.steal.previews.previewGiveaways
 import io.github.johnwes7.steal.shared.config.AppLog
 import io.github.johnwes7.steal.shared.models.app.HomeDealItem
 import io.github.johnwes7.steal.shared.models.itad.ItadGiveaway
-import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadState
@@ -67,9 +58,8 @@ import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
- * Games tab 的根页面：Hot deals 与 Giveaways 两个区块，最下面暂时是调试用的地区切换。
- * The Games tab's root screen: the Hot deals and Giveaways sections, with a temporary debug region switch at the
- * bottom.
+ * Games tab 的根页面：Hot deals 与 Giveaways 两个区块。
+ * The Games tab's root screen: the Hot deals and Giveaways sections.
  */
 @Composable
 fun GamesView(modifier: Modifier = Modifier) {
@@ -80,33 +70,27 @@ fun GamesView(modifier: Modifier = Modifier) {
     val giveawaysState by viewModel.giveawaysState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
-    // 2. 调试用的地区，转屏不丢
-    // 2. The debug region, surviving rotation
-    var region by rememberSaveable { mutableStateOf(AppRegion.Australia) }
-
-    // 3. 页面出现、地区变了都调 loadIfNeeded，由它决定要不要请求
-    // 3. Call loadIfNeeded whenever the page appears or the region changes; it decides whether to fetch
-    LaunchedEffect(region) {
-        viewModel.loadIfNeeded(region = region)
+    // 2. 页面出现时让 ViewModel 开始加载：地区它自己从设置里读，加载过就不再请求
+    // 2. Ask the view model to start loading when the page appears; it reads the region itself and won't refetch
+    LaunchedEffect(Unit) {
+        viewModel.loadIfNeeded()
     }
 
-    // 4. 取打开外部链接用的 UriHandler：giveaway 的领取页在 App 外面打开
-    // 4. Get the UriHandler for external links: giveaway claim pages open outside the app
+    // 3. 取打开外部链接用的 UriHandler：giveaway 的领取页在 App 外面打开
+    // 3. Get the UriHandler for external links: giveaway claim pages open outside the app
     val uriHandler = LocalUriHandler.current
 
-    // 5. 状态和操作交给内容函数显示；Hot deals 列表页和详情页还没做，点了先不做事
-    // 5. Hand the state and actions to the content function; the Hot deals list and detail pages don't exist yet
+    // 4. 状态和操作交给内容函数显示；Hot deals 列表页和详情页还没做，点了先不做事
+    // 4. Hand the state and actions to the content function; the Hot deals list and detail pages don't exist yet
     GamesContent(
         dealState = dealState,
         giveawaysState = giveawaysState,
         isRefreshing = isRefreshing,
-        region = region,
-        onSelectRegion = { newRegion -> region = newRegion },
-        onRefresh = { viewModel.refresh(region = region) },
+        onRefresh = { viewModel.refresh() },
         onOpenHotDeals = {},
         onSelectDeal = { _ -> },
         onOpenGiveaway = { giveaway -> openClaimPage(uriHandler = uriHandler, url = giveaway.url) },
-        onRetryDeals = { viewModel.retryDeals(region = region) },
+        onRetryDeals = { viewModel.retryDeals() },
         onRetryGiveaways = { viewModel.retryGiveaways() },
         modifier = modifier,
     )
@@ -136,8 +120,6 @@ private fun GamesContent(
     dealState: DealLoadState,
     giveawaysState: GiveawaysLoadState,
     isRefreshing: Boolean,
-    region: AppRegion,
-    onSelectRegion: (AppRegion) -> Unit,
     onRefresh: () -> Unit,
     onOpenHotDeals: () -> Unit,
     onSelectDeal: (HomeDealItem) -> Unit,
@@ -197,9 +179,6 @@ private fun GamesContent(
                     onSelect = onOpenGiveaway,
                     onRetry = onRetryGiveaways,
                 )
-                item(key = "debug") {
-                    DebugSection(region = region, onSelectRegion = onSelectRegion)
-                }
             }
         }
     }
@@ -305,38 +284,6 @@ private fun SectionHeader(
     }
 }
 
-// MARK: - 调试区 / Debug
-
-/**
- * 调试区：切地区，看各种货币的格式；地区设置页做好后删掉。
- * The debug area: a region switch to check each currency's formatting; removed once the region setting exists.
- */
-@Composable
-private fun DebugSection(
-    region: AppRegion,
-    onSelectRegion: (AppRegion) -> Unit,
-) {
-    Column(
-        modifier = Modifier.padding(top = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        HorizontalDivider()
-        Text(text = "Debug", style = MaterialTheme.typography.titleMedium)
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            for (option in AppRegion.entries) {
-                FilterChip(
-                    selected = option == region,
-                    onClick = { onSelectRegion(option) },
-                    label = { Text(option.apiRegionCode) },
-                )
-            }
-        }
-    }
-}
-
 @Preview
 @Composable
 private fun GamesContentPreview() {
@@ -345,8 +292,6 @@ private fun GamesContentPreview() {
             dealState = DealLoadState.Loaded(items = previewDealItems),
             giveawaysState = GiveawaysLoadState.Loaded(giveaways = previewGiveaways),
             isRefreshing = false,
-            region = AppRegion.Australia,
-            onSelectRegion = { _ -> },
             onRefresh = {},
             onOpenHotDeals = {},
             onSelectDeal = { _ -> },

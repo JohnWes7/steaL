@@ -3,7 +3,10 @@ package io.github.johnwes7.steal.shared.viewmodels
 import io.github.johnwes7.steal.shared.models.app.HomeDealItem.SteamLink
 import io.github.johnwes7.steal.shared.models.app.LoadError
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
+import io.github.johnwes7.steal.shared.models.settings.AppTheme
+import io.github.johnwes7.steal.shared.services.InMemoryPreferencesDataStore
 import io.github.johnwes7.steal.shared.services.ItadApi
+import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamApi
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
 import io.github.johnwes7.steal.shared.services.installAppPlugins
@@ -47,6 +50,10 @@ import kotlin.test.assertTrue
  * State tests for [GamesViewModel]: one mock engine plays ITAD, answering deals, giveaways and lookups by path,
  * without the network.
  *
+ * 地区来自内存里的设置，默认澳大利亚；换地区的测试经 [SettingsRepository.setRegion] 改它，同设置页。
+ * The region comes from in-memory settings and defaults to Australia; tests that change it call
+ * [SettingsRepository.setRegion], as the settings screen does.
+ *
  * `viewModelScope` 固定跑在 `Dispatchers.Main` 上，测试前用 `Dispatchers.setMain` 换成测试调度器（Android 官方
  * 「Coroutines best practices」的做法），测试后换回来。请求在假引擎自己的线程上回答，所以用 `StateFlow.first { … }`
  * 等状态变成想要的样子，而不是推进虚拟时间。
@@ -82,7 +89,7 @@ class GamesViewModelTest {
         servers.lookupGate = lookupGate
         val viewModel = servers.makeViewModel()
 
-        viewModel.loadIfNeeded(AppRegion.Australia)
+        viewModel.loadIfNeeded()
 
         val published = viewModel.dealState.first { state -> state is DealLoadState.Loaded }
         assertEquals(listOf(SteamLink.Pending, SteamLink.Pending), steamLinks(published))
@@ -107,7 +114,7 @@ class GamesViewModelTest {
         servers.lookupStatus = HttpStatusCode.InternalServerError
         val viewModel = servers.makeViewModel()
 
-        viewModel.loadIfNeeded(AppRegion.Australia)
+        viewModel.loadIfNeeded()
 
         val settled = viewModel.dealState.first { state -> isSettled(state) }
         assertEquals(listOf(SteamLink.Failed, SteamLink.Failed), steamLinks(settled))
@@ -125,7 +132,7 @@ class GamesViewModelTest {
         servers.dealsStatus = HttpStatusCode.InternalServerError
         val viewModel = servers.makeViewModel()
 
-        viewModel.loadIfNeeded(AppRegion.Australia)
+        viewModel.loadIfNeeded()
 
         val failed = viewModel.dealState.first { state -> state is DealLoadState.Failed }
         assertEquals(DealLoadState.Failed(error = LoadError.Server(statusCode = 500)), failed)
@@ -142,12 +149,12 @@ class GamesViewModelTest {
         val servers = FakeServers()
         servers.dealsStatus = HttpStatusCode.InternalServerError
         val viewModel = servers.makeViewModel()
-        viewModel.loadIfNeeded(AppRegion.Australia)
+        viewModel.loadIfNeeded()
         viewModel.dealState.first { state -> state is DealLoadState.Failed }
         val giveawaysBefore = viewModel.giveawaysState.first { state -> state is GiveawaysLoadState.Loaded }
 
         servers.dealsStatus = HttpStatusCode.OK
-        viewModel.retryDeals(AppRegion.Australia)
+        viewModel.retryDeals()
 
         val settled = viewModel.dealState.first { state -> isSettled(state) }
         assertEquals(listOf("AU-found", "AU-missing"), itadUUIDs(settled))
@@ -161,21 +168,21 @@ class GamesViewModelTest {
     // MARK: - 地区 / Region
 
     /**
-     * 同一个地区再调用 `loadIfNeeded` 什么也不做：状态还是原来那个，不切回 `Loading`。
-     * Calling `loadIfNeeded` again for the same region does nothing: the state stays the same object and never
-     * goes back to `Loading`.
+     * 再调用 `loadIfNeeded` 不会再订阅一次：状态还是原来那个，不切回 `Loading`，也不多发请求。
+     * Calling `loadIfNeeded` again doesn't subscribe a second time: the state stays the same object, never goes
+     * back to `Loading`, and no extra requests are sent.
      */
     @Test
-    fun sameRegionDoesNotReload() = runTest {
+    fun secondCallDoesNotSubscribeAgain() = runTest {
         val servers = FakeServers()
         val viewModel = servers.makeViewModel()
-        viewModel.loadIfNeeded(AppRegion.Australia)
+        viewModel.loadIfNeeded()
         val settled = viewModel.dealState.first { state -> isSettled(state) }
         viewModel.giveawaysState.first { state -> state is GiveawaysLoadState.Loaded }
 
-        viewModel.loadIfNeeded(AppRegion.Australia)
-        // 要是误启动了加载，排队的协程会在这里跑，状态会变成 Loading。
-        // A mistakenly started load would run its queued coroutine here and switch the state to Loading.
+        viewModel.loadIfNeeded()
+        // 要是又订阅了一次，新的订阅会在这里收到地区、开始加载，状态会变成 Loading。
+        // A second subscription would receive the region here and start loading, switching the state to Loading.
         advanceUntilIdle()
 
         assertSame(settled, viewModel.dealState.value)
@@ -184,18 +191,42 @@ class GamesViewModelTest {
     }
 
     /**
+     * 改别的设置（深浅）不重新加载：整份设置会再发一次，但地区没变。
+     * Changing another setting (the theme) doesn't reload: the whole settings are emitted again, but the region is
+     * unchanged.
+     */
+    @Test
+    fun otherSettingChangeDoesNotReload() = runTest {
+        val settings = SettingsRepository(dataStore = InMemoryPreferencesDataStore())
+        val servers = FakeServers()
+        val viewModel = servers.makeViewModel(settingsRepository = settings)
+        viewModel.loadIfNeeded()
+        val settled = viewModel.dealState.first { state -> isSettled(state) }
+        viewModel.giveawaysState.first { state -> state is GiveawaysLoadState.Loaded }
+
+        settings.setTheme(AppTheme.Light)
+        // 要是误重载了，排队的协程会在这里跑，状态会变成 Loading。
+        // A mistaken reload would run its queued coroutine here and switch the state to Loading.
+        advanceUntilIdle()
+
+        assertSame(settled, viewModel.dealState.value)
+        assertEquals(listOf("AU"), servers.dealsCountries.value)
+    }
+
+    /**
      * 换地区只重新加载 deals（请求带新地区），giveaways 不重新请求。
      * A region change reloads only the deals, with the new region in the request; the giveaways are not refetched.
      */
     @Test
     fun regionChangeReloadsOnlyDeals() = runTest {
+        val settings = SettingsRepository(dataStore = InMemoryPreferencesDataStore())
         val servers = FakeServers()
-        val viewModel = servers.makeViewModel()
-        viewModel.loadIfNeeded(AppRegion.Australia)
+        val viewModel = servers.makeViewModel(settingsRepository = settings)
+        viewModel.loadIfNeeded()
         viewModel.dealState.first { state -> isSettled(state) }
         val giveawaysBefore = viewModel.giveawaysState.first { state -> state is GiveawaysLoadState.Loaded }
 
-        viewModel.loadIfNeeded(AppRegion.UnitedStates)
+        settings.setRegion(AppRegion.UnitedStates)
 
         val settled = viewModel.dealState.first { state -> isSettled(state) && itadUUIDs(state).contains("US-found") }
         assertEquals(listOf("US-found", "US-missing"), itadUUIDs(settled))
@@ -214,17 +245,18 @@ class GamesViewModelTest {
      */
     @Test
     fun regionChangeCancelsInFlightDeals() = runTest {
+        val settings = SettingsRepository(dataStore = InMemoryPreferencesDataStore())
         val servers = FakeServers()
         val australiaGate = CompletableDeferred<Unit>()
         servers.dealsGates["AU"] = australiaGate
-        val viewModel = servers.makeViewModel()
+        val viewModel = servers.makeViewModel(settingsRepository = settings)
 
-        viewModel.loadIfNeeded(AppRegion.Australia)
+        viewModel.loadIfNeeded()
         // 等澳区的请求真的到了服务器、卡在闸门上。
         // Wait until the Australian request has really reached the server and is held at the gate.
         servers.dealsCountries.first { countries -> countries.contains("AU") }
 
-        viewModel.loadIfNeeded(AppRegion.UnitedStates)
+        settings.setRegion(AppRegion.UnitedStates)
 
         val settled = viewModel.dealState.first { state -> isSettled(state) }
         assertEquals(listOf("US-found", "US-missing"), itadUUIDs(settled))
@@ -245,13 +277,13 @@ class GamesViewModelTest {
     fun refreshKeepsOldListUntilNewDataArrives() = runTest {
         val servers = FakeServers()
         val viewModel = servers.makeViewModel()
-        viewModel.loadIfNeeded(AppRegion.Australia)
+        viewModel.loadIfNeeded()
         val before = viewModel.dealState.first { state -> isSettled(state) }
         viewModel.giveawaysState.first { state -> state is GiveawaysLoadState.Loaded }
         val refreshGate = CompletableDeferred<Unit>()
         servers.dealsGates["AU"] = refreshGate
 
-        viewModel.refresh(AppRegion.Australia)
+        viewModel.refresh()
 
         assertTrue(viewModel.isRefreshing.value)
         servers.dealsCountries.first { countries -> countries.size == 2 }
@@ -262,6 +294,28 @@ class GamesViewModelTest {
         val after = viewModel.dealState.value
         assertTrue(isSettled(after))
         assertEquals(2, servers.giveawaysRequestCount.value)
+    }
+
+    /**
+     * 下拉刷新和重试都用设置里当前的地区，不是第一次加载时的地区。
+     * Pull to refresh and retry both use the current region from the settings, not the one from the first load.
+     */
+    @Test
+    fun refreshAndRetryUseCurrentRegion() = runTest {
+        val settings = SettingsRepository(dataStore = InMemoryPreferencesDataStore())
+        val servers = FakeServers()
+        val viewModel = servers.makeViewModel(settingsRepository = settings)
+        viewModel.loadIfNeeded()
+        viewModel.dealState.first { state -> isSettled(state) }
+        settings.setRegion(AppRegion.UnitedStates)
+        viewModel.dealState.first { state -> isSettled(state) && itadUUIDs(state).contains("US-found") }
+
+        viewModel.refresh()
+        viewModel.isRefreshing.first { isRefreshing -> !isRefreshing }
+        viewModel.retryDeals()
+        servers.dealsCountries.first { countries -> countries.size == 4 }
+
+        assertEquals(listOf("AU", "US", "US", "US"), servers.dealsCountries.value)
     }
 
     // MARK: - 小工具 / Helpers
@@ -333,10 +387,14 @@ class GamesViewModelTest {
         val giveawaysRequestCount = MutableStateFlow(0)
 
         /**
-         * 建一个连着这个假服务器的 [GamesViewModel]，Service 用和正式 App 一样的插件配置。
-         * Builds a [GamesViewModel] wired to this fake server, with services using the app's real plugin setup.
+         * 建一个连着这个假服务器的 [GamesViewModel]，Service 用和正式 App 一样的插件配置；地区从
+         * [settingsRepository] 读，不传就是一份没存过东西的设置（澳大利亚）。
+         * Builds a [GamesViewModel] wired to this fake server, with services using the app's real plugin setup; the
+         * region comes from [settingsRepository], which defaults to empty settings (Australia).
          */
-        fun makeViewModel(): GamesViewModel {
+        fun makeViewModel(
+            settingsRepository: SettingsRepository = SettingsRepository(dataStore = InMemoryPreferencesDataStore()),
+        ): GamesViewModel {
             val engine = MockEngine { request -> answer(request) }
             val client = HttpClient(engine) {
                 installAppPlugins(logsRequests = false)
@@ -344,7 +402,11 @@ class GamesViewModelTest {
             val itadApi = ItadApi(client = client, apiKey = "test-key")
             val steamApi = SteamApi(client = client)
             val resolver = SteamAppIDResolver(itadApi = itadApi, steamApi = steamApi)
-            return GamesViewModel(itadApi = itadApi, steamAppIDResolver = resolver)
+            return GamesViewModel(
+                itadApi = itadApi,
+                steamAppIDResolver = resolver,
+                settingsRepository = settingsRepository,
+            )
         }
 
         /**
