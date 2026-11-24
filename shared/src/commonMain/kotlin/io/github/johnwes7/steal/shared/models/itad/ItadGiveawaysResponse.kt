@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.shared.models.itad
 
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
 
 // `GET https://api.isthereanydeal.com/giveaways/v1` 的响应顶层直接是数组，没有 `nextOffset` / `hasMore` 这种分页外层，
@@ -74,7 +75,49 @@ data class ItadGiveaway(
      * The games in this giveaway, possibly more than one.
      */
     val games: List<ItadGiveawayGame>,
-)
+) {
+
+    /**
+     * 列表里显示的标题：第一款游戏的名字，没有游戏时用 [title]。
+     * The title shown in lists: the first game's name, or [title] when there are no games.
+     *
+     * [title] 带「- FREE on …」这类后缀，游戏名更干净。
+     * [title] carries suffixes such as "- FREE on …", so the game name reads cleaner.
+     */
+    val displayTitle: String
+        get() {
+            val firstGame = games.firstOrNull() ?: return title
+            return firstGame.title
+        }
+
+    /**
+     * 行缩略图：第一款游戏的小横幅优先，最后才退到竖版封面；没有游戏或一张图都没有是 `null`。
+     * The row thumbnail: the first game's small banners first, the box art only as a last resort; `null` when
+     * there are no games or no images.
+     */
+    val thumbnailUrl: String?
+        get() {
+            val assets = games.firstOrNull()?.assets ?: return null
+            val candidates = listOfNotNull(
+                assets.banner300,
+                assets.banner400,
+                assets.banner145,
+                assets.banner600,
+                assets.boxart,
+            )
+            return candidates.firstOrNull()
+        }
+
+    /**
+     * 领取截止时间；[expiry] 没有或解析不了时是 `null`。
+     * The claim deadline; `null` when [expiry] is missing or cannot be parsed.
+     */
+    val expiryInstant: Instant?
+        get() {
+            val expiryText = expiry ?: return null
+            return Instant.parseOrNull(expiryText)
+        }
+}
 
 // 游戏 / Game
 
