@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.shared.models.itad
 
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 import kotlinx.serialization.Serializable
 
@@ -117,7 +118,75 @@ data class ItadGiveaway(
             val expiryText = expiry ?: return null
             return Instant.parseOrNull(expiryText)
         }
+
+    /**
+     * 截止时间的显示方式：今天、剩几天，或具体日期。
+     * How the deadline is shown: today, days left, or the exact date.
+     */
+    sealed interface Deadline {
+
+        /**
+         * 不到一整天就截止，已经过了截止时间也算。
+         * Ends in less than a full day, including deadlines already passed.
+         */
+        data object Today : Deadline
+
+        /**
+         * 还剩 [days] 天，1 到 7。
+         * [days] days left, from 1 to 7.
+         */
+        data class DaysLeft(val days: Int) : Deadline
+
+        /**
+         * 一周以后才截止，显示 [expiry] 的日期。
+         * Ends more than a week away, shown as the date of [expiry].
+         */
+        data class OnDate(val expiry: Instant) : Deadline
+    }
+
+    /**
+     * 按 [now] 算截止时间怎么显示；没有截止时间是 `null`。
+     * Works out how the deadline is shown as of [now]; `null` when there is no deadline.
+     *
+     * 天数按整 24 小时算、不按日历日：明天凌晨截止、现在还不到 24 小时，算 [Deadline.Today]。
+     * Days count whole 24-hour spans rather than calendar days, so a deadline early tomorrow that is under 24 hours
+     * away is [Deadline.Today].
+     */
+    fun deadline(now: Instant): Deadline? {
+        val expiry = expiryInstant ?: return null
+        val remaining = expiry - now
+        val daysLeft = remaining.inWholeDays
+
+        return when {
+            daysLeft <= 0 -> Deadline.Today
+            daysLeft <= COUNTDOWN_MAX_DAYS -> Deadline.DaysLeft(days = daysLeft.toInt())
+            else -> Deadline.OnDate(expiry = expiry)
+        }
+    }
+
+    /**
+     * 按 [now] 是否 48 小时内截止（含已经过了），界面用它加强调色；没有截止时间是 `false`。
+     * Whether the deadline is within 48 hours of [now] (or already passed), for the UI's emphasis; `false` when there
+     * is no deadline.
+     */
+    fun isExpiringSoon(now: Instant): Boolean {
+        val expiry = expiryInstant ?: return false
+        val remaining = expiry - now
+        return remaining <= EXPIRING_SOON_WITHIN
+    }
 }
+
+/**
+ * 剩几天以内显示倒计时，更远显示日期。
+ * The most days left that still show as a countdown; farther deadlines show the date.
+ */
+private const val COUNTDOWN_MAX_DAYS = 7
+
+/**
+ * 剩多久以内算快截止。
+ * How close a deadline has to be to count as expiring soon.
+ */
+private val EXPIRING_SOON_WITHIN = 48.hours
 
 // 游戏 / Game
 
