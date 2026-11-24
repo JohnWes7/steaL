@@ -17,6 +17,7 @@
   <img src="https://img.shields.io/badge/Swift-5-F05138?logo=swift&logoColor=white" alt="Swift 5">
   <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
   <img src="https://img.shields.io/badge/Data-SwiftData%20%2B%20Firestore-FFCA28" alt="SwiftData + Firestore">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue" alt="License: AGPL-3.0-or-later"></a>
 </p>
 
 <p align="center">
@@ -152,6 +153,30 @@ icon/                    Icon Composer sources for the Liquid Glass app icon
 
 steaL is not affiliated with IsThereAnyDeal or Valve. Steam and the Steam logo are trademarks of Valve
 Corporation.
+
+## License
+
+steaL is free software, licensed under the [GNU Affero General Public License v3.0 or later](LICENSE)
+(`AGPL-3.0-or-later`).
+
+As an additional permission under section 7 of the AGPL, you may distribute builds through app stores
+such as the Apple App Store and Google Play, even where a store's terms would otherwise conflict with
+the AGPL, as long as the complete source stays publicly available under the AGPL. See
+[LICENSE-EXCEPTIONS.md](LICENSE-EXCEPTIONS.md) for the exact terms. Contributions are accepted under
+the same terms.
+
+Some files in this repository come from third parties and keep their own licenses:
+
+| Files | Source | License |
+| --- | --- | --- |
+| `androidApp/src/main/res/font/roboto_bold.ttf` | [Roboto](https://fonts.google.com/specimen/Roboto) | SIL Open Font License 1.1 |
+| `androidApp/src/main/res/font/noto_sans_sc_bold.otf` | [Noto Sans SC](https://fonts.google.com/noto/specimen/Noto+Sans+SC) (subset) | SIL Open Font License 1.1 |
+| `androidApp/src/main/res/drawable/*_24px.xml` | [Material Symbols](https://github.com/google/material-design-icons) | Apache License 2.0 |
+| `NavigationState.kt`, `Navigator.kt`, `RememberNavKey.kt` in `androidApp/.../navigation/` | Adapted from [android/nav3-recipes](https://github.com/android/nav3-recipes) | Apache License 2.0 |
+| `gradlew`, `gradlew.bat`, `gradle/wrapper/` | [Gradle](https://gradle.org) wrapper | Apache License 2.0 |
+
+The font license texts are in `androidApp/src/main/assets/licenses/`. Libraries downloaded by Swift
+Package Manager, Gradle and uv keep their own licenses.
 
 ## Author
 

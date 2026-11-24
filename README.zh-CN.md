@@ -17,6 +17,7 @@
   <img src="https://img.shields.io/badge/Swift-5-F05138?logo=swift&logoColor=white" alt="Swift 5">
   <img src="https://img.shields.io/badge/UI-SwiftUI-0A84FF" alt="SwiftUI">
   <img src="https://img.shields.io/badge/Data-SwiftData%20%2B%20Firestore-FFCA28" alt="SwiftData + Firestore">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0--or--later-blue" alt="License: AGPL-3.0-or-later"></a>
 </p>
 
 <p align="center">
@@ -129,6 +130,26 @@ icon/                    Liquid Glass App 图标的 Icon Composer 源文件
 - AI 建议由语言模型生成，可能有误，不构成消费建议。
 
 steaL 与 IsThereAnyDeal、Valve 均无隶属关系。Steam 及其标志是 Valve Corporation 的商标。
+
+## 许可证
+
+steaL 是自由软件，按 [GNU Affero 通用公共许可证 3.0 或更新版本](LICENSE)（`AGPL-3.0-or-later`）发布。
+
+另外，按 AGPL 第 7 条给了一项附加许可：只要完整源码仍按 AGPL 公开，就可以经 Apple App Store、Google Play
+等应用商店分发构建，即使商店条款与 AGPL 冲突。具体条款见 [LICENSE-EXCEPTIONS.md](LICENSE-EXCEPTIONS.md)。
+贡献的代码按同样的条款接受。以上中文说明仅供参考，以英文许可证原文为准。
+
+仓库里有些文件来自第三方，保留它们自己的许可证：
+
+| 文件 | 来源 | 许可证 |
+| --- | --- | --- |
+| `androidApp/src/main/res/font/roboto_bold.ttf` | [Roboto](https://fonts.google.com/specimen/Roboto) | SIL Open Font License 1.1 |
+| `androidApp/src/main/res/font/noto_sans_sc_bold.otf` | [Noto Sans SC](https://fonts.google.com/noto/specimen/Noto+Sans+SC)（子集） | SIL Open Font License 1.1 |
+| `androidApp/src/main/res/drawable/*_24px.xml` | [Material Symbols](https://github.com/google/material-design-icons) | Apache License 2.0 |
+| `androidApp/.../navigation/` 下的 `NavigationState.kt`、`Navigator.kt`、`RememberNavKey.kt` | 改写自 [android/nav3-recipes](https://github.com/android/nav3-recipes) | Apache License 2.0 |
+| `gradlew`、`gradlew.bat`、`gradle/wrapper/` | [Gradle](https://gradle.org) wrapper | Apache License 2.0 |
+
+字体的许可证原文在 `androidApp/src/main/assets/licenses/`。Swift Package Manager、Gradle 和 uv 下载的库保留各自的许可证。
 
 ## 作者
 
