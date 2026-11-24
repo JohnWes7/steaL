@@ -42,7 +42,7 @@ class RootViewModel(settingsRepository: SettingsRepository) : ViewModel() {
         data class Loaded(val settings: AppSettings) : SettingsLoadState
     }
 
-    private val loadedStates: Flow<SettingsLoadState> = settingsRepository.settings.map { settings ->
+    private val _settingsState: Flow<SettingsLoadState> = settingsRepository.settings.map { settings ->
         SettingsLoadState.Loaded(settings)
     }
 
@@ -56,7 +56,7 @@ class RootViewModel(settingsRepository: SettingsRepository) : ViewModel() {
      * Reading starts as soon as the view model exists (`Eagerly`) rather than when the UI collects: the splash screen
      * is waiting on it, so the sooner it arrives the sooner the splash goes away.
      */
-    val settingsState: StateFlow<SettingsLoadState> = loadedStates.stateIn(
+    val settingsState: StateFlow<SettingsLoadState> = _settingsState.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = SettingsLoadState.Loading,
