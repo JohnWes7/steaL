@@ -86,6 +86,7 @@ class ThemeSettingsViewModelTest {
             useDynamicColor = true,
             palette = ColorPalette.ThemeBuilderIosGray,
             barBlur = BarBlurSettings(isEnabled = false, radiusDp = 8, tintPercent = 40, noisePercent = 5),
+            region = AppSettings.DEFAULT.region,
         )
         assertEquals(expected, viewModel.settings.value)
         assertEquals(expected, repository.settings.first())

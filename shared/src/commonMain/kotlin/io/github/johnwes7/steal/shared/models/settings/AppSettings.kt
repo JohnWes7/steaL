@@ -27,17 +27,24 @@ data class AppSettings(
      * The frosted glass of the top bar and tab bar.
      */
     val barBlur: BarBlurSettings,
+    /**
+     * 商店地区：请求价格时用哪个国家或地区的价格和货币。
+     * The store region: whose prices and currency the requests ask for.
+     */
+    val region: AppRegion,
 ) {
     companion object {
         /**
-         * 默认设置：深色、不用动态配色、Theme Builder 配色、毛玻璃开。
-         * The default settings: dark, no dynamic color, the Theme Builder palette, and frosted bars on.
+         * 默认设置：深色、不用动态配色、Theme Builder 配色、毛玻璃开、地区澳大利亚。
+         * The default settings: dark, no dynamic color, the Theme Builder palette, frosted bars on, and the
+         * Australia region.
          */
         val DEFAULT: AppSettings = AppSettings(
             theme = AppTheme.Dark,
             useDynamicColor = false,
             palette = ColorPalette.ThemeBuilder,
             barBlur = BarBlurSettings.DEFAULT,
+            region = AppRegion.Australia,
         )
     }
 }

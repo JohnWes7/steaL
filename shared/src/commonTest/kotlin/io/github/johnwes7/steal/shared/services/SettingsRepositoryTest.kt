@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.models.settings.AppSettings
 import io.github.johnwes7.steal.shared.models.settings.AppTheme
 import io.github.johnwes7.steal.shared.models.settings.BarBlurSettings
@@ -24,8 +25,9 @@ import kotlin.test.assertEquals
 class SettingsRepositoryTest {
 
     /**
-     * 什么都没存过时读到默认设置。
-     * Reads the default settings when nothing has been saved.
+     * 什么都没存过时读到默认设置；地区默认澳大利亚，同 iOS 读不到设置时的兜底。
+     * Reads the default settings when nothing has been saved; the region defaults to Australia, matching iOS's
+     * fallback when it has no settings.
      */
     @Test
     fun emptyStorageReadsDefaults() = runTest {
@@ -34,6 +36,7 @@ class SettingsRepositoryTest {
         val settings = repository.settings.first()
 
         assertEquals(AppSettings.DEFAULT, settings)
+        assertEquals(AppRegion.Australia, settings.region)
     }
 
     /**
@@ -51,6 +54,7 @@ class SettingsRepositoryTest {
         repository.setBarBlurRadius(32)
         repository.setBarBlurTintPercent(55)
         repository.setBarBlurNoisePercent(0)
+        repository.setRegion(AppRegion.Japan)
         val settings = repository.settings.first()
 
         val expected = AppSettings(
@@ -58,6 +62,7 @@ class SettingsRepositoryTest {
             useDynamicColor = true,
             palette = ColorPalette.SimulatedC,
             barBlur = BarBlurSettings(isEnabled = false, radiusDp = 32, tintPercent = 55, noisePercent = 0),
+            region = AppRegion.Japan,
         )
         assertEquals(expected, settings)
     }
@@ -75,6 +80,7 @@ class SettingsRepositoryTest {
             intPreferencesKey("bar_blur_radius_dp") to 999,
             intPreferencesKey("bar_blur_tint_percent") to -5,
             intPreferencesKey("bar_blur_noise_percent") to 30,
+            stringPreferencesKey("region") to "Atlantis",
         )
         val repository = SettingsRepository(dataStore = InMemoryPreferencesDataStore(initial = stored))
 
@@ -82,6 +88,7 @@ class SettingsRepositoryTest {
 
         assertEquals(AppSettings.DEFAULT.theme, settings.theme)
         assertEquals(AppSettings.DEFAULT.palette, settings.palette)
+        assertEquals(AppSettings.DEFAULT.region, settings.region)
         val expectedBlur = BarBlurSettings(isEnabled = false, radiusDp = 40, tintPercent = 0, noisePercent = 30)
         assertEquals(expectedBlur, settings.barBlur)
     }

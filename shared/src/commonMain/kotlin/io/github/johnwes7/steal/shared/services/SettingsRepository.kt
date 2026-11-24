@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.johnwes7.steal.shared.config.AppLog
+import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.models.settings.AppSettings
 import io.github.johnwes7.steal.shared.models.settings.AppTheme
 import io.github.johnwes7.steal.shared.models.settings.BarBlurSettings
@@ -47,6 +48,14 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         .map { preferences -> settingsFrom(preferences) }
 
     // MARK: - 写入 / Writes
+
+    /**
+     * 保存商店地区。
+     * Saves the store region.
+     */
+    suspend fun setRegion(region: AppRegion) {
+        dataStore.edit { preferences -> preferences[SettingsKeys.REGION] = region.name }
+    }
 
     /**
      * 保存深浅色。
@@ -129,10 +138,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
      * Turns the stored values into [AppSettings]; items never saved, unrecognized or out of range use the defaults.
      */
     private fun settingsFrom(preferences: Preferences): AppSettings {
-        // 1. 外观与配色：枚举按名字存，认不出的名字（以后改了枚举名）用默认值
-        // 1. Appearance and colors: enums are stored by name, and unknown names (a later rename) use the default
+        // 1. 地区、外观与配色：枚举按名字存，认不出的名字（以后改了枚举名）用默认值
+        // 1. Region, appearance and colors: enums stored by name; unknown names (a later rename) use the default
         val defaults = AppSettings.DEFAULT
-        
+
+        val regionName = preferences[SettingsKeys.REGION]
+        val region = AppRegion.entries.firstOrNull { entry -> entry.name == regionName } ?: defaults.region
         val themeName = preferences[SettingsKeys.THEME]
         val theme = AppTheme.entries.firstOrNull { entry -> entry.name == themeName } ?: defaults.theme
         val paletteName = preferences[SettingsKeys.PALETTE]
@@ -160,6 +171,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             useDynamicColor = useDynamicColor,
             palette = palette,
             barBlur = barBlur,
+            region = region,
         )
     }
 }
@@ -172,6 +184,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
  * The key names are written into the user's file, so renaming one loses that setting.
  */
 private object SettingsKeys {
+    val REGION = stringPreferencesKey("region")
     val THEME = stringPreferencesKey("theme")
     val USE_DYNAMIC_COLOR = booleanPreferencesKey("use_dynamic_color")
     val PALETTE = stringPreferencesKey("color_palette")
