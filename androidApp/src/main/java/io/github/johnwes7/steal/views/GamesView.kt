@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,6 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnwes7.steal.LocalAppContainer
 import io.github.johnwes7.steal.R
 import io.github.johnwes7.steal.previews.previewDealItems
+import io.github.johnwes7.steal.previews.previewGiveaways
 import io.github.johnwes7.steal.shared.config.AppLog
 import io.github.johnwes7.steal.shared.models.app.HomeDealItem
 import io.github.johnwes7.steal.shared.models.itad.ItadGiveaway
@@ -61,15 +61,15 @@ import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadState
 import io.github.johnwes7.steal.views.components.home.DealsSectionView
 import io.github.johnwes7.steal.views.components.home.GamesHeaderView
-import io.github.johnwes7.steal.views.components.home.GiveawayRowView
 import io.github.johnwes7.steal.views.components.home.giveawaysSectionItems
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
- * Games tab 的根页面：Hot deals 区块，下面暂时是调试用的地区切换与 giveaways 文字。
- * The Games tab's root screen: the Hot deals section, followed for now by a debug region switch and giveaways text.
+ * Games tab 的根页面：Hot deals 与 Giveaways 两个区块，最下面暂时是调试用的地区切换。
+ * The Games tab's root screen: the Hot deals and Giveaways sections, with a temporary debug region switch at the
+ * bottom.
  */
 @Composable
 fun GamesView(modifier: Modifier = Modifier) {
@@ -198,12 +198,7 @@ private fun GamesContent(
                     onRetry = onRetryGiveaways,
                 )
                 item(key = "debug") {
-                    DebugSection(
-                        region = region,
-                        onSelectRegion = onSelectRegion,
-                        giveawaysState = giveawaysState,
-                        onRetryGiveaways = onRetryGiveaways,
-                    )
+                    DebugSection(region = region, onSelectRegion = onSelectRegion)
                 }
             }
         }
@@ -313,15 +308,13 @@ private fun SectionHeader(
 // MARK: - 调试区 / Debug
 
 /**
- * 调试区：切地区（看各种货币的格式）与 giveaways 的纯文字状态。
- * The debug area: a region switch (to check each currency's formatting) and the giveaways state as plain text.
+ * 调试区：切地区，看各种货币的格式；地区设置页做好后删掉。
+ * The debug area: a region switch to check each currency's formatting; removed once the region setting exists.
  */
 @Composable
 private fun DebugSection(
     region: AppRegion,
     onSelectRegion: (AppRegion) -> Unit,
-    giveawaysState: GiveawaysLoadState,
-    onRetryGiveaways: () -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(top = 24.dp),
@@ -341,19 +334,6 @@ private fun DebugSection(
                 )
             }
         }
-        Text(text = "Giveaways", style = MaterialTheme.typography.titleSmall)
-        when (giveawaysState) {
-            GiveawaysLoadState.Loading -> Text(text = "Loading…")
-            is GiveawaysLoadState.Failed -> {
-                Text(text = "Failed: ${giveawaysState.error}")
-                Button(onClick = onRetryGiveaways) { Text(text = "Retry") }
-            }
-            is GiveawaysLoadState.Loaded -> {
-                for (giveaway in giveawaysState.giveaways) {
-                    GiveawayRowView(giveaway = giveaway, onClick = {})
-                }
-            }
-        }
     }
 }
 
@@ -363,7 +343,7 @@ private fun GamesContentPreview() {
     SteaLTheme(darkTheme = true) {
         GamesContent(
             dealState = DealLoadState.Loaded(items = previewDealItems),
-            giveawaysState = GiveawaysLoadState.Loading,
+            giveawaysState = GiveawaysLoadState.Loaded(giveaways = previewGiveaways),
             isRefreshing = false,
             region = AppRegion.Australia,
             onSelectRegion = { _ -> },
