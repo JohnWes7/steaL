@@ -27,6 +27,15 @@
     <string name="deal_quality_three_month_low">3-month low</string>
     <string name="deal_quality_steam" translatable="false">Steam</string>
 
+    <!-- 首页 Giveaways / Home: Giveaways -->
+    <string name="giveaways_title">Giveaways</string>
+    <string name="giveaways_empty">No giveaways right now. Check back later.</string>
+    <string name="giveaway_free_badge">FREE</string>
+    <!-- 没有商店的 giveaway（如游戏内兑换码）显示在商店名的位置 / Shown in place of the shop name when a giveaway has no shop, such as an in-game code -->
+    <string name="giveaway_redeem_code">Redeem code</string>
+    <string name="giveaway_ends_today">Today</string>
+    <string name="giveaway_days_left">%1$dd left</string>
+
     <!-- 价格 / Prices -->
     <string name="price_free">Free</string>
 

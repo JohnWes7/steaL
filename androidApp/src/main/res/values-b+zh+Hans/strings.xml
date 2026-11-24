@@ -18,6 +18,14 @@
     <string name="deal_quality_all_time_low">史低</string>
     <string name="deal_quality_three_month_low">3 个月最低</string>
 
+    <!-- 首页 Giveaways / Home: Giveaways -->
+    <string name="giveaways_title">免费领取</string>
+    <string name="giveaways_empty">现在没有免费领取，晚点再来看看。</string>
+    <string name="giveaway_free_badge">免费</string>
+    <string name="giveaway_redeem_code">兑换码</string>
+    <string name="giveaway_ends_today">今天截止</string>
+    <string name="giveaway_days_left">剩 %1$d 天</string>
+
     <!-- 价格 / Prices -->
     <string name="price_free">免费</string>
 
