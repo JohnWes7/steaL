@@ -55,6 +55,7 @@ import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadState
 import io.github.johnwes7.steal.views.components.home.DealsSectionView
 import io.github.johnwes7.steal.views.components.home.GamesHeaderView
+import io.github.johnwes7.steal.views.components.home.GiveawayRowView
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
@@ -259,8 +260,7 @@ private fun DebugSection(
             }
             is GiveawaysLoadState.Loaded -> {
                 for (giveaway in giveawaysState.giveaways) {
-                    val expiry = giveaway.expiry ?: "no expiry"
-                    Text(text = "${giveaway.title}\n  until $expiry")
+                    GiveawayRowView(giveaway = giveaway, onClick = {})
                 }
             }
         }
