@@ -48,6 +48,16 @@ data class ExtendedColors(
      * Icons on [hotContainer].
      */
     val onHotContainer: Color,
+    /**
+     * 「免费领取」的圆底，如 Giveaways 标题前的礼物。
+     * The container behind the "gift" accent, such as the gift before the Giveaways title.
+     */
+    val giftContainer: Color,
+    /**
+     * [giftContainer] 上的图标。
+     * Icons on [giftContainer].
+     */
+    val onGiftContainer: Color,
 )
 
 private val LightExtendedColors = ExtendedColors(
@@ -55,6 +65,8 @@ private val LightExtendedColors = ExtendedColors(
     brandBlue = BrandBlueLight,
     hotContainer = OrangeContainerLight,
     onHotContainer = OnOrangeContainerLight,
+    giftContainer = GreenContainerLight,
+    onGiftContainer = OnGreenContainerLight,
 )
 
 private val DarkExtendedColors = ExtendedColors(
@@ -62,6 +74,8 @@ private val DarkExtendedColors = ExtendedColors(
     brandBlue = BrandBlueDark,
     hotContainer = OrangeContainerDark,
     onHotContainer = OnOrangeContainerDark,
+    giftContainer = GreenContainerDark,
+    onGiftContainer = OnGreenContainerDark,
 )
 
 /**
@@ -74,6 +88,8 @@ val LocalExtendedColors = staticCompositionLocalOf {
         brandBlue = Color.Unspecified,
         hotContainer = Color.Unspecified,
         onHotContainer = Color.Unspecified,
+        giftContainer = Color.Unspecified,
+        onGiftContainer = Color.Unspecified,
     )
 }
 

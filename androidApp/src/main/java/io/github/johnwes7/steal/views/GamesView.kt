@@ -208,8 +208,8 @@ private fun GiveawaysHeader() {
     SectionHeader(
         title = stringResource(R.string.giveaways_title),
         iconRes = R.drawable.featured_seasonal_and_gifts_24px,
-        iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
-        iconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        iconContainerColor = ExtendedTheme.colors.giftContainer,
+        iconColor = ExtendedTheme.colors.onGiftContainer,
         modifier = Modifier.padding(top = 16.dp),
     )
 }

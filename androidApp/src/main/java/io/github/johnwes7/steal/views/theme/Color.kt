@@ -61,3 +61,33 @@ internal val OrangeContainerLight = Color(0xFFFFDDBB)
  * Icons on the container (light, Material tone 10).
  */
 internal val OnOrangeContainerLight = Color(0xFF2B1700)
+
+// MARK: - 「免费领取」的绿色 / The "gift" green
+
+/**
+ * 「免费领取」绿色的圆底（深色）：品牌绿 16% 叠在深色页面背景（iOS `appBackground` #101214）上，算法同橙色的圆底。
+ * The "gift" green container (dark): the brand green at 16% over the dark page background (iOS `appBackground`
+ * #101214), worked out the same way as the orange container.
+ */
+internal val GreenContainerDark = Color(0xFF24301D)
+
+/**
+ * 圆底上的图标（深色）：品牌绿本身。
+ * Icons on the container (dark): the brand green itself.
+ */
+internal val OnGreenContainerDark = BrandGreenDark
+
+/**
+ * 「免费领取」绿色的圆底（浅色）。
+ * The "gift" green container (light).
+ *
+ * 浅色还没设计，先用品牌绿色阶（Theme Builder 导出的 primary）第 90 档。
+ * Light mode isn't designed yet; this is tone 90 of the brand green palette (Theme Builder's primary) for now.
+ */
+internal val GreenContainerLight = Color(0xFFB1F66C)
+
+/**
+ * 圆底上的图标（浅色，同一色阶第 10 档）。
+ * Icons on the container (light, tone 10 of the same palette).
+ */
+internal val OnGreenContainerLight = Color(0xFF0E2000)
