@@ -51,6 +51,7 @@ import io.github.johnwes7.steal.LocalAppContainer
 import io.github.johnwes7.steal.R
 import io.github.johnwes7.steal.previews.previewDealItems
 import io.github.johnwes7.steal.shared.models.app.HomeDealItem
+import io.github.johnwes7.steal.shared.models.itad.ItadGiveaway
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
@@ -58,6 +59,7 @@ import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadSt
 import io.github.johnwes7.steal.views.components.home.DealsSectionView
 import io.github.johnwes7.steal.views.components.home.GamesHeaderView
 import io.github.johnwes7.steal.views.components.home.GiveawayRowView
+import io.github.johnwes7.steal.views.components.home.giveawaysSectionItems
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
@@ -96,6 +98,7 @@ fun GamesView(modifier: Modifier = Modifier) {
         onRefresh = { viewModel.refresh(region = region) },
         onOpenHotDeals = {},
         onSelectDeal = { _ -> },
+        onOpenGiveaway = { _ -> },
         onRetryDeals = { viewModel.retryDeals(region = region) },
         onRetryGiveaways = { viewModel.retryGiveaways() },
         modifier = modifier,
@@ -116,6 +119,7 @@ private fun GamesContent(
     onRefresh: () -> Unit,
     onOpenHotDeals: () -> Unit,
     onSelectDeal: (HomeDealItem) -> Unit,
+    onOpenGiveaway: (ItadGiveaway) -> Unit,
     onRetryDeals: () -> Unit,
     onRetryGiveaways: () -> Unit,
     modifier: Modifier = Modifier,
@@ -166,6 +170,11 @@ private fun GamesContent(
                 item(key = "giveawaysHeader") {
                     GiveawaysHeader()
                 }
+                giveawaysSectionItems(
+                    state = giveawaysState,
+                    onSelect = onOpenGiveaway,
+                    onRetry = onRetryGiveaways,
+                )
                 item(key = "debug") {
                     DebugSection(
                         region = region,
@@ -279,6 +288,8 @@ private fun SectionHeader(
     }
 }
 
+// MARK: - 调试区 / Debug
+
 /**
  * 调试区：切地区（看各种货币的格式）与 giveaways 的纯文字状态。
  * The debug area: a region switch (to check each currency's formatting) and the giveaways state as plain text.
@@ -337,6 +348,7 @@ private fun GamesContentPreview() {
             onRefresh = {},
             onOpenHotDeals = {},
             onSelectDeal = { _ -> },
+            onOpenGiveaway = { _ -> },
             onRetryDeals = {},
             onRetryGiveaways = {},
         )
