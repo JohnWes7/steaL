@@ -2,9 +2,13 @@ package io.github.johnwes7.steal.shared.services
 
 import io.github.johnwes7.steal.shared.models.itad.ItadDealsRequest
 import io.github.johnwes7.steal.shared.models.itad.ItadDealsResponse
+import io.github.johnwes7.steal.shared.models.itad.ItadGameInfoResponse
+import io.github.johnwes7.steal.shared.models.itad.ItadGameLookupResponse
 import io.github.johnwes7.steal.shared.models.itad.ItadGiveaway
+import io.github.johnwes7.steal.shared.models.itad.ItadPriceGame
 import io.github.johnwes7.steal.shared.models.itad.ItadShopIDsResponse
 import io.github.johnwes7.steal.shared.models.itad.ItadShopRef
+import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -109,6 +113,78 @@ class ItadApi(
         val entries: Map<String, List<String>?> = response.body()
         val shopIDs = ItadShopIDsResponse(entries = entries)
         return shopIDs
+    }
+
+    /**
+     * 按 Steam [appID] 找对应的 ITAD 游戏（`GET /games/lookup/v1`）。
+     * Finds the ITAD game for a Steam [appID] (`GET /games/lookup/v1`).
+     *
+     * `appid` 传裸数字，不加 `app/` 前缀。ITAD 没收录时 `found` 是 `false`，这不是错误。
+     * 非 2xx 抛 [ItadApiException]；断网、超时、解码失败抛 Ktor 自己的异常。
+     * `appid` takes the bare number without the `app/` prefix. When ITAD does not list the game, `found` is `false`,
+     * which is not an error. A non-2xx status throws [ItadApiException]; lost connections, timeouts and decoding
+     * failures throw Ktor's own exceptions.
+     */
+    suspend fun lookupGame(appID: Int): ItadGameLookupResponse {
+        val response = client.get("$BASE_URL/games/lookup/v1") {
+            header(API_KEY_HEADER, apiKey)
+            parameter("appid", appID)
+        }
+        ensureSuccess(response)
+
+        val lookup: ItadGameLookupResponse = response.body()
+        return lookup
+    }
+
+    /**
+     * 取一个游戏的评分、标签、热度和厂商（`GET /games/info/v2`）。
+     * Fetches one game's reviews, tags, popularity and credits (`GET /games/info/v2`).
+     *
+     * [uuid] 是 ITAD 游戏 UUID，传 Steam appID 会 400。非 2xx 抛 [ItadApiException]；断网、超时、解码失败抛 Ktor 自己的异常。
+     * [uuid] is the ITAD game UUID; a Steam appID gets a 400. A non-2xx status throws [ItadApiException]; lost
+     * connections, timeouts and decoding failures throw Ktor's own exceptions.
+     */
+    suspend fun fetchGameInfo(uuid: String): ItadGameInfoResponse {
+        val response = client.get("$BASE_URL/games/info/v2") {
+            header(API_KEY_HEADER, apiKey)
+            parameter("id", uuid)
+        }
+        ensureSuccess(response)
+
+        val info: ItadGameInfoResponse = response.body()
+        return info
+    }
+
+    /**
+     * 取一批游戏在 [region] 的各家报价和历史低价（`POST /games/prices/v3?deals=false`），请求体是 [uuids] 组成的 JSON 数组。
+     * Fetches the offers and historical lows of a batch of games in [region]
+     * (`POST /games/prices/v3?deals=false`), with a JSON array of [uuids] as the body.
+     *
+     * `deals=false` 才会带上没打折的价格和历史低价。响应是稀疏的：没有价格数据的游戏整条不返回，要按 UUID 取
+     * （`List<ItadPriceGame>.game(uuid)`），不能按下标对应。[uuids] 为空时直接返回空列表、不发请求：服务器会拒绝空数组；一次最多 200 个。
+     * 非 2xx 抛 [ItadApiException]；断网、超时、解码失败抛 Ktor 自己的异常。
+     * `deals=false` is what includes prices that are not on sale and the historical lows. The response is sparse: a
+     * game without price data is left out entirely, so entries must be found by UUID (`List<ItadPriceGame>.game(uuid)`), never by index. An
+     * empty [uuids] returns an empty list without a request, because the server rejects an empty array; at most 200
+     * per call. A non-2xx status throws [ItadApiException]; lost connections, timeouts and decoding failures throw
+     * Ktor's own exceptions.
+     */
+    suspend fun fetchPrices(uuids: List<String>, region: AppRegion): List<ItadPriceGame> {
+        if (uuids.isEmpty()) {
+            return emptyList()
+        }
+
+        val response = client.post("$BASE_URL/games/prices/v3") {
+            header(API_KEY_HEADER, apiKey)
+            parameter("country", region.apiRegionCode)
+            parameter("deals", false)
+            contentType(ContentType.Application.Json)
+            setBody(uuids)
+        }
+        ensureSuccess(response)
+
+        val prices: List<ItadPriceGame> = response.body()
+        return prices
     }
 
     /**
