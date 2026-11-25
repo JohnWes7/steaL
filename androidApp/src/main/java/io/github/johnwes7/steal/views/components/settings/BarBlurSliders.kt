@@ -20,8 +20,9 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
 import kotlin.math.roundToInt
 
 /**
- * 毛玻璃的三个滑块（模糊半径、叠色不透明度、噪点），每个松手时交出取整后的值。
- * The three frosted glass sliders (blur radius, tint opacity, noise), each handing over its rounded value on release.
+ * 毛玻璃的三个滑块（模糊半径、叠色不透明度、噪点），拖动中每次变化都交出取整后的值。
+ * The three frosted glass sliders (blur radius, tint opacity, noise), each handing over its rounded value on every
+ * change while dragged.
  */
 @Composable
 fun BarBlurSliders(

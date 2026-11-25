@@ -260,7 +260,7 @@ fun ThemeSettingsContent(
                     null
                 }
                 
-                // three sliders: radius, tint, noise; only call the callbacks when the user releases the slider
+                // three sliders: radius, tint, noise; call the callbacks on every change while dragging
                 SegmentedListItem(
                     shapes = ListItemDefaults.segmentedShapes(index = 1, count = 3),
                     colors = segmentedListItemColors,

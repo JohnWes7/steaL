@@ -73,24 +73,24 @@ class ThemeSettingsViewModel(private val settingsRepository: SettingsRepository)
      * 保存模糊半径（dp）。
      * Saves the blur radius in dp.
      *
-     * 滑块松手时调用一次，拖动中不调。
-     * Called once when the slider is released, not while it is dragged.
+     * 拖动滑块时每次变化都调用，每次都写一次。
+     * Called on every change while the slider is dragged, writing each time.
      */
     fun setBarBlurRadius(radiusDp: Int) {
         save { settingsRepository.setBarBlurRadius(radiusDp) }
     }
 
     /**
-     * 保存叠色不透明度（百分数），滑块松手时调用。
-     * Saves the tint opacity as a percentage; called when the slider is released.
+     * 保存叠色不透明度（百分数），拖动滑块时每次变化都调用。
+     * Saves the tint opacity as a percentage; called on every change while the slider is dragged.
      */
     fun setBarBlurTintPercent(tintPercent: Int) {
         save { settingsRepository.setBarBlurTintPercent(tintPercent) }
     }
 
     /**
-     * 保存噪点不透明度（百分数），滑块松手时调用。
-     * Saves the noise opacity as a percentage; called when the slider is released.
+     * 保存噪点不透明度（百分数），拖动滑块时每次变化都调用。
+     * Saves the noise opacity as a percentage; called on every change while the slider is dragged.
      */
     fun setBarBlurNoisePercent(noisePercent: Int) {
         save { settingsRepository.setBarBlurNoisePercent(noisePercent) }
