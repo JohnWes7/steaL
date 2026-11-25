@@ -26,6 +26,16 @@
     <string name="giveaway_ends_today">今天截止</string>
     <string name="giveaway_days_left">剩 %1$d 天</string>
 
+    <!-- Sales 页 / Sales page -->
+    <string name="sale_events_happening_now">正在进行</string>
+    <string name="sale_event_ends">%1$s结束</string>
+    <plurals name="sale_event_duration_days">
+        <item quantity="other">%d 天</item>
+    </plurals>
+    <string name="sale_events_empty_title">暂无促销活动</string>
+    <string name="sale_events_empty_message">商店公布大促和 Fest 后会显示在这里。</string>
+    <string name="sale_events_disclaimer">促销日期由 AI 从各商店的官方公告整理，可能有误。点活动可查看原始页面。</string>
+
     <!-- 价格 / Prices -->
     <string name="price_free">免费</string>
 

@@ -54,13 +54,13 @@ class SaleEventsViewModel(
 
     // MARK: - 对外状态 / Exposed state
 
-    private val _state = MutableStateFlow<SaleEventsLoadState>(SaleEventsLoadState.Loading)
+    private val _saleState = MutableStateFlow<SaleEventsLoadState>(SaleEventsLoadState.Loading)
 
     /**
      * 活动列表当前的状态，界面按它显示。
      * The event list's current state, which the UI renders.
      */
-    val state: StateFlow<SaleEventsLoadState> = _state.asStateFlow()
+    val saleState: StateFlow<SaleEventsLoadState> = _saleState.asStateFlow()
 
     // MARK: - 内部记录 / Internal bookkeeping
 
@@ -119,20 +119,20 @@ class SaleEventsViewModel(
     private suspend fun updateEvents() {
         // 1. 切到 Loading
         // 1. Show Loading
-        _state.value = SaleEventsLoadState.Loading
+        _saleState.value = SaleEventsLoadState.Loading
 
         // 2. 请求活动并发布
         // 2. Fetch and publish the events
         try {
             val eventList = saleEventsApi.fetchSaleEvents()
-            _state.value = SaleEventsLoadState.Loaded(eventList = eventList)
+            _saleState.value = SaleEventsLoadState.Loaded(eventList = eventList)
         } catch (cancellation: CancellationException) {
             // 取消不是失败，要原样抛出，协程才会结束。
             // A cancellation is no failure; rethrow it so the coroutine ends.
             throw cancellation
         } catch (error: Exception) {
             AppLog.saleEvents.e(error) { "活动加载失败 / Loading sale events failed" }
-            _state.value = SaleEventsLoadState.Failed(error = LoadError.from(error))
+            _saleState.value = SaleEventsLoadState.Failed(error = LoadError.from(error))
         }
     }
 }

@@ -36,6 +36,23 @@
     <string name="giveaway_ends_today">Today</string>
     <string name="giveaway_days_left">%1$dd left</string>
 
+    <!-- Sales 页 / Sales page -->
+    <string name="sale_events_happening_now">Happening now</string>
+    <!-- %1$s 是 ICU 的相对日期（today / tomorrow / in 2 days），按日历日算 / %1$s is ICU's relative date (today / tomorrow / in 2 days), counted in calendar days -->
+    <string name="sale_event_ends">Ends %1$s</string>
+    <plurals name="sale_event_duration_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="sale_event_store_and_time" translatable="false">%1$s · %2$s</string>
+    <string name="sale_events_empty_title">No upcoming sales</string>
+    <string name="sale_events_empty_message">Store sales and fests will show up here once they\'re announced.</string>
+    <string name="sale_events_disclaimer">Sale dates are gathered by AI from each store\'s official announcements and may be wrong. Tap an event to check the original page.</string>
+    <string name="sale_event_store_steam" translatable="false">Steam</string>
+    <string name="sale_event_store_epic" translatable="false">Epic Games Store</string>
+    <string name="sale_event_store_itchio" translatable="false">itch.io</string>
+    <string name="sale_event_store_gog" translatable="false">GOG</string>
+
     <!-- 价格 / Prices -->
     <string name="price_free">Free</string>
 

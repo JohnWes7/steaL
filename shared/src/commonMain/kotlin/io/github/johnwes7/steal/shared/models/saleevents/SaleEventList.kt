@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.shared.models.saleevents
 
+import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -146,6 +147,24 @@ data class SaleEvent(
         val hasStarted = start <= now
         val hasEnded = end <= now
         return hasStarted && !hasEnded
+    }
+
+    /**
+     * 到 [now] 为止活动过去了多少，0 到 1：还没开始是 0，已经结束是 1。
+     * How much of the event has passed by [now], from 0 to 1: 0 before it starts and 1 once it has ended.
+     */
+    fun elapsedFraction(now: Instant): Float {
+        val total = end - start
+        // 接口不该给出结束不晚于开始的活动；真给了就当已经过完，不让进度条拿到 NaN。
+        // The API should never send an event that ends before it starts; if it does, treat it as over rather than
+        // handing the progress bar a NaN.
+        if (total <= Duration.ZERO) {
+            return 1f
+        }
+        val elapsed = now - start
+        val fraction = elapsed / total
+        val clamped = fraction.coerceIn(0.0, 1.0)
+        return clamped.toFloat()
     }
 
     /**

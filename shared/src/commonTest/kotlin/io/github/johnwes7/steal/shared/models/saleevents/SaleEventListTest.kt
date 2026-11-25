@@ -118,6 +118,37 @@ class SaleEventListTest {
         assertFalse(epicSavings.isHappeningNow(epicSavings.end))
     }
 
+    // MARK: - 已过去的比例 / Elapsed fraction
+
+    /**
+     * Epic Savings 共 14 天：开始前和开始那一刻是 0，第 7 天是一半，结束那一刻和之后是 1。
+     * Epic Savings lasts 14 days: 0 before and at the start, half on day 7, and 1 at and after the end.
+     */
+    @Test
+    fun elapsedFractionRunsFromZeroToOne() {
+        val epicSavings = realEventList().events[0]
+        val dayBefore = Instant.parse("2026-11-11T16:00:00Z")
+        val halfway = Instant.parse("2026-11-19T16:00:00Z")
+        val dayAfter = Instant.parse("2026-11-27T16:00:00Z")
+
+        assertEquals(0f, epicSavings.elapsedFraction(now = dayBefore))
+        assertEquals(0f, epicSavings.elapsedFraction(now = epicSavings.start))
+        assertEquals(0.5f, epicSavings.elapsedFraction(now = halfway))
+        assertEquals(1f, epicSavings.elapsedFraction(now = epicSavings.end))
+        assertEquals(1f, epicSavings.elapsedFraction(now = dayAfter))
+    }
+
+    /**
+     * 结束不晚于开始的坏数据当作已经过完，不出 NaN。
+     * Bad data that ends no later than it starts counts as over, never NaN.
+     */
+    @Test
+    fun elapsedFractionOfEmptyEventIsOne() {
+        val instantEvent = event(id = "instant", start = "2026-12-01T00:00:00Z", end = "2026-12-01T00:00:00Z")
+
+        assertEquals(1f, instantEvent.elapsedFraction(now = NOW))
+    }
+
     // MARK: - 天数 / Day counts
 
     /**

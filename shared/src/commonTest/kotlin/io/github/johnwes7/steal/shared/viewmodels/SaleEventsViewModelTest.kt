@@ -70,7 +70,7 @@ class SaleEventsViewModelTest {
 
         advanceUntilIdle()
 
-        assertSame(SaleEventsLoadState.Loading, viewModel.state.value)
+        assertSame(SaleEventsLoadState.Loading, viewModel.saleState.value)
         assertEquals(0, server.requestCount.value)
     }
 
@@ -85,7 +85,7 @@ class SaleEventsViewModelTest {
 
         viewModel.loadIfNeeded()
 
-        val loaded = viewModel.state.first { state -> state is SaleEventsLoadState.Loaded }
+        val loaded = viewModel.saleState.first { state -> state is SaleEventsLoadState.Loaded }
         val eventList = assertIs<SaleEventsLoadState.Loaded>(loaded).eventList
         assertEquals(listOf("Winter Sale 2026"), eventList.events.map { event -> event.name })
         assertEquals(1, server.requestCount.value)
@@ -101,11 +101,11 @@ class SaleEventsViewModelTest {
         val viewModel = server.makeViewModel()
 
         viewModel.loadIfNeeded()
-        val loaded = viewModel.state.first { state -> state is SaleEventsLoadState.Loaded }
+        val loaded = viewModel.saleState.first { state -> state is SaleEventsLoadState.Loaded }
         viewModel.loadIfNeeded()
         advanceUntilIdle()
 
-        assertSame(loaded, viewModel.state.value)
+        assertSame(loaded, viewModel.saleState.value)
         assertEquals(1, server.requestCount.value)
     }
 
@@ -124,13 +124,13 @@ class SaleEventsViewModelTest {
         val viewModel = server.makeViewModel()
 
         viewModel.loadIfNeeded()
-        val failed = viewModel.state.first { state -> state is SaleEventsLoadState.Failed }
+        val failed = viewModel.saleState.first { state -> state is SaleEventsLoadState.Failed }
         assertEquals(SaleEventsLoadState.Failed(error = LoadError.Server(statusCode = 503)), failed)
 
         viewModel.retry()
-        viewModel.state.first { state -> state is SaleEventsLoadState.Loading }
+        viewModel.saleState.first { state -> state is SaleEventsLoadState.Loading }
         retryGate.complete(Unit)
-        viewModel.state.first { state -> state is SaleEventsLoadState.Loaded }
+        viewModel.saleState.first { state -> state is SaleEventsLoadState.Loaded }
 
         assertEquals(2, server.requestCount.value)
     }
@@ -151,7 +151,7 @@ class SaleEventsViewModelTest {
         server.requestCount.first { count -> count == 1 }
         viewModel.retry()
 
-        viewModel.state.first { state -> state is SaleEventsLoadState.Loaded }
+        viewModel.saleState.first { state -> state is SaleEventsLoadState.Loaded }
         server.cancelledRequests.first { requests -> requests == listOf(1) }
         assertEquals(2, server.requestCount.value)
     }
