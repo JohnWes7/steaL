@@ -110,6 +110,8 @@
     <!-- 语言名用它自己的语言写，不翻译（同系统的语言列表） / Language names are written in their own language and never translated, as in the system's language list -->
     <string name="language_name_english" translatable="false">English</string>
     <string name="language_name_simplified_chinese" translatable="false">简体中文</string>
+    <!-- 不是界面文字：Steam 接口 l= 参数的语言代码。每份翻译写自己对应的代码，按界面实际显示的翻译请求 Steam / Not UI text: the language code for Steam's l= parameter. Each translation sets its own code, so Steam is asked in the language the UI actually shows -->
+    <string name="steam_api_language">english</string>
 
     <!-- 加载失败，四种原因同 LoadError / Load failures, one per LoadError case -->
     <string name="load_error_offline_title">You\'re offline</string>

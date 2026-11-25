@@ -176,21 +176,3 @@ struct ITADGameURLs: Codable, Hashable, Sendable {
     /// ITAD 游戏页 / The game's page on IsThereAnyDeal
     let game: String?
 }
-
-// MARK: - 派生属性 / Derived properties
-
-extension ITADGameInfoResponse {
-
-    /// 是否还没发售：这个接口里没有比价数据时 `releaseDate` 就是 `nil` /
-    /// Whether the game is unreleased: this endpoint leaves `releaseDate` `nil` until it ships
-    var isUnreleased: Bool { releaseDate == nil }
-
-    /// Steam 好评率那一条 / The Steam rating entry
-    var steamReview: ITADReview? { reviews?.first { $0.source == "Steam" } }
-
-    /// 主开发商名称，数组第一个 / The primary developer name, first of the list
-    var primaryDeveloper: String? { developers?.first?.name }
-
-    /// 主发行商名称，数组第一个 / The primary publisher name, first of the list
-    var primaryPublisher: String? { publishers?.first?.name }
-}
