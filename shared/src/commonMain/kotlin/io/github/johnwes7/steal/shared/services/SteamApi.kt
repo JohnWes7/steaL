@@ -3,6 +3,9 @@ package io.github.johnwes7.steal.shared.services
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.models.steam.SteamAppAvailabilityEntry
 import io.github.johnwes7.steal.shared.models.steam.SteamAppAvailabilityResponse
+import io.github.johnwes7.steal.shared.models.steam.SteamAppDetails
+import io.github.johnwes7.steal.shared.models.steam.SteamAppDetailsEntry
+import io.github.johnwes7.steal.shared.models.steam.SteamAppDetailsResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -49,6 +52,36 @@ class SteamApi(
         val entries: Map<String, SteamAppAvailabilityEntry> = response.body()
         val availability = SteamAppAvailabilityResponse(entries = entries)
         return availability
+    }
+
+    /**
+     * 取 [appID] 的商店详情（`GET /api/appdetails`，不带 `filters`）；Steam 上没有这个 app 时返回 `null`，这不是错误。
+     * Fetches [appID]'s store details (`GET /api/appdetails` without `filters`); returns `null` when Steam has no
+     * such app, which is not an error.
+     *
+     * [region] 决定价格的货币和是否锁区；[steamLanguage] 是 `l=` 的语言代码（如 `schinese`），决定名字、介绍、视频名的语言。
+     * 不能加 `filters=basic`：它会裁掉视频、截图和类型。响应带 `max-age=3600`，一小时内同一游戏、地区、语言直接读 HTTP 缓存。
+     * 非 2xx 抛 [SteamApiException]；断网、超时、解码失败抛 Ktor 自己的异常。
+     * [region] decides the price currency and region locks; [steamLanguage] is the `l=` language code (such as
+     * `schinese`) for the name, descriptions and movie names. `filters=basic` must not be added, as it strips the
+     * movies, screenshots and genres. The response carries `max-age=3600`, so the same game, region and language is
+     * read from the HTTP cache for an hour. A non-2xx status throws [SteamApiException]; lost connections, timeouts
+     * and decoding failures throw Ktor's own exceptions.
+     */
+    suspend fun fetchAppDetails(appID: Int, region: AppRegion, steamLanguage: String): SteamAppDetails? {
+        val response = client.get("$BASE_URL/api/appdetails") {
+            parameter("appids", appID)
+            parameter("cc", region.apiRegionCode)
+            parameter("l", steamLanguage)
+        }
+        ensureSuccess(response)
+
+        // 顶层是以 appID 字符串为 key 的字典，只查一个 app 也一样。
+        // The root is a dictionary keyed by appID strings, even when only one app is asked for.
+        val entries: Map<String, SteamAppDetailsEntry> = response.body()
+        val appDetailsResponse = SteamAppDetailsResponse(entries = entries)
+        val details = appDetailsResponse.details(appID)
+        return details
     }
 
     /**
