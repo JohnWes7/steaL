@@ -285,21 +285,6 @@ data class SteamAppDetails(
         }
 
     /**
-     * 主预告片：标了 `highlight` 的那个能播的视频，没有就是第一个能播的。
-     * The main trailer: the playable movie flagged `highlight`, or else the first playable one.
-     */
-    val mainTrailer: SteamMovie?
-        get() {
-            val allMovies = movies ?: return null
-            val playableMovies = allMovies.filter { movie -> movie.isPlayable }
-            val highlightedMovie = playableMovies.firstOrNull { movie -> movie.highlight == true }
-            if (highlightedMovie != null) {
-                return highlightedMovie
-            }
-            return playableMovies.firstOrNull()
-        }
-
-    /**
      * 按定价分的条目类型。
      * The kind of entry by pricing.
      */

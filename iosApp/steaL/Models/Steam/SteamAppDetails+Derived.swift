@@ -92,13 +92,3 @@ extension SteamMovie {
     /// 优先用于播放的地址 / The URL to play
     var preferredURL: String? { hlsH264 }
 }
-
-extension Array where Element == SteamMovie {
-
-    /// 主预告片：`highlight == true` 的那条，找不到就按 Steam 的返回顺序取第一条 /
-    /// The highlight reel: the entry flagged `highlight`, falling back to Steam's own ordering
-    var mainTrailer: SteamMovie? {
-        first(where: { $0.highlight == true && $0.isPlayable })
-            ?? first(where: { $0.isPlayable })
-    }
-}
