@@ -18,6 +18,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -120,7 +122,94 @@ class SteamApiTest {
         assertEquals(LoadError.Server(500), LoadError.from(error))
     }
 
+    // MARK: - 详情 / Details
+
+    /**
+     * 详情请求发到 `GET /api/appdetails`，带一个 appID、地区代码（Europe 是 `DE`）和 `l=`，不带 `filters`。
+     * The details request goes to `GET /api/appdetails` with one appID, the region code (`DE` for Europe) and
+     * `l=`, and no `filters`.
+     */
+    @Test
+    fun fetchAppDetailsSendsExpectedQuery() = runTest {
+        var captured: HttpRequestData? = null
+        val api = makeApi { request ->
+            captured = request
+            respond(content = DETAILS_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        api.fetchAppDetails(appID = ELDEN_RING, region = AppRegion.Europe, steamLanguage = "schinese")
+
+        val request = captured!!
+        assertEquals(HttpMethod.Get, request.method)
+        assertEquals("store.steampowered.com", request.url.host)
+        assertEquals("/api/appdetails", request.url.encodedPath)
+        assertEquals("1245620", request.url.parameters["appids"])
+        assertEquals("DE", request.url.parameters["cc"])
+        assertEquals("schinese", request.url.parameters["l"])
+        assertNull(request.url.parameters["filters"])
+    }
+
+    /**
+     * 从以 appID 为 key 的字典里取出这个 app 的详情。
+     * The app's details are taken out of the dictionary keyed by appID.
+     */
+    @Test
+    fun fetchAppDetailsReturnsDetails() = runTest {
+        val api = makeApi {
+            respond(content = DETAILS_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val details = api.fetchAppDetails(appID = ELDEN_RING, region = AppRegion.Australia, steamLanguage = "english")
+
+        assertNotNull(details)
+        assertEquals("ELDEN RING", details.name)
+        assertEquals(8995, details.priceOverview?.final)
+    }
+
+    /**
+     * Steam 上没有的 app（`success:false`）返回 `null`，不抛错。
+     * An app Steam does not have (`success:false`) returns `null` without throwing.
+     */
+    @Test
+    fun fetchAppDetailsMissingAppIsNull() = runTest {
+        val api = makeApi {
+            respond(content = """{"9999999":{"success":false}}""", status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val details = api.fetchAppDetails(appID = 9999999, region = AppRegion.Australia, steamLanguage = "english")
+
+        assertNull(details)
+    }
+
+    /**
+     * 详情请求非 2xx 也抛 [SteamApiException]，归成 `LoadError.Server`。
+     * A non-2xx details request also throws [SteamApiException], normalised to `LoadError.Server`.
+     */
+    @Test
+    fun fetchAppDetailsThrowsOnNonSuccess() = runTest {
+        val api = makeApi {
+            respond(content = "Too Many Requests", status = HttpStatusCode.TooManyRequests)
+        }
+
+        val error = assertFailsWith<SteamApiException> {
+            api.fetchAppDetails(appID = ELDEN_RING, region = AppRegion.Australia, steamLanguage = "english")
+        }
+
+        assertEquals(429, error.statusCode)
+        assertEquals(LoadError.Server(429), LoadError.from(error))
+    }
+
     private companion object {
+
+        /** ELDEN RING 的 Steam appID / ELDEN RING's Steam appID. */
+        const val ELDEN_RING = 1245620
+
+        /**
+         * 只留几个字段的 ELDEN RING 详情（完整的真实样例在 `SteamAppDetailsTest`）。
+         * ELDEN RING's details trimmed to a few fields (the full real sample is in `SteamAppDetailsTest`).
+         */
+        const val DETAILS_BODY =
+            """{"1245620":{"success":true,"data":{"type":"game","name":"ELDEN RING","steam_appid":1245620,"is_free":false,"price_overview":{"currency":"AUD","initial":8995,"final":8995,"discount_percent":0}}}}"""
 
         /**
          * Monster Hunter: World 三个候选的真实响应（2026-11-19）。

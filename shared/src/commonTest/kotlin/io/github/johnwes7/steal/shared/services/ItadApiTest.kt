@@ -3,6 +3,8 @@ package io.github.johnwes7.steal.shared.services
 import io.github.johnwes7.steal.shared.models.app.LoadError
 import io.github.johnwes7.steal.shared.models.itad.ItadDealsFilter
 import io.github.johnwes7.steal.shared.models.itad.ItadDealsRequest
+import io.github.johnwes7.steal.shared.models.itad.game
+import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -21,6 +23,7 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -226,7 +229,178 @@ class ItadApiTest {
         assertTrue(response.entries.isEmpty())
     }
 
+    // MARK: - 详情页的三个接口 / The detail page's three endpoints
+
+    /**
+     * 按 appID 找游戏发 `GET /games/lookup/v1`，`appid` 是裸数字（不带 `app/`），key 在请求头里不在网址里。
+     * Looking a game up by appID sends `GET /games/lookup/v1` with a bare `appid` (no `app/`), and the key in the
+     * header, not the URL.
+     */
+    @Test
+    fun lookupGameSendsBareAppID() = runTest {
+        var captured: HttpRequestData? = null
+        val api = makeApi { request ->
+            captured = request
+            respond(content = LOOKUP_FOUND_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val lookup = api.lookupGame(appID = 1245620)
+
+        val request = captured!!
+        assertEquals(HttpMethod.Get, request.method)
+        assertEquals("api.isthereanydeal.com", request.url.host)
+        assertEquals("/games/lookup/v1", request.url.encodedPath)
+        assertEquals("1245620", request.url.parameters["appid"])
+        assertNull(request.url.parameters["key"])
+        assertEquals(TEST_KEY, request.headers[ItadApi.API_KEY_HEADER])
+
+        assertTrue(lookup.found)
+        assertEquals(ELDEN_RING, lookup.game?.id)
+    }
+
+    /**
+     * 没收录（`found:false`）照常返回，不抛错。
+     * An untracked game (`found:false`) comes back normally without throwing.
+     */
+    @Test
+    fun lookupGameNotFoundIsNotError() = runTest {
+        val api = makeApi {
+            respond(content = """{"found":false}""", status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val lookup = api.lookupGame(appID = 4349200)
+
+        assertFalse(lookup.found)
+        assertNull(lookup.game)
+    }
+
+    /**
+     * 游戏信息发 `GET /games/info/v2?id=<UUID>`，key 在请求头里。
+     * Game info sends `GET /games/info/v2?id=<UUID>`, with the key in the header.
+     */
+    @Test
+    fun fetchGameInfoSendsUUID() = runTest {
+        var captured: HttpRequestData? = null
+        val api = makeApi { request ->
+            captured = request
+            respond(content = INFO_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val info = api.fetchGameInfo(uuid = ELDEN_RING)
+
+        val request = captured!!
+        assertEquals(HttpMethod.Get, request.method)
+        assertEquals("/games/info/v2", request.url.encodedPath)
+        assertEquals(ELDEN_RING, request.url.parameters["id"])
+        assertNull(request.url.parameters["key"])
+        assertEquals(TEST_KEY, request.headers[ItadApi.API_KEY_HEADER])
+
+        assertEquals("Elden Ring", info.title)
+        assertNull(info.assets)
+    }
+
+    /**
+     * 比价发 `POST /games/prices/v3?country=<代码>&deals=false`（Europe 是 `DE`），请求体是 UUID 数组；
+     * 响应是稀疏的，没有价格的 UUID 取不到。
+     * Prices send `POST /games/prices/v3?country=<code>&deals=false` (`DE` for Europe) with an array of UUIDs as the
+     * body; the response is sparse, so a UUID without prices is not found.
+     */
+    @Test
+    fun fetchPricesSendsExpectedRequest() = runTest {
+        var captured: HttpRequestData? = null
+        val api = makeApi { request ->
+            captured = request
+            respond(content = PRICES_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val prices = api.fetchPrices(uuids = listOf(ELDEN_RING, UNKNOWN_UUID), region = AppRegion.Europe)
+
+        val request = captured!!
+        assertEquals(HttpMethod.Post, request.method)
+        assertEquals("/games/prices/v3", request.url.encodedPath)
+        assertEquals("DE", request.url.parameters["country"])
+        assertEquals("false", request.url.parameters["deals"])
+        assertNull(request.url.parameters["key"])
+        assertEquals(TEST_KEY, request.headers[ItadApi.API_KEY_HEADER])
+        val sentBody = request.body.toByteArray().decodeToString()
+        val expectedBody = Json.parseToJsonElement("""["$ELDEN_RING","$UNKNOWN_UUID"]""")
+        assertEquals(expectedBody, Json.parseToJsonElement(sentBody))
+
+        assertEquals(1, prices.size)
+        assertEquals(4553, prices.game(ELDEN_RING)?.allTimeLow?.amountInt)
+        assertNull(prices.game(UNKNOWN_UUID))
+    }
+
+    /**
+     * UUID 列表为空时比价不发请求，直接返回空列表。
+     * An empty UUID list sends no prices request and returns an empty list.
+     */
+    @Test
+    fun fetchPricesSkipsEmptyList() = runTest {
+        var requestCount = 0
+        val api = makeApi {
+            requestCount += 1
+            respond(content = "[]", status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val prices = api.fetchPrices(uuids = emptyList(), region = AppRegion.Australia)
+
+        assertEquals(0, requestCount)
+        assertTrue(prices.isEmpty())
+    }
+
+    /**
+     * 三个接口非 2xx 都抛 [ItadApiException]（如 `info/v2` 传错 ID 时的 400）。
+     * All three endpoints throw [ItadApiException] on a non-2xx (such as `info/v2`'s 400 for a wrong ID).
+     */
+    @Test
+    fun detailEndpointsThrowOnNonSuccess() = runTest {
+        val api = makeApi {
+            respond(content = BAD_REQUEST_BODY, status = HttpStatusCode.BadRequest, headers = JSON_HEADERS)
+        }
+
+        val lookupError = assertFailsWith<ItadApiException> {
+            api.lookupGame(appID = 1245620)
+        }
+        val infoError = assertFailsWith<ItadApiException> {
+            api.fetchGameInfo(uuid = "1245620")
+        }
+        val pricesError = assertFailsWith<ItadApiException> {
+            api.fetchPrices(uuids = listOf(ELDEN_RING), region = AppRegion.Australia)
+        }
+
+        assertEquals(400, lookupError.statusCode)
+        assertEquals(400, infoError.statusCode)
+        assertEquals(BAD_REQUEST_BODY, infoError.body)
+        assertEquals(400, pricesError.statusCode)
+        assertEquals(LoadError.Server(400), LoadError.from(pricesError))
+    }
+
     private companion object {
+
+        /**
+         * 只留标识的 ELDEN RING lookup 响应（完整的真实样例在 `ItadGameLookupTest`）。
+         * ELDEN RING's lookup response trimmed to its identity (the full real sample is in `ItadGameLookupTest`).
+         */
+        const val LOOKUP_FOUND_BODY =
+            """{"found":true,"game":{"id":"018d937f-590c-728b-ac35-38bcff85f086","slug":"elden-ring","title":"Elden Ring","type":"game"}}"""
+
+        /**
+         * 只留必填字段的 ELDEN RING 信息（完整的真实样例在 `ItadGameInfoTest`）。
+         * ELDEN RING's info trimmed to the required fields (the full real sample is in `ItadGameInfoTest`).
+         */
+        const val INFO_BODY =
+            """{"id":"018d937f-590c-728b-ac35-38bcff85f086","slug":"elden-ring","title":"Elden Ring","type":"game","mature":false}"""
+
+        /**
+         * 只有 ELDEN RING 一条、没有报价的比价响应（完整的真实样例在 `ItadPricesTest`）。
+         * A prices response with only ELDEN RING and no offers (the full real sample is in `ItadPricesTest`).
+         */
+        const val PRICES_BODY =
+            """[{"id":"018d937f-590c-728b-ac35-38bcff85f086","historyLow":{"all":{"amount":45.53,"amountInt":4553,"currency":"AUD"},"y1":null,"m3":null},"deals":[]}]"""
+
+        /** 400 的响应原文（形状不重要）/ A 400 reply (its shape does not matter). */
+        const val BAD_REQUEST_BODY = """{"status_code":400,"reason_phrase":"Bad Request"}"""
 
         /** ELDEN RING 的 ITAD UUID / ELDEN RING's ITAD UUID. */
         const val ELDEN_RING = "018d937f-590c-728b-ac35-38bcff85f086"
