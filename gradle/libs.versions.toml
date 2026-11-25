@@ -16,6 +16,8 @@ navigation3 = "1.2.1"
 lifecycle = "2.11.0"
 kotlinxSerialization = "1.11.0"
 kotlinxCoroutines = "1.11.0"
+kotlinxDatetime = "0.8.0"
+desugarJdkLibs = "2.1.5"
 ktor = "3.6.1"
 kermit = "2.2.0"
 coil = "3.6.3"
@@ -55,6 +57,12 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 kotlinx-serialization-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+# 时区与日历：把 kotlin.time.Instant 换算成用户时区的日期（Sales 按月分段、按日历日数天）/ Time zones and calendars: turning kotlin.time.Instant into dates in the user's time zone (Sales month sections and calendar-day counts)
+# Ktor 3.6.1（经 ktor-openapi-schema）依赖 0.8.0-0.6.x-compat，Gradle 实际选它：多出旧的 kotlinx.datetime.Instant / Clock，代码里要显式 import kotlin.time.Instant / kotlin.time.Clock
+# Ktor 3.6.1 (through ktor-openapi-schema) depends on 0.8.0-0.6.x-compat, which Gradle picks: it adds the old kotlinx.datetime.Instant / Clock, so code imports kotlin.time.Instant / kotlin.time.Clock explicitly
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+# Android 26 以下补上 java.time（kotlinx-datetime 在 JVM 上靠它）/ Provides java.time below Android 26 (kotlinx-datetime relies on it on the JVM)
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 
 # shared 网络层：Ktor（HTTP 客户端）与 Kermit（日志）/ shared networking: Ktor (HTTP client) and Kermit (logging)
 ktor-client-engine-defaults = { group = "io.ktor", name = "ktor-client-engine-defaults", version.ref = "ktor" }

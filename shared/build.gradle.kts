@@ -100,6 +100,11 @@ kotlin {
                 // DataStore<Preferences>, which the platform entry point creates and passes in.
                 api(libs.androidx.datastore.core)
                 api(libs.androidx.datastore.preferences.core)
+                // 时区与日历（按用户时区分月、数日历日）；用 api 是因为模型函数的公开参数是 TimeZone，
+                // androidApp 调用时要传 TimeZone.currentSystemDefault()。
+                // Time zones and calendars (month sections and calendar days in the user's time zone); api because
+                // model functions take a public TimeZone parameter, which androidApp passes as TimeZone.currentSystemDefault().
+                api(libs.kotlinx.datetime)
             }
         }
 

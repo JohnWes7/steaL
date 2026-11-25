@@ -51,6 +51,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // minSdk 是 24，而 shared 用的 kotlinx-datetime 在 JVM 上靠 java.time（API 26 起才有）：打开 desugaring，
+        // 由构建把 java.time 补进 APK，否则 Android 7.x 上一换算时区就崩。
+        // minSdk is 24, while shared's kotlinx-datetime relies on java.time on the JVM (API 26 and up): desugaring lets
+        // the build bundle java.time into the APK; without it, time zone conversions crash on Android 7.x.
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
@@ -77,6 +82,9 @@ android {
 }
 
 dependencies {
+    // 上面 compileOptions 打开的 desugaring 用的库。
+    // The library behind the desugaring turned on in compileOptions above.
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(project(":shared"))
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
