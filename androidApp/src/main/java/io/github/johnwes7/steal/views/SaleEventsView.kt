@@ -159,7 +159,7 @@ private fun SaleEventsContent(
                             )
                         }
                         item(key = "disclaimer") {
-                            SaleEventsDisclaimer()
+                            SaleEventsDisclaimer(modifier = Modifier.animateItem())
                         }
                     }
                 }
@@ -173,12 +173,12 @@ private fun SaleEventsContent(
  * The disclaimer at the end of the list: the dates are gathered by AI and may be wrong.
  */
 @Composable
-private fun SaleEventsDisclaimer() {
+private fun SaleEventsDisclaimer(modifier: Modifier = Modifier) {
     Text(
         text = stringResource(R.string.sale_events_disclaimer),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+        modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
     )
 }
 

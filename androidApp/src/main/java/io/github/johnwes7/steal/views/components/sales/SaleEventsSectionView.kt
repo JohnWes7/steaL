@@ -46,7 +46,7 @@ fun LazyListScope.saleEventSectionItems(
     when (section) {
         is SaleEventSection.HappeningNow -> {
             item(key = "section-happening-now") {
-                SectionTitle(section = section, timeZone = timeZone)
+                SectionTitle(section = section, timeZone = timeZone, modifier = Modifier.animateItem())
             }
             itemsIndexed(
                 items = section.events,
@@ -67,7 +67,7 @@ fun LazyListScope.saleEventSectionItems(
         }
         is SaleEventSection.Month -> {
             item(key = "section-${section.month}") {
-                SectionTitle(section = section, timeZone = timeZone)
+                SectionTitle(section = section, timeZone = timeZone, modifier = Modifier.animateItem())
             }
             itemsIndexed(
                 items = section.events,
@@ -112,12 +112,12 @@ private fun gapBelow(index: Int, count: Int, gap: Dp): Dp {
  * otherwise the month and year.
  */
 @Composable
-private fun SectionTitle(section: SaleEventSection, timeZone: TimeZone) {
+private fun SectionTitle(section: SaleEventSection, timeZone: TimeZone, modifier: Modifier = Modifier) {
     Text(
         text = saleEventSectionTitle(section = section, timeZone = timeZone),
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier
+        modifier = modifier
             .semantics { heading() }
             .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 8.dp),
     )
