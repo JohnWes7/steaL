@@ -49,6 +49,13 @@ object AppLog {
     val saleEvents: Logger = Logger.withTag("SaleEvents")
 
     /**
+     * 游戏详情页：加载 Steam 详情、查 ITAD UUID、比价和游戏信息的失败。
+     * The game detail page: failures loading the Steam details, looking up the ITAD UUID, the prices and the game
+     * info.
+     */
+    val gameDetail: Logger = Logger.withTag("GameDetail")
+
+    /**
      * 设置：读写存储的失败。
      * Settings: failures reading or writing storage.
      */
