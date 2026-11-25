@@ -6,6 +6,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.cache.storage.CacheStorage
 import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
@@ -35,7 +36,7 @@ class SteamApiTest {
     ): SteamApi {
         val engine = MockEngine(handler)
         val client = HttpClient(engine) {
-            installAppPlugins(logsRequests = false)
+            installAppPlugins(logsRequests = false, cacheStorage = CacheStorage.Unlimited())
         }
         val api = SteamApi(client = client)
         return api

@@ -26,6 +26,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import io.github.johnwes7.steal.HTTP_CACHE_FOLDER
 import io.github.johnwes7.steal.LocalAppContainer
 import io.github.johnwes7.steal.config.Config
 import io.github.johnwes7.steal.navigation.AppTab
@@ -46,6 +47,7 @@ import io.github.johnwes7.steal.views.components.shared.LocalTabBarHeight
 import io.github.johnwes7.steal.views.components.shared.barBackground
 import io.github.johnwes7.steal.views.components.shared.rememberBarBlurStyle
 import io.github.johnwes7.steal.views.theme.SteaLTheme
+import java.io.File
 
 /**
  * App 的主框架：底部导航栏 + 每个 tab 自己的返回栈。
@@ -195,9 +197,12 @@ private fun MainTabViewPreview() {
     // a failure when the preview environment has no network.
     val context = LocalContext.current
     val appContainer = remember {
+        val httpCacheDirectory = File(context.cacheDir, HTTP_CACHE_FOLDER)
         AppContainer(
             logsRequests = false,
+            httpCacheDirectory = httpCacheDirectory.path,
             itadApiKey = Config.ITAD_API_KEY,
+            backendBaseUrl = Config.BACKEND_BASE_URL,
             settingsDataStore = createSettingsDataStore(context = context),
         )
     }

@@ -3,12 +3,16 @@ package io.github.johnwes7.steal.shared.services
 import io.github.johnwes7.steal.shared.config.AppLog
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
+import io.ktor.client.plugins.cache.HttpCache
+import io.ktor.client.plugins.cache.storage.CacheStorage
+import io.ktor.client.plugins.cache.storage.FileStorage
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.io.files.Path
 import kotlinx.serialization.json.Json
 
 /**
@@ -54,27 +58,41 @@ internal val appNetworkJson: Json = Json {
  * Android, Darwin (`NSURLSession`) on iOS.
  *
  * [logsRequests] 为 `true` 时把每个请求与响应的原文打到 [AppLog.http]，调试版传 `true`、正式版传 `false`。
+ * [cacheDirectory] 是 HTTP 缓存的目录，由平台传入（放系统可以清的缓存目录），不存在会自动建。
  * When [logsRequests] is `true`, the raw text of every request and response goes to [AppLog.http]; debug builds
- * pass `true` and release builds `false`.
+ * pass `true` and release builds `false`. [cacheDirectory] is where the HTTP cache lives, passed in by the platform
+ * (a cache folder the system may clear); it is created if missing.
  */
-fun createHttpClient(logsRequests: Boolean): HttpClient {
+fun createHttpClient(logsRequests: Boolean, cacheDirectory: String): HttpClient {
+    // 存在文件里，App 重开后一小时内的响应还能用。
+    // Stored in files, so responses still fresh within the hour survive an app restart.
+    val cacheStorage = FileStorage(directory = Path(cacheDirectory))
     val client = HttpClient {
-        installAppPlugins(logsRequests)
+        installAppPlugins(logsRequests = logsRequests, cacheStorage = cacheStorage)
     }
     return client
 }
 
 /**
- * 给 client 装上全 App 统一的插件与设置。
- * Installs the app-wide plugins and settings on a client.
+ * 给 client 装上全 App 统一的插件与设置，HTTP 缓存存进 [cacheStorage]。
+ * Installs the app-wide plugins and settings on a client, with the HTTP cache kept in [cacheStorage].
  *
- * 和 [createHttpClient] 分开，测试才能把同一套配置装到 Ktor 的假引擎上。
- * Kept apart from [createHttpClient] so tests can put the same configuration on Ktor's mock engine.
+ * 和 [createHttpClient] 分开，测试才能把同一套配置装到 Ktor 的假引擎上（缓存用内存里的）。
+ * Kept apart from [createHttpClient] so tests can put the same configuration on Ktor's mock engine (with an
+ * in-memory cache).
  */
-internal fun HttpClientConfig<*>.installAppPlugins(logsRequests: Boolean) {
+internal fun HttpClientConfig<*>.installAppPlugins(logsRequests: Boolean, cacheStorage: CacheStorage) {
     // 不让 Ktor 按状态码抛它自己的异常：每个 Service 自己查状态码、抛自己的错误类型。
     // Keep Ktor from throwing its own exceptions by status code: each service checks the status and throws its own error type.
     expectSuccess = false
+
+    // 按响应头缓存 GET 的成功响应：有 max-age 的（自建后端、Steam appdetails）在有效期内不发请求；
+    // 没有缓存头的（ITAD）立刻过期，每次照常请求。
+    // Cache successful GET responses by their headers: those with max-age (our backend, Steam appdetails) skip the
+    // network while fresh; those without cache headers (ITAD) expire at once and are requested every time.
+    install(HttpCache) {
+        publicStorage(cacheStorage)
+    }
 
     // 用 appNetworkJson 编解码 JSON 请求体与响应体。
     // Encode and decode JSON bodies with appNetworkJson.

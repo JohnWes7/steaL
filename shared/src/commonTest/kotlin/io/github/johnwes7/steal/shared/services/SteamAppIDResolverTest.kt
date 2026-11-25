@@ -4,6 +4,7 @@ import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.cache.storage.CacheStorage
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
@@ -50,7 +51,7 @@ class SteamAppIDResolverTest {
                 }
             }
             val client = HttpClient(engine) {
-                installAppPlugins(logsRequests = false)
+                installAppPlugins(logsRequests = false, cacheStorage = CacheStorage.Unlimited())
             }
             val itadApi = ItadApi(client = client, apiKey = "test-key")
             val steamApi = SteamApi(client = client)

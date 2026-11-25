@@ -1,6 +1,7 @@
 package io.github.johnwes7.steal.shared.models.app
 
 import io.github.johnwes7.steal.shared.services.ItadApiException
+import io.github.johnwes7.steal.shared.services.SaleEventsApiException
 import io.github.johnwes7.steal.shared.services.SteamApiException
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.network.sockets.SocketTimeoutException
@@ -25,9 +26,11 @@ class LoadErrorTest {
     fun serviceFailuresAreServer() {
         val itadError = ItadApiException(statusCode = 429, body = "Too Many Requests")
         val steamError = SteamApiException(statusCode = 503, body = "Service Unavailable")
+        val saleEventsError = SaleEventsApiException(statusCode = 429, body = """{"message":"Too Many Requests"}""")
 
         assertEquals(LoadError.Server(429), LoadError.from(itadError))
         assertEquals(LoadError.Server(503), LoadError.from(steamError))
+        assertEquals(LoadError.Server(429), LoadError.from(saleEventsError))
     }
 
     /**

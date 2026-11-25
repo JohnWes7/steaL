@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.johnwes7.steal.shared.services.ItadApi
+import io.github.johnwes7.steal.shared.services.SaleEventsApi
 import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamApi
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
@@ -25,23 +26,30 @@ import io.ktor.client.HttpClient
  * The platform entry point creates exactly one (in `SteaLApplication` on Android): every instance brings its own
  * HTTP client and set of services.
  *
- * [logsRequests] 决定是否打印 HTTP 请求与响应，调试版传 `true`；[itadApiKey] 由平台从自己的配置读出来传入；
+ * [logsRequests] 决定是否打印 HTTP 请求与响应，调试版传 `true`；[httpCacheDirectory] 是 HTTP 缓存的目录；
+ * [itadApiKey] 和自建后端的地址 [backendBaseUrl]（到 `/v1` 为止）由平台从自己的配置读出来传入；
  * [settingsDataStore] 由平台建好传入（文件放在哪里各平台不同），容器只用这一份。
- * [logsRequests] decides whether HTTP requests and responses are logged (debug builds pass `true`); the platform
- * reads [itadApiKey] from its own configuration; the platform creates [settingsDataStore] (where the file lives
- * differs per platform), and the container uses only that one.
+ * [logsRequests] decides whether HTTP requests and responses are logged (debug builds pass `true`);
+ * [httpCacheDirectory] is where the HTTP cache lives; the platform reads [itadApiKey] and our backend's address
+ * [backendBaseUrl] (up to `/v1`) from its own configuration; the platform creates [settingsDataStore] (where the
+ * file lives differs per platform), and the container uses only that one.
  */
 class AppContainer(
     logsRequests: Boolean,
+    httpCacheDirectory: String,
     itadApiKey: String,
+    backendBaseUrl: String,
     settingsDataStore: DataStore<Preferences>,
 ) {
 
     /**
-     * 所有 Service 共用的 HTTP 客户端，连接可以复用。
-     * The HTTP client every service shares, so connections are reused.
+     * 所有 Service 共用的 HTTP 客户端，连接和缓存可以复用。
+     * The HTTP client every service shares, so connections and the cache are reused.
      */
-    private val httpClient: HttpClient = createHttpClient(logsRequests = logsRequests)
+    private val httpClient: HttpClient = createHttpClient(
+        logsRequests = logsRequests,
+        cacheDirectory = httpCacheDirectory,
+    )
 
     /**
      * IsThereAnyDeal 接口：deals、giveaways、appID 查询。
@@ -60,6 +68,12 @@ class AppContainer(
      * Turns ITAD game UUIDs into Steam appIDs.
      */
     val steamAppIDResolver: SteamAppIDResolver = SteamAppIDResolver(itadApi = itadApi, steamApi = steamApi)
+
+    /**
+     * 自建后端的促销活动接口。
+     * Our backend's sale events API.
+     */
+    val saleEventsApi: SaleEventsApi = SaleEventsApi(client = httpClient, baseUrl = backendBaseUrl)
 
     /**
      * 用户设置的读写。

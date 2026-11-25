@@ -43,6 +43,12 @@ object AppLog {
     val games: Logger = Logger.withTag("Games")
 
     /**
+     * Sales 页：加载促销活动、打开来源网页的失败。
+     * The Sales page: failures loading sale events or opening their source pages.
+     */
+    val saleEvents: Logger = Logger.withTag("SaleEvents")
+
+    /**
      * 设置：读写存储的失败。
      * Settings: failures reading or writing storage.
      */

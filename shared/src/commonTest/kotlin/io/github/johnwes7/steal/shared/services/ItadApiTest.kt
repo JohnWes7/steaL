@@ -8,6 +8,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
+import io.ktor.client.plugins.cache.storage.CacheStorage
 import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
@@ -52,7 +53,7 @@ class ItadApiTest {
     ): ItadApi {
         val engine = MockEngine(handler)
         val client = HttpClient(engine) {
-            installAppPlugins(logsRequests = false)
+            installAppPlugins(logsRequests = false, cacheStorage = CacheStorage.Unlimited())
         }
         val api = ItadApi(client = client, apiKey = TEST_KEY)
         return api
