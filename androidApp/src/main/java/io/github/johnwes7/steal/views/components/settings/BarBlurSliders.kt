@@ -6,10 +6,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -40,7 +36,7 @@ fun BarBlurSliders(
             valueRange = BarBlurSettings.RADIUS_RANGE_DP,
             formatValue = { number -> stringResource(R.string.settings_value_dp, number) },
             enabled = enabled,
-            onValueChangeFinished = onRadiusChange,
+            onValueChange = onRadiusChange,
         )
         BlurValueSlider(
             label = stringResource(R.string.settings_tint_opacity),
@@ -48,7 +44,7 @@ fun BarBlurSliders(
             valueRange = BarBlurSettings.PERCENT_RANGE,
             formatValue = { number -> stringResource(R.string.settings_value_percent, number) },
             enabled = enabled,
-            onValueChangeFinished = onTintChange,
+            onValueChange = onTintChange,
         )
         BlurValueSlider(
             label = stringResource(R.string.settings_noise),
@@ -56,19 +52,19 @@ fun BarBlurSliders(
             valueRange = BarBlurSettings.PERCENT_RANGE,
             formatValue = { number -> stringResource(R.string.settings_value_percent, number) },
             enabled = enabled,
-            onValueChangeFinished = onNoiseChange,
+            onValueChange = onNoiseChange,
         )
     }
 }
 
 /**
- * 一个数值滑块：名字和当前值在上，滑块在下；松手时把取整后的值交给 [onValueChangeFinished]。
- * One value slider: the name and current value above, the slider below; on release it hands the rounded value to
- * [onValueChangeFinished].
+ * 一个数值滑块：名字和当前值在上，滑块在下；拖动中每次变化都把取整后的值交给 [onValueChange]。
+ * One value slider: the name and current value above, the slider below; every change while dragging hands the
+ * rounded value to [onValueChange].
  *
- * 拖动中只改这一行自己的状态（官方 Slider 示例的写法），存的 [value] 变了（保存完、恢复默认）就从新值重新开始。
- * While dragging only this row's own state changes (as in the official Slider samples); when the stored [value]
- * changes (after saving or a reset) it starts over from the new value.
+ * 滑块和数字直接显示存下来的 [value]，没有自己的状态：拖动时要等新值存好、读回来才会动。
+ * The slider and the number show the stored [value] directly, with no state of their own: while dragging they
+ * only move once the new value has been saved and read back.
  */
 @Composable
 private fun BlurValueSlider(
@@ -77,21 +73,25 @@ private fun BlurValueSlider(
     valueRange: IntRange,
     formatValue: @Composable (Int) -> String,
     enabled: Boolean,
-    onValueChangeFinished: (Int) -> Unit,
+    onValueChange: (Int) -> Unit,
 ) {
-    var dragValue by remember(value) { mutableFloatStateOf(value.toFloat()) }
-    val shownValue = dragValue.roundToInt()
     val sliderRange = valueRange.first.toFloat()..valueRange.last.toFloat()
 
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = label, modifier = Modifier.weight(1f))
-            Text(text = formatValue(shownValue), style = MaterialTheme.typography.bodyMedium)
+            Text(text = formatValue(value), style = MaterialTheme.typography.bodyMedium)
         }
         Slider(
-            value = dragValue,
-            onValueChange = { newValue -> dragValue = newValue },
-            onValueChangeFinished = { onValueChangeFinished(dragValue.roundToInt()) },
+            value = value.toFloat(),
+            onValueChange = { newValue ->
+                // 取整后和存的值一样就不写，免得同一个值排队写好几次
+                // Skip values that round to what is already stored, so the same value isn't queued many times
+                val roundedValue = newValue.roundToInt()
+                if (roundedValue != value) {
+                    onValueChange(roundedValue)
+                }
+            },
             valueRange = sliderRange,
             enabled = enabled,
         )
