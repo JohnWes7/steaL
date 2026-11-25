@@ -14,6 +14,7 @@ import io.github.johnwes7.steal.shared.services.createHttpClient
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RegionSettingsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RootViewModel
+import io.github.johnwes7.steal.shared.viewmodels.SaleEventsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.SettingsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.ThemeSettingsViewModel
 import io.ktor.client.HttpClient
@@ -102,6 +103,16 @@ class AppContainer(
                 steamAppIDResolver = steamAppIDResolver,
                 settingsRepository = settingsRepository,
             )
+        }
+    }
+
+    /**
+     * Sales tab 根页面 [SaleEventsViewModel] 的工厂。
+     * The factory for the Sales tab root screen's [SaleEventsViewModel].
+     */
+    val saleEventsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            SaleEventsViewModel(saleEventsApi = saleEventsApi)
         }
     }
 
