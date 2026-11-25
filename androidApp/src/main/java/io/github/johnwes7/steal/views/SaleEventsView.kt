@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
@@ -30,7 +30,6 @@ import io.github.johnwes7.steal.previews.previewNow
 import io.github.johnwes7.steal.previews.previewSaleEventList
 import io.github.johnwes7.steal.shared.config.AppLog
 import io.github.johnwes7.steal.shared.models.saleevents.SaleEvent
-import io.github.johnwes7.steal.shared.models.saleevents.SaleEventSection
 import io.github.johnwes7.steal.shared.viewmodels.SaleEventsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.SaleEventsViewModel.SaleEventsLoadState
 import io.github.johnwes7.steal.views.components.sales.saleEventSectionItems
@@ -113,63 +112,58 @@ private fun SaleEventsContent(
         scrollState = listState,
         modifier = modifier,
     ) { contentPadding ->
-        when (saleState) {
-            SaleEventsLoadState.Loading -> SaleEventsLoading(contentPadding = contentPadding)
-            is SaleEventsLoadState.Failed -> CenteredInPage(contentPadding = contentPadding) {
-                LoadErrorView(error = saleState.error, onRetry = onRetry)
-            }
-            is SaleEventsLoadState.Loaded -> {
-                val sections = saleState.eventList.sections(now = now, timeZone = timeZone)
-                if (sections.isEmpty()) {
-                    CenteredInPage(contentPadding = contentPadding) {
-                        ContentUnavailableView(
-                            iconRes = R.drawable.calendar_month_24px,
-                            title = stringResource(R.string.sale_events_empty_title),
-                            message = stringResource(R.string.sale_events_empty_message),
-                        )
+        // 骨架给的留白加在列表里面，内容才会滚到两条栏后面；再加上列表自己的边距。
+        // The scaffold's padding goes inside the list so content scrolls behind both bars, plus the list's own margins.
+        val listPadding = contentPadding + PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 24.dp)
+
+        // 列表一直在，按状态放 item：进程被杀后恢复的旧滚动位置在加载中只能落到唯一的那一项，新数据从顶部开始；
+        // 活动行是加进已布局过的列表，animateItem 才会让它们淡入。
+        // The list is always there, with items chosen by state: a scroll position restored after process death can
+        // only land on the single loading item, so fresh data starts at the top; event rows join a list that has
+        // already been laid out, which is what lets animateItem fade them in.
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = listPadding,
+        ) {
+            when (saleState) {
+                SaleEventsLoadState.Loading -> item(key = "saleEventsLoading") {
+                    CenteredPageItem {
+                        SaleEventsLoading()
                     }
-                } else {
-                    SaleEventsList(
-                        sections = sections,
-                        listState = listState,
-                        contentPadding = contentPadding,
-                        onOpenEvent = onOpenEvent,
-                        now = now,
-                        timeZone = timeZone,
-                    )
+                }
+                is SaleEventsLoadState.Failed -> item(key = "saleEventsError") {
+                    CenteredPageItem {
+                        LoadErrorView(error = saleState.error, onRetry = onRetry)
+                    }
+                }
+                is SaleEventsLoadState.Loaded -> {
+                    val sections = saleState.eventList.sections(now = now, timeZone = timeZone)
+                    if (sections.isEmpty()) {
+                        item(key = "saleEventsEmpty") {
+                            CenteredPageItem {
+                                ContentUnavailableView(
+                                    iconRes = R.drawable.calendar_month_24px,
+                                    title = stringResource(R.string.sale_events_empty_title),
+                                    message = stringResource(R.string.sale_events_empty_message),
+                                )
+                            }
+                        }
+                    } else {
+                        for (section in sections) {
+                            saleEventSectionItems(
+                                section = section,
+                                onSelect = onOpenEvent,
+                                now = now,
+                                timeZone = timeZone,
+                            )
+                        }
+                        item(key = "disclaimer") {
+                            SaleEventsDisclaimer()
+                        }
+                    }
                 }
             }
-        }
-    }
-}
-
-/**
- * 分段的活动列表，最后一项是免责说明。
- * The sectioned event list, ending with the disclaimer.
- */
-@Composable
-private fun SaleEventsList(
-    sections: List<SaleEventSection>,
-    listState: LazyListState,
-    contentPadding: PaddingValues,
-    onOpenEvent: (SaleEvent) -> Unit,
-    now: Instant,
-    timeZone: TimeZone,
-) {
-    // 骨架给的留白加在列表里面，内容才会滚到两条栏后面；再加上列表自己的边距。
-    // The scaffold's padding goes inside the list so content scrolls behind both bars, plus the list's own margins.
-    val listPadding = contentPadding + PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 24.dp)
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        state = listState,
-        contentPadding = listPadding,
-    ) {
-        for (section in sections) {
-            saleEventSectionItems(section = section, onSelect = onOpenEvent, now = now, timeZone = timeZone)
-        }
-        item(key = "disclaimer") {
-            SaleEventsDisclaimer()
         }
     }
 }
@@ -189,27 +183,29 @@ private fun SaleEventsDisclaimer() {
 }
 
 /**
- * 加载中：页面中间一个加载指示器。
- * Loading: a loading indicator in the middle of the page.
+ * 加载中的指示器。
+ * The loading indicator.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SaleEventsLoading(contentPadding: PaddingValues) {
-    CenteredInPage(contentPadding = contentPadding) {
-        LoadingIndicator()
-    }
+private fun SaleEventsLoading() {
+    LoadingIndicator()
 }
 
 /**
- * 把不滚动的内容放在两条栏之间的区域正中。
- * Centers non-scrolling content in the area between the two bars.
+ * 列表里占满一屏、内容居中的一项，放加载中、失败和空列表；出现和消失时淡入淡出。
+ * A list item that fills one screen with its content centered, for loading, failure and the empty list; it fades
+ * in and out.
+ *
+ * 一屏是列表的可见区域减去 contentPadding，所以内容居中在两条栏之间。
+ * One screen is the list's viewport minus its contentPadding, so the content centers between the two bars.
  */
 @Composable
-private fun CenteredInPage(contentPadding: PaddingValues, content: @Composable () -> Unit) {
+private fun LazyItemScope.CenteredPageItem(content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding),
+            .animateItem()
+            .fillParentMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         content()
