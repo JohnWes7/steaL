@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -62,9 +64,9 @@ fun BarBlurSliders(
  * One value slider: the name and current value above, the slider below; every change while dragging hands the
  * rounded value to [onValueChange].
  *
- * 滑块和数字直接显示存下来的 [value]，没有自己的状态：拖动时要等新值存好、读回来才会动。
- * The slider and the number show the stored [value] directly, with no state of their own: while dragging they
- * only move once the new value has been saved and read back.
+ * 滑块和数字直接显示存下来的 [value]，滑块自己不改值：拖动时要等新值存好、读回来才会动。
+ * The slider and the number show the stored [value] directly, and the slider never changes the value itself:
+ * while dragging they only move once the new value has been saved and read back.
  */
 @Composable
 private fun BlurValueSlider(
@@ -76,6 +78,13 @@ private fun BlurValueSlider(
     onValueChange: (Int) -> Unit,
 ) {
     val sliderRange = valueRange.first.toFloat()..valueRange.last.toFloat()
+    val sliderState = remember(sliderRange) {
+        SliderState(value = value.toFloat(), trackRange = sliderRange)
+    }
+    // 每次重画都换成存下来的值（同 material3 旧的 value 版 Slider 在库里的做法）；放进 effect 会晚一帧
+    // Overwritten with the stored value on every recomposition, as the old value-based Slider does inside
+    // material3; doing it in an effect would lag a frame behind
+    sliderState.value = value.toFloat()
 
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -83,7 +92,7 @@ private fun BlurValueSlider(
             Text(text = formatValue(value), style = MaterialTheme.typography.bodyMedium)
         }
         Slider(
-            value = value.toFloat(),
+            state = sliderState,
             onValueChange = { newValue ->
                 // 取整后和存的值一样就不写，免得同一个值排队写好几次
                 // Skip values that round to what is already stored, so the same value isn't queued many times
@@ -92,7 +101,6 @@ private fun BlurValueSlider(
                     onValueChange(roundedValue)
                 }
             },
-            valueRange = sliderRange,
             enabled = enabled,
         )
     }
