@@ -11,15 +11,19 @@ import SwiftUI
 
 // MARK: - 枚举 / Enums
 
-/// 界面外观偏好（system / light / dark），直接映射到 SwiftUI 的 `colorScheme` /
-/// The app's visual appearance preference, mapped onto SwiftUI's `colorScheme`
+/// 界面外观偏好：跟随系统、浅色或深色。
+/// The app's appearance preference: follow the system, light or dark.
 enum AppTheme: String, Codable, CaseIterable, Identifiable {
     case system
     case light
     case dark
 
+    /// 列表用的标识，就是 raw value。
+    /// The identity for lists, which is the raw value.
     var id: String { rawValue }
 
+    /// 设置页上显示的名字。
+    /// The name shown on the settings page.
     var displayName: String {
         switch self {
         case .system: return "System"
@@ -28,7 +32,8 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// 交给 `.preferredColorScheme` 的值；`nil` 表示跟随系统 / The value for `.preferredColorScheme`; `nil` follows the system
+    /// 交给 `.preferredColorScheme` 的值；`nil` 表示跟随系统。
+    /// The value for `.preferredColorScheme`; `nil` follows the system.
     var colorScheme: ColorScheme? {
         switch self {
         case .system: return nil
@@ -38,8 +43,11 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// 购物区域；Steam 与第三方商店按区定价，它决定请求参数，从而决定返回的价格与货币 /
-/// The store region the user is shopping in; it drives the request parameters, and so the prices and currency returned
+/// 购物区域，决定请求参数，从而决定返回的价格和货币。
+/// The store region the user shops in, which drives the request parameters and so the prices and currency returned.
+///
+/// Steam 和第三方商店都按区定价。
+/// Steam and third-party shops both price by region.
 enum AppRegion: String, Codable, CaseIterable, Identifiable {
     case australia
     case china
@@ -49,8 +57,12 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
     case korea
     case europe
 
+    /// 列表用的标识，就是 raw value。
+    /// The identity for lists, which is the raw value.
     var id: String { rawValue }
 
+    /// 设置页上显示的名字。
+    /// The name shown on the settings page.
     var displayName: String {
         switch self {
         case .australia: return "Australia"
@@ -63,7 +75,8 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// 拼 Steam / ITAD 请求时用的国家或地区代码 / The country code used when building Steam and ITAD payloads
+    /// 拼 Steam / ITAD 请求时用的国家或地区代码。
+    /// The country code used when building Steam and ITAD requests.
     var apiRegionCode: String {
         switch self {
         case .australia: return "AU"
@@ -79,15 +92,22 @@ enum AppRegion: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// App 与 Steam 的语言偏好；raw value 就是 Steam 的 API 语言代码，如 `"schinese"` /
-/// Preferred language of the app and Steam; the raw value is Steam's own API language code
+/// Steam 内容和 AI 回答用的语言偏好。
+/// The language preference for Steam content and AI answers.
+///
+/// raw value 只是存进设置的名字，不是 Steam 的代码；请求 Steam 用 `apiCode`（如 `"schinese"`）。
+/// The raw value is only the name stored in the settings, not Steam's code; Steam requests use `apiCode`
+/// (such as `"schinese"`).
 enum AppLanguage: String, Codable, CaseIterable, Identifiable {
     case english
     case simplifiedChinese
 
+    /// 列表用的标识，就是 raw value。
+    /// The identity for lists, which is the raw value.
     var id: String { rawValue }
 
-    /// 请求里用的 Steam 语言代码 / The Steam language code used in API requests
+    /// 请求里用的 Steam 语言代码。
+    /// The Steam language code used in API requests.
     var apiCode: String {
         switch self {
         case .english: return "english"
@@ -95,6 +115,8 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// 设置页上显示的名字，用这种语言自己的写法。
+    /// The name shown on the settings page, written in the language itself.
     var displayName: String {
         switch self {
         case .english: return "English"
@@ -102,7 +124,8 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// 语言的英文名，告诉 AI 用什么语言回答 / The language's English name, telling the model which language to reply in
+    /// 语言的英文名，告诉 AI 用什么语言回答。
+    /// The language's English name, telling the model which language to reply in.
     var englishName: String {
         switch self {
         case .english: return "English"
