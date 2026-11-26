@@ -26,6 +26,9 @@
     <string name="deal_quality_all_time_low">All-time low</string>
     <string name="deal_quality_three_month_low">3-month low</string>
     <string name="deal_quality_steam" translatable="false">Steam</string>
+    <!-- 点了打不开详情页的卡片时的 Snackbar，%1$s 是游戏名 / Snackbars for a card that can't open its detail page; %1$s is the game's title -->
+    <string name="deal_not_on_steam">“%1$s” isn\'t available on Steam</string>
+    <string name="deal_steam_lookup_failed">Couldn\'t check “%1$s” on Steam</string>
 
     <!-- 首页 Giveaways / Home: Giveaways -->
     <string name="giveaways_title">Giveaways</string>

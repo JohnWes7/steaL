@@ -166,6 +166,90 @@ class GamesViewModelTest {
         assertEquals(1, servers.giveawaysRequestCount.value)
     }
 
+    // MARK: - 补 appID 的重试 / AppID lookup retry
+
+    /**
+     * 补 appID 失败后重试：失败的卡片先回到 `Pending`，再查成 `Resolved` / `NotFound`；不重新请求 deals 和 giveaways。
+     * Retrying a failed appID lookup: the failed cards go back to `Pending`, then settle as `Resolved` / `NotFound`;
+     * neither the deals nor the giveaways are refetched.
+     */
+    @Test
+    fun retryAppIDsResolvesFailedRowsOnly() = runTest {
+        val servers = FakeServers()
+        servers.lookupStatus = HttpStatusCode.InternalServerError
+        val viewModel = servers.makeViewModel()
+        viewModel.loadIfNeeded()
+        viewModel.dealState.first { state -> isSettled(state) }
+        viewModel.giveawaysState.first { state -> state is GiveawaysLoadState.Loaded }
+
+        servers.lookupStatus = HttpStatusCode.OK
+        viewModel.retryAppIDs()
+
+        assertEquals(listOf(SteamLink.Pending, SteamLink.Pending), steamLinks(viewModel.dealState.value))
+        val settled = viewModel.dealState.first { state -> isSettled(state) }
+        assertEquals(listOf(SteamLink.Resolved(appID = FOUND_APP_ID), SteamLink.NotFound), steamLinks(settled))
+        assertEquals(listOf("AU"), servers.dealsCountries.value)
+        assertEquals(1, servers.giveawaysRequestCount.value)
+        assertEquals(2, servers.lookupRequestCount.value)
+    }
+
+    /**
+     * 重试还在途中就换了地区：重试被取消，新地区的列表照常补 appID。
+     * The region changes while a retry is in flight: the retry is cancelled, and the new region's list resolves its
+     * appIDs as usual.
+     */
+    @Test
+    fun dealsReloadCancelsInFlightAppIDRetry() = runTest {
+        val settings = SettingsRepository(dataStore = InMemoryPreferencesDataStore())
+        val servers = FakeServers()
+        servers.lookupStatus = HttpStatusCode.InternalServerError
+        val viewModel = servers.makeViewModel(settingsRepository = settings)
+        viewModel.loadIfNeeded()
+        viewModel.dealState.first { state -> isSettled(state) }
+
+        val retryGate = CompletableDeferred<Unit>()
+        servers.lookupGate = retryGate
+        servers.lookupStatus = HttpStatusCode.OK
+        viewModel.retryAppIDs()
+        // 等重试的 lookup 真的到了服务器、卡在闸门上。
+        // Wait until the retry's lookup has really reached the server and is held at the gate.
+        servers.lookupRequestCount.first { count -> count == 2 }
+
+        settings.setRegion(AppRegion.UnitedStates)
+
+        servers.cancelledLookupCount.first { count -> count == 1 }
+        retryGate.complete(Unit)
+        val settled = viewModel.dealState.first { state -> isSettled(state) && itadUUIDs(state).contains("US-found") }
+        assertEquals(listOf(SteamLink.Resolved(appID = FOUND_APP_ID), SteamLink.NotFound), steamLinks(settled))
+    }
+
+    /**
+     * deals 还在加载时重试不做事：状态不变，也不多发 lookup。
+     * A retry while the deals are loading does nothing: the state stays the same and no extra lookup is sent.
+     */
+    @Test
+    fun retryAppIDsWhileDealsLoadingDoesNothing() = runTest {
+        val servers = FakeServers()
+        servers.lookupStatus = HttpStatusCode.InternalServerError
+        val viewModel = servers.makeViewModel()
+        viewModel.loadIfNeeded()
+        val failed = viewModel.dealState.first { state -> isSettled(state) }
+        val refreshGate = CompletableDeferred<Unit>()
+        servers.dealsGates["AU"] = refreshGate
+        viewModel.refresh()
+        servers.dealsCountries.first { countries -> countries.size == 2 }
+
+        viewModel.retryAppIDs()
+        // 要是误启动了重试，它会在这里切到 Pending 并发出 lookup。
+        // A mistaken retry would switch to Pending and send a lookup here.
+        advanceUntilIdle()
+
+        assertSame(failed, viewModel.dealState.value)
+        assertEquals(1, servers.lookupRequestCount.value)
+        refreshGate.complete(Unit)
+        viewModel.isRefreshing.first { isRefreshing -> !isRefreshing }
+    }
+
     // MARK: - 地区 / Region
 
     /**
@@ -387,6 +471,12 @@ class GamesViewModelTest {
         /** 收到的 giveaways 请求数 / The number of giveaways requests received. */
         val giveawaysRequestCount = MutableStateFlow(0)
 
+        /** 收到的 lookup 请求数 / The number of lookup requests received. */
+        val lookupRequestCount = MutableStateFlow(0)
+
+        /** 在闸门上被取消的 lookup 请求数 / The number of lookup requests cancelled at the gate. */
+        val cancelledLookupCount = MutableStateFlow(0)
+
         /**
          * 建一个连着这个假服务器的 [GamesViewModel]，Service 用和正式 App 一样的插件配置；地区从
          * [settingsRepository] 读，不传就是一份没存过东西的设置（澳大利亚）。
@@ -452,12 +542,23 @@ class GamesViewModelTest {
         }
 
         /**
-         * 回答 lookup：有闸门就等；成功时 `-found` 结尾的 UUID 给 `app/100`，其余给 `null`。
-         * Answers a lookup: waits at the gate if any; on success, UUIDs ending in `-found` get `app/100` and the rest
-         * get `null`.
+         * 回答 lookup：记下次数，有闸门就等；成功时 `-found` 结尾的 UUID 给 `app/100`，其余给 `null`。
+         * Answers a lookup: counts it and waits at the gate if any; on success, UUIDs ending in `-found` get
+         * `app/100` and the rest get `null`.
          */
         private suspend fun MockRequestHandleScope.answerLookup(request: HttpRequestData): HttpResponseData {
-            lookupGate?.await()
+            lookupRequestCount.update { count -> count + 1 }
+
+            val gate = lookupGate
+            if (gate != null) {
+                try {
+                    gate.await()
+                } catch (cancellation: CancellationException) {
+                    cancelledLookupCount.update { count -> count + 1 }
+                    throw cancellation
+                }
+            }
+
             if (lookupStatus != HttpStatusCode.OK) {
                 return respond(content = "", status = lookupStatus, headers = JSON_HEADERS)
             }

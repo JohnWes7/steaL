@@ -136,6 +136,12 @@ class GamesViewModel(
 
     private var giveawaysJob: Job? = null
 
+    /**
+     * 补 appID 的重试；加载 deals 时接着补的那次跑在 [dealsJob] 里，不在这里。
+     * The appID lookup retry; the lookup that follows a deals load runs inside [dealsJob], not here.
+     */
+    private var appIDsJob: Job? = null
+
     // MARK: - 界面调用 / Called by the UI
 
     /**
@@ -161,9 +167,6 @@ class GamesViewModel(
      * 下拉刷新：按当前地区，两个区块连同 appID 都重查，旧内容留到新数据回来；还没收到地区、或已经在刷新时不做事。
      * Pull to refresh: refetches both sections and the appIDs for the current region, keeping the old content until
      * new data arrives; does nothing before the region arrives or while already refreshing.
-     *
-     * 补 appID 失败的卡片也靠它重试。
-     * It is also how cards whose appID lookup failed get retried.
      */
     fun refresh() {
         // 1. 还没收到地区、或正在刷新就跳过，否则开始转圈
@@ -210,6 +213,47 @@ class GamesViewModel(
         loadGiveaways(showsLoading = true)
     }
 
+    /**
+     * 补 appID 失败后的重试：只重查当前列表的 appID，不重新请求 deals；还没收到地区、deals 还在加载、或没有失败的卡片时
+     * 不做事。
+     * Retries the appID lookup after a failure: re-resolves only the current list's appIDs without refetching the
+     * deals; does nothing before the region arrives, while the deals are loading, or when no card has failed.
+     *
+     * 重查期间失败的卡片回到 `Pending`；deals 重新加载时会取消还没回来的重试。
+     * The failed cards go back to `Pending` meanwhile; reloading the deals cancels a retry that hasn't returned.
+     */
+    fun retryAppIDs() {
+        // 1. 不该重试就跳过：deals 在加载时，加载完会自己补 appID
+        // 1. Skip when there is nothing to retry: a running deals load resolves the appIDs itself
+        val region = loadedRegion
+        if (region == null) {
+            return
+        }
+        val runningDealsJob = dealsJob
+        if (runningDealsJob != null && runningDealsJob.isActive) {
+            return
+        }
+        val state = _dealState.value
+        if (state !is DealLoadState.Loaded) {
+            return
+        }
+        val hasFailedItems = state.items.any { item -> item.steam == HomeDealItem.SteamLink.Failed }
+        if (!hasFailedItems) {
+            return
+        }
+
+        // 2. 失败的卡片切回 Pending：查询期间点它们先不做事
+        // 2. Put the failed cards back to Pending: taps on them do nothing during the lookup
+        appIDsJob?.cancel()
+        settleFailedAsPending()
+
+        // 3. 启动重查，记下来供 deals 重新加载时取消
+        // 3. Launch the lookup and keep it so a deals reload can cancel it
+        appIDsJob = viewModelScope.launch {
+            resolveAppIDs(region = region)
+        }
+    }
+
     // MARK: - 订阅地区 / Region subscription
 
     /**
@@ -251,9 +295,11 @@ class GamesViewModel(
     // load… manages the coroutine and returns at once; update… fetches inside it and writes the state.
 
     private fun loadDeals(region: AppRegion, showsLoading: Boolean): Job {
-        // 1. 取消旧请求：旧结果不会盖掉新结果
-        // 1. Cancel the old request: a stale result never overwrites a fresh one
+        // 1. 取消旧请求和补 appID 的重试：旧结果不会盖掉新结果，旧列表的 appID 也不会写到新列表上
+        // 1. Cancel the old request and any appID retry: a stale result never overwrites a fresh one, and the old
+        //    list's appIDs never land on the new list
         dealsJob?.cancel()
+        appIDsJob?.cancel()
 
         // 2. 启动新请求，记下来供下次取消
         // 2. Launch the new one and keep it for the next cancel
@@ -390,6 +436,22 @@ class GamesViewModel(
         val updatedItems = state.items.map { item ->
             if (item.steam == HomeDealItem.SteamLink.Pending) {
                 item.copy(steam = HomeDealItem.SteamLink.Failed)
+            } else {
+                item
+            }
+        }
+        _dealState.value = DealLoadState.Loaded(items = updatedItems)
+    }
+
+    private fun settleFailedAsPending() {
+        val state = _dealState.value
+        if (state !is DealLoadState.Loaded) {
+            return
+        }
+
+        val updatedItems = state.items.map { item ->
+            if (item.steam == HomeDealItem.SteamLink.Failed) {
+                item.copy(steam = HomeDealItem.SteamLink.Pending)
             } else {
                 item
             }

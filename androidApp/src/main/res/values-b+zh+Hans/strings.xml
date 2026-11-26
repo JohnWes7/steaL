@@ -17,6 +17,8 @@
     <string name="deal_regular_price_description">原价 %1$s</string>
     <string name="deal_quality_all_time_low">史低</string>
     <string name="deal_quality_three_month_low">3 个月最低</string>
+    <string name="deal_not_on_steam">Steam 上没有“%1$s”</string>
+    <string name="deal_steam_lookup_failed">没能在 Steam 上查询“%1$s”</string>
 
     <!-- 首页 Giveaways / Home: Giveaways -->
     <string name="giveaways_title">免费领取</string>

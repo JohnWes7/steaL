@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.views
 
+import android.content.res.Resources
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +18,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -24,10 +29,13 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
@@ -57,6 +65,8 @@ import io.github.johnwes7.steal.views.components.home.giveawaysSectionItems
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Games tab 的根页面：Hot deals 与 Giveaways 两个区块；点查到 appID 的卡片时调 [onOpenGameDetail] 打开详情页。
@@ -85,16 +95,33 @@ fun GamesView(
     // 3. Get the UriHandler for external links: giveaway claim pages open outside the app
     val uriHandler = LocalUriHandler.current
 
-    // 4. 状态和操作交给内容函数显示；Hot deals 列表页还没做，点标题先不做事
-    // 4. Hand the state and actions to the content function; the Hot deals list doesn't exist yet, so its title does
+    // 4. 卡片打不开详情页时用 Snackbar 说明：要它的状态、弹出用的协程和读文案的 Resources
+    // 4. Explain with a snackbar when a card can't open its detail: needs its state, a coroutine to show it, and
+    //    Resources for the text
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
+
+    // 5. 状态和操作交给内容函数显示；Hot deals 列表页还没做，点标题先不做事
+    // 5. Hand the state and actions to the content function; the Hot deals list doesn't exist yet, so its title does
     //    nothing for now
     GamesContent(
         dealState = dealState,
         giveawaysState = giveawaysState,
         isRefreshing = isRefreshing,
+        snackbarHostState = snackbarHostState,
         onRefresh = { viewModel.refresh() },
         onOpenHotDeals = {},
-        onSelectDeal = { item -> openGameDetailIfResolved(item = item, onOpenGameDetail = onOpenGameDetail) },
+        onSelectDeal = { item ->
+            openGameDetailIfResolved(
+                item = item,
+                resources = resources,
+                scope = scope,
+                snackbarHostState = snackbarHostState,
+                onOpenGameDetail = onOpenGameDetail,
+                onRetryAppIDs = { viewModel.retryAppIDs() },
+            )
+        },
         onOpenGiveaway = { giveaway -> openClaimPage(uriHandler = uriHandler, url = giveaway.url) },
         onRetryDeals = { viewModel.retryDeals() },
         onRetryGiveaways = { viewModel.retryGiveaways() },
@@ -103,25 +130,80 @@ fun GamesView(
 }
 
 /**
- * 点了一张 deal 卡片：查到 Steam appID 就调 [onOpenGameDetail] 打开详情页；还在查、查不到、查询失败时先只记日志。
+ * 点了一张 deal 卡片：查到 Steam appID 就调 [onOpenGameDetail] 打开详情页；Steam 上没有、或查询失败时弹 Snackbar 说明；
+ * 还在查时不做事。
  * Handles a tapped deal card: calls [onOpenGameDetail] to open the detail screen when the Steam appID is resolved;
- * while resolving, with no appID, or after a failed lookup it only logs for now.
+ * shows a snackbar when the game isn't on Steam or the lookup failed; does nothing while still resolving.
  *
- * 详情页的 appID 是硬门槛，所以没有 appID 不能打开。查不到、查询失败时给用户的提示（Snackbar 还是对话框）还没定。
- * The detail screen requires an appID, so it cannot open without one. The prompt for users when there is none or
- * the lookup failed (a snackbar or a dialog) is not decided yet.
+ * 查询失败的 Snackbar 带重试按钮，按了调 [onRetryAppIDs]；查到后不自动打开，用户再点一次卡片。
+ * The lookup-failed snackbar has a retry action that calls [onRetryAppIDs]; a resolved card doesn't open by itself,
+ * the user taps it again.
  */
-private fun openGameDetailIfResolved(item: HomeDealItem, onOpenGameDetail: (GameDetailRoute) -> Unit) {
+private fun openGameDetailIfResolved(
+    item: HomeDealItem,
+    resources: Resources,
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    onOpenGameDetail: (GameDetailRoute) -> Unit,
+    onRetryAppIDs: () -> Unit,
+) {
     val title = item.deal.title
     when (val steam = item.steam) {
         is HomeDealItem.SteamLink.Resolved -> {
             val route = GameDetailRoute(appID = steam.appID, uuid = item.itadUUID, title = title)
             onOpenGameDetail(route)
         }
+        // 补 appID 几百毫秒就回来，这期间点了不做事。
+        // Resolving lands within a few hundred milliseconds; taps in between do nothing.
         HomeDealItem.SteamLink.Pending -> AppLog.games.d { "appID 还在查，先不打开 / Still resolving the appID: $title" }
-        HomeDealItem.SteamLink.NotFound -> AppLog.games.d { "Steam 上没有，打不开详情 / Not on Steam, no detail: $title" }
-        HomeDealItem.SteamLink.Failed -> AppLog.games.d { "appID 查询失败，打不开详情 / Lookup failed, no detail: $title" }
+        HomeDealItem.SteamLink.NotFound -> {
+            val message = resources.getString(R.string.deal_not_on_steam, title)
+            scope.launch {
+                showLatestSnackbar(snackbarHostState = snackbarHostState, message = message)
+            }
+        }
+        HomeDealItem.SteamLink.Failed -> {
+            val message = resources.getString(R.string.deal_steam_lookup_failed, title)
+            val retryLabel = resources.getString(R.string.action_retry)
+            scope.launch {
+                val result = showLatestSnackbar(
+                    snackbarHostState = snackbarHostState,
+                    message = message,
+                    actionLabel = retryLabel,
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    onRetryAppIDs()
+                }
+            }
+        }
     }
+}
+
+/**
+ * 关掉正在显示的 Snackbar 再弹一条新的，返回它是怎么消失的（按了 [actionLabel] 还是超时 / 被划掉）。
+ * Dismisses the snackbar on screen and shows a new one, returning how it went away (its [actionLabel] was tapped,
+ * or it timed out / was swiped away).
+ *
+ * `showSnackbar` 会排队等前一条消失，连点几张卡片时只该看到最新那条。带按钮的默认一直不消失，这里改成长时间。
+ * `showSnackbar` queues behind the one on screen, but tapping several cards should only show the latest. One with an
+ * action stays forever by default, so it is shown for the long duration instead.
+ */
+private suspend fun showLatestSnackbar(
+    snackbarHostState: SnackbarHostState,
+    message: String,
+    actionLabel: String? = null,
+): SnackbarResult {
+    val current = snackbarHostState.currentSnackbarData
+    if (current != null) {
+        current.dismiss()
+    }
+
+    val duration = if (actionLabel == null) {
+        SnackbarDuration.Short
+    } else {
+        SnackbarDuration.Long
+    }
+    return snackbarHostState.showSnackbar(message = message, actionLabel = actionLabel, duration = duration)
 }
 
 /**
@@ -148,6 +230,7 @@ private fun GamesContent(
     dealState: DealLoadState,
     giveawaysState: GiveawaysLoadState,
     isRefreshing: Boolean,
+    snackbarHostState: SnackbarHostState,
     onRefresh: () -> Unit,
     onOpenHotDeals: () -> Unit,
     onSelectDeal: (HomeDealItem) -> Unit,
@@ -165,6 +248,7 @@ private fun GamesContent(
         header = { GamesHeaderView() },
         scrollState = listState,
         modifier = modifier,
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { contentPadding ->
         // 骨架给的留白加在列表里面，内容才会滚到两条栏后面；再加上列表自己的边距。
         // The scaffold's padding goes inside the list so content scrolls behind both bars, plus the list's own margins.
@@ -320,6 +404,7 @@ private fun GamesContentPreview() {
             dealState = DealLoadState.Loaded(items = previewDealItems),
             giveawaysState = GiveawaysLoadState.Loaded(giveaways = previewGiveaways),
             isRefreshing = false,
+            snackbarHostState = remember { SnackbarHostState() },
             onRefresh = {},
             onOpenHotDeals = {},
             onSelectDeal = { _ -> },

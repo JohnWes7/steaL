@@ -117,6 +117,9 @@ enum class PageTopBarStyle {
  * [PageTopBarStyle.Small]。
  * With [PageTopBarStyle.Collapsing] the bar collapses through nested scrolling, which also counts a pull-to-refresh
  * drag, so screens with pull to refresh use [PageTopBarStyle.Small].
+ *
+ * [snackbarHost] 放页面的 `SnackbarHost`，显示在 tab 栏上面。
+ * [snackbarHost] holds the screen's `SnackbarHost`, shown above the tab bar.
  */
 @Composable
 fun PageScaffold(
@@ -125,6 +128,7 @@ fun PageScaffold(
     modifier: Modifier = Modifier,
     navigationIcon: @Composable () -> Unit = {},
     topBarStyle: PageTopBarStyle = PageTopBarStyle.Small,
+    snackbarHost: @Composable () -> Unit = {},
     content: @Composable (contentPadding: PaddingValues) -> Unit,
 ) {
     // 1. 模糊的来源和顶栏的样式
@@ -154,9 +158,10 @@ fun PageScaffold(
         modifier
     }
 
-    // 4. 内容铺满整页、顶栏叠在上面；没有 bottomBar 的 Scaffold 会把 contentInsets 的底部也算进给内容的 padding
+    // 4. 内容铺满整页、顶栏叠在上面；没有 bottomBar 的 Scaffold 会把 contentInsets 的底部也算进给内容的 padding，
+    //    Snackbar 也垫在它上面，所以不会被 tab 栏挡住
     // 4. Content fills the page under the top bar; a Scaffold without a bottomBar adds the bottom of contentInsets
-    //    to the padding it hands to content
+    //    to the padding it hands to content and lifts the snackbar above it, so the tab bar doesn't hide it
     Scaffold(
         modifier = scaffoldModifier,
         topBar = {
@@ -189,6 +194,7 @@ fun PageScaffold(
                 )
             }
         },
+        snackbarHost = snackbarHost,
         contentWindowInsets = contentInsets,
     ) { innerPadding ->
         // 模糊的来源挂在内容外面，页面不用知道 Haze。
