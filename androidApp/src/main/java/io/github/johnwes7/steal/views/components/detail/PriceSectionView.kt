@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.views.components.detail
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -79,41 +80,55 @@ fun PriceSectionView(
     modifier: Modifier = Modifier,
 ) {
     val title = stringResource(R.string.game_detail_section_prices)
-    when (state) {
-        PricesLoadState.Hidden -> Unit
-        PricesLoadState.Loading -> DetailSection(title = title, modifier = modifier) {
-            LoadingIndicator(modifier = Modifier.size(40.dp))
-        }
-        // 查了没有：不给重试，重试也不会变。
-        // Checked and missing: no retry, since retrying wouldn't change anything.
-        PricesLoadState.NotFound -> DetailSection(title = title, modifier = modifier) {
-            DetailUnavailablePrompt(message = stringResource(R.string.game_detail_prices_not_found), onRetry = null)
-        }
-        PricesLoadState.Failed -> DetailSection(title = title, modifier = modifier) {
-            DetailUnavailablePrompt(message = stringResource(R.string.game_detail_prices_failed), onRetry = onRetry)
-        }
-        is PricesLoadState.Loaded -> Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            CurrentOffers(
-                prices = state.prices,
+    // 只有状态的种类变了（加载中 → 有数据）才淡入淡出，高度跟着平滑变化；同一种状态里的更新就地刷新。
+    // Only a change in the kind of state (loading to loaded) cross-fades, with the height following smoothly;
+    // updates within the same kind refresh in place.
+    AnimatedContent(
+        targetState = state,
+        modifier = modifier,
+        label = "pricesSection",
+        contentKey = { targetState -> targetState::class },
+    ) { targetState ->
+        // 读 targetState 而不是 state：淡出中的旧内容要继续显示旧状态。
+        // Reads targetState rather than state, so the outgoing content keeps showing the old state while it fades.
+        when (targetState) {
+            PricesLoadState.Hidden -> Unit
+            PricesLoadState.Loading -> DetailSection(title = title) {
+                LoadingIndicator(modifier = Modifier.size(40.dp))
+            }
+            // 查了没有：不给重试，重试也不会变。
+            // Checked and missing: no retry, since retrying wouldn't change anything.
+            PricesLoadState.NotFound -> DetailSection(title = title) {
+                DetailUnavailablePrompt(
+                    message = stringResource(R.string.game_detail_prices_not_found),
+                    onRetry = null,
+                )
+            }
+            PricesLoadState.Failed -> DetailSection(title = title) {
+                DetailUnavailablePrompt(message = stringResource(R.string.game_detail_prices_failed), onRetry = onRetry)
+            }
+            is PricesLoadState.Loaded -> Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                CurrentOffers(
+                    prices = targetState.prices,
+                    offerFilter = offerFilter,
+                    onSelectOfferFilter = onSelectOfferFilter,
+                    isShowingAllOffers = isShowingAllOffers,
+                    onToggleOffers = onToggleOffers,
+                    onOfferClick = onOfferClick,
+                )
+                PriceHistory(prices = targetState.prices)
+            }
+            // 永久免费：历史低价都是 0，不显示。
+            // Free forever: every historical low is zero, so they're left out.
+            is PricesLoadState.LoadedWithoutHistory -> CurrentOffers(
+                prices = targetState.prices,
                 offerFilter = offerFilter,
                 onSelectOfferFilter = onSelectOfferFilter,
                 isShowingAllOffers = isShowingAllOffers,
                 onToggleOffers = onToggleOffers,
                 onOfferClick = onOfferClick,
             )
-            PriceHistory(prices = state.prices)
         }
-        // 永久免费：历史低价都是 0，不显示。
-        // Free forever: every historical low is zero, so they're left out.
-        is PricesLoadState.LoadedWithoutHistory -> CurrentOffers(
-            prices = state.prices,
-            offerFilter = offerFilter,
-            onSelectOfferFilter = onSelectOfferFilter,
-            isShowingAllOffers = isShowingAllOffers,
-            onToggleOffers = onToggleOffers,
-            onOfferClick = onOfferClick,
-            modifier = modifier,
-        )
     }
 }
 

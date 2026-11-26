@@ -2,6 +2,7 @@ package io.github.johnwes7.steal.views.components.detail
 
 import android.icu.text.NumberFormat
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,20 +58,31 @@ fun ItadInfoSectionView(state: InfoLoadState, onRetry: () -> Unit, modifier: Mod
     }
 
     DetailSection(title = stringResource(R.string.game_detail_section_itad), modifier = modifier) {
-        when (state) {
-            InfoLoadState.Hidden -> Unit
-            InfoLoadState.Loading -> LoadingIndicator(modifier = Modifier.size(40.dp))
-            // 查了没有：不给重试，重试也不会变。
-            // Checked and missing: no retry, since retrying wouldn't change anything.
-            InfoLoadState.NotFound -> DetailUnavailablePrompt(
-                message = stringResource(R.string.game_detail_itad_not_found),
-                onRetry = null,
-            )
-            InfoLoadState.Failed -> DetailUnavailablePrompt(
-                message = stringResource(R.string.game_detail_itad_failed),
-                onRetry = onRetry,
-            )
-            is InfoLoadState.Loaded -> InfoContent(info = state.info)
+        // 标题不动，只有状态的种类变了（加载中 → 有数据）才淡入淡出，高度跟着平滑变化。
+        // The title stays put; only a change in the kind of state (loading to loaded) cross-fades, with the height
+        // following smoothly.
+        AnimatedContent(
+            targetState = state,
+            label = "itadInfoSection",
+            contentKey = { targetState -> targetState::class },
+        ) { targetState ->
+            // 读 targetState 而不是 state：淡出中的旧内容要继续显示旧状态。
+            // Reads targetState rather than state, so the outgoing content keeps showing the old state while it fades.
+            when (targetState) {
+                InfoLoadState.Hidden -> Unit
+                InfoLoadState.Loading -> LoadingIndicator(modifier = Modifier.size(40.dp))
+                // 查了没有：不给重试，重试也不会变。
+                // Checked and missing: no retry, since retrying wouldn't change anything.
+                InfoLoadState.NotFound -> DetailUnavailablePrompt(
+                    message = stringResource(R.string.game_detail_itad_not_found),
+                    onRetry = null,
+                )
+                InfoLoadState.Failed -> DetailUnavailablePrompt(
+                    message = stringResource(R.string.game_detail_itad_failed),
+                    onRetry = onRetry,
+                )
+                is InfoLoadState.Loaded -> InfoContent(info = targetState.info)
+            }
         }
     }
 }
