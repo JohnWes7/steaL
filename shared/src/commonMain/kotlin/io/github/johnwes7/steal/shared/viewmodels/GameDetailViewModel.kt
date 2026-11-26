@@ -229,7 +229,7 @@ class GameDetailViewModel(
      * 整页当前的状态，界面按它显示。
      * The whole page's current state, which the UI renders.
      */
-    val detailState: StateFlow<DetailLoadState> = _detailState.asStateFlow()
+    val steamDetailState: StateFlow<DetailLoadState> = _detailState.asStateFlow()
 
     private val _pricesState = MutableStateFlow<PricesLoadState>(PricesLoadState.Hidden)
 
@@ -237,7 +237,7 @@ class GameDetailViewModel(
      * 比价区块当前的状态；Steam 详情到之前是 `Hidden`。
      * The prices section's current state; `Hidden` until the Steam details arrive.
      */
-    val pricesState: StateFlow<PricesLoadState> = _pricesState.asStateFlow()
+    val itadPricesState: StateFlow<PricesLoadState> = _pricesState.asStateFlow()
 
     private val _infoState = MutableStateFlow<InfoLoadState>(InfoLoadState.Hidden)
 
@@ -245,7 +245,7 @@ class GameDetailViewModel(
      * 游戏信息区块当前的状态；Steam 详情到之前是 `Hidden`。
      * The game info section's current state; `Hidden` until the Steam details arrive.
      */
-    val infoState: StateFlow<InfoLoadState> = _infoState.asStateFlow()
+    val itadInfoState: StateFlow<InfoLoadState> = _infoState.asStateFlow()
 
     // MARK: - 内部记录 / Internal bookkeeping
 

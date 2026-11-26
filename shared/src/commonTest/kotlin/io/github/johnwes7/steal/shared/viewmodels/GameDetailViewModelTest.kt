@@ -80,11 +80,11 @@ class GameDetailViewModelTest {
 
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        val detail = viewModel.detailState.first { state -> state is DetailLoadState.Loaded }
+        val detail = viewModel.steamDetailState.first { state -> state is DetailLoadState.Loaded }
         assertEquals("Game AU english", detail.title(fallback = TITLE))
-        val prices = viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
+        val prices = viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
         assertTrue(prices is PricesLoadState.Loaded)
-        viewModel.infoState.first { state -> state is InfoLoadState.Loaded }
+        viewModel.itadInfoState.first { state -> state is InfoLoadState.Loaded }
 
         assertEquals(listOf("AU/english"), servers.steamRequests.value)
         assertEquals(listOf("AU"), servers.pricesCountries.value)
@@ -103,8 +103,8 @@ class GameDetailViewModelTest {
 
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
-        viewModel.infoState.first { state -> state is InfoLoadState.Loaded }
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
+        viewModel.itadInfoState.first { state -> state is InfoLoadState.Loaded }
         assertEquals(1, servers.lookupRequestCount.value)
     }
 
@@ -122,10 +122,10 @@ class GameDetailViewModelTest {
 
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        viewModel.detailState.first { state -> state is DetailLoadState.Loaded }
+        viewModel.steamDetailState.first { state -> state is DetailLoadState.Loaded }
         advanceUntilIdle()
-        assertEquals(PricesLoadState.Hidden, viewModel.pricesState.value)
-        assertEquals(InfoLoadState.Hidden, viewModel.infoState.value)
+        assertEquals(PricesLoadState.Hidden, viewModel.itadPricesState.value)
+        assertEquals(InfoLoadState.Hidden, viewModel.itadInfoState.value)
         assertEquals(0, servers.lookupRequestCount.value)
         assertTrue(servers.pricesCountries.value.isEmpty())
         assertEquals(0, servers.infoRequestCount.value)
@@ -144,9 +144,9 @@ class GameDetailViewModelTest {
 
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        viewModel.infoState.first { state -> state is InfoLoadState.Loaded }
+        viewModel.itadInfoState.first { state -> state is InfoLoadState.Loaded }
         servers.pricesCountries.first { countries -> countries.isNotEmpty() }
-        val prices = viewModel.pricesState.first { state -> state != PricesLoadState.Loading }
+        val prices = viewModel.itadPricesState.first { state -> state != PricesLoadState.Loading }
         assertEquals(PricesLoadState.Hidden, prices)
     }
 
@@ -162,7 +162,7 @@ class GameDetailViewModelTest {
 
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        val prices = viewModel.pricesState.first { state -> state == PricesLoadState.NotFound }
+        val prices = viewModel.itadPricesState.first { state -> state == PricesLoadState.NotFound }
         assertEquals(PricesLoadState.NotFound, prices)
     }
 
@@ -178,7 +178,7 @@ class GameDetailViewModelTest {
 
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        val prices = viewModel.pricesState.first { state -> state is PricesLoadState.LoadedWithoutHistory }
+        val prices = viewModel.itadPricesState.first { state -> state is PricesLoadState.LoadedWithoutHistory }
         assertTrue(prices is PricesLoadState.LoadedWithoutHistory)
     }
 
@@ -196,11 +196,11 @@ class GameDetailViewModelTest {
 
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        val detail = viewModel.detailState.first { state -> state == DetailLoadState.NotFound }
+        val detail = viewModel.steamDetailState.first { state -> state == DetailLoadState.NotFound }
         assertEquals(TITLE, detail.title(fallback = TITLE))
         advanceUntilIdle()
         assertEquals(0, servers.lookupRequestCount.value)
-        assertEquals(PricesLoadState.Hidden, viewModel.pricesState.value)
+        assertEquals(PricesLoadState.Hidden, viewModel.itadPricesState.value)
     }
 
     /**
@@ -215,8 +215,8 @@ class GameDetailViewModelTest {
 
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        viewModel.pricesState.first { state -> state == PricesLoadState.NotFound }
-        viewModel.infoState.first { state -> state == InfoLoadState.NotFound }
+        viewModel.itadPricesState.first { state -> state == PricesLoadState.NotFound }
+        viewModel.itadInfoState.first { state -> state == InfoLoadState.NotFound }
         assertTrue(servers.pricesCountries.value.isEmpty())
         assertEquals(0, servers.infoRequestCount.value)
     }
@@ -232,15 +232,15 @@ class GameDetailViewModelTest {
         val viewModel = servers.makeViewModel(uuid = null)
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        viewModel.pricesState.first { state -> state == PricesLoadState.Failed }
-        viewModel.infoState.first { state -> state == InfoLoadState.Failed }
+        viewModel.itadPricesState.first { state -> state == PricesLoadState.Failed }
+        viewModel.itadInfoState.first { state -> state == InfoLoadState.Failed }
 
         servers.lookupStatus = HttpStatusCode.OK
         viewModel.retryInfo()
 
-        viewModel.infoState.first { state -> state is InfoLoadState.Loaded }
+        viewModel.itadInfoState.first { state -> state is InfoLoadState.Loaded }
         assertEquals(2, servers.lookupRequestCount.value)
-        assertEquals(PricesLoadState.Failed, viewModel.pricesState.value)
+        assertEquals(PricesLoadState.Failed, viewModel.itadPricesState.value)
     }
 
     /**
@@ -254,7 +254,7 @@ class GameDetailViewModelTest {
         val viewModel = servers.makeViewModel(uuid = GAME_UUID)
         viewModel.loadIfNeeded(steamLanguage = "english")
 
-        val failed = viewModel.detailState.first { state -> state is DetailLoadState.Failed }
+        val failed = viewModel.steamDetailState.first { state -> state is DetailLoadState.Failed }
         assertEquals(DetailLoadState.Failed(error = LoadError.Server(statusCode = 500)), failed)
         assertEquals(TITLE, failed.title(fallback = TITLE))
 
@@ -263,10 +263,10 @@ class GameDetailViewModelTest {
         servers.steamGate = steamGate
         viewModel.retry()
 
-        viewModel.detailState.first { state -> state == DetailLoadState.Loading }
+        viewModel.steamDetailState.first { state -> state == DetailLoadState.Loading }
         steamGate.complete(Unit)
-        viewModel.detailState.first { state -> state is DetailLoadState.Loaded }
-        viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
+        viewModel.steamDetailState.first { state -> state is DetailLoadState.Loaded }
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
         assertEquals(listOf("AU/english", "AU/english"), servers.steamRequests.value)
     }
 
@@ -280,17 +280,17 @@ class GameDetailViewModelTest {
         servers.pricesStatus = HttpStatusCode.InternalServerError
         val viewModel = servers.makeViewModel(uuid = null)
         viewModel.loadIfNeeded(steamLanguage = "english")
-        viewModel.pricesState.first { state -> state == PricesLoadState.Failed }
-        val infoBefore = viewModel.infoState.first { state -> state is InfoLoadState.Loaded }
+        viewModel.itadPricesState.first { state -> state == PricesLoadState.Failed }
+        val infoBefore = viewModel.itadInfoState.first { state -> state is InfoLoadState.Loaded }
 
         servers.pricesStatus = HttpStatusCode.OK
         viewModel.retryPrices()
 
-        viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
         // 要是误重查了信息，它的协程会在这里跑、先切到 Loading，状态对象就换了。
         // A mistaken info refetch would run here and switch to Loading first, replacing the state object.
         advanceUntilIdle()
-        assertSame(infoBefore, viewModel.infoState.value)
+        assertSame(infoBefore, viewModel.itadInfoState.value)
         assertEquals(1, servers.lookupRequestCount.value)
         assertEquals(1, servers.infoRequestCount.value)
         assertEquals(listOf("AU", "AU"), servers.pricesCountries.value)
@@ -308,14 +308,14 @@ class GameDetailViewModelTest {
         val servers = FakeServers()
         val viewModel = servers.makeViewModel(uuid = GAME_UUID, settingsRepository = settings)
         viewModel.loadIfNeeded(steamLanguage = "english")
-        viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
 
         settings.setRegion(AppRegion.UnitedStates)
 
         servers.pricesCountries.first { countries -> countries.contains("US") }
-        val detail = viewModel.detailState.first { state -> state.title(fallback = TITLE) == "Game US english" }
+        val detail = viewModel.steamDetailState.first { state -> state.title(fallback = TITLE) == "Game US english" }
         assertTrue(detail is DetailLoadState.Loaded)
-        viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
         assertEquals(listOf("AU/english", "US/english"), servers.steamRequests.value)
         assertEquals(listOf("AU", "US"), servers.pricesCountries.value)
     }
@@ -329,11 +329,11 @@ class GameDetailViewModelTest {
         val servers = FakeServers()
         val viewModel = servers.makeViewModel(uuid = GAME_UUID)
         viewModel.loadIfNeeded(steamLanguage = "english")
-        viewModel.detailState.first { state -> state is DetailLoadState.Loaded }
+        viewModel.steamDetailState.first { state -> state is DetailLoadState.Loaded }
 
         viewModel.loadIfNeeded(steamLanguage = "schinese")
 
-        viewModel.detailState.first { state -> state.title(fallback = TITLE) == "Game AU schinese" }
+        viewModel.steamDetailState.first { state -> state.title(fallback = TITLE) == "Game AU schinese" }
         assertEquals(listOf("AU/english", "AU/schinese"), servers.steamRequests.value)
     }
 
@@ -346,15 +346,15 @@ class GameDetailViewModelTest {
         val servers = FakeServers()
         val viewModel = servers.makeViewModel(uuid = GAME_UUID)
         viewModel.loadIfNeeded(steamLanguage = "english")
-        val settled = viewModel.detailState.first { state -> state is DetailLoadState.Loaded }
-        viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
+        val settled = viewModel.steamDetailState.first { state -> state is DetailLoadState.Loaded }
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
 
         viewModel.loadIfNeeded(steamLanguage = "english")
         // 要是误重载了，排队的协程会在这里跑，状态会变成 Loading。
         // A mistaken reload would run its queued coroutine here and switch the state to Loading.
         advanceUntilIdle()
 
-        assertSame(settled, viewModel.detailState.value)
+        assertSame(settled, viewModel.steamDetailState.value)
         assertEquals(listOf("AU/english"), servers.steamRequests.value)
     }
 
@@ -369,13 +369,13 @@ class GameDetailViewModelTest {
         val servers = FakeServers()
         val viewModel = servers.makeViewModel(uuid = GAME_UUID, settingsRepository = settings)
         viewModel.loadIfNeeded(steamLanguage = "english")
-        val settled = viewModel.detailState.first { state -> state is DetailLoadState.Loaded }
-        viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
+        val settled = viewModel.steamDetailState.first { state -> state is DetailLoadState.Loaded }
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
 
         settings.setTheme(AppTheme.Light)
         advanceUntilIdle()
 
-        assertSame(settled, viewModel.detailState.value)
+        assertSame(settled, viewModel.steamDetailState.value)
         assertEquals(listOf("AU/english"), servers.steamRequests.value)
     }
 
@@ -398,7 +398,7 @@ class GameDetailViewModelTest {
         settings.setRegion(AppRegion.UnitedStates)
 
         servers.pricesCountries.first { countries -> countries.contains("US") }
-        val prices = viewModel.pricesState.first { state -> state is PricesLoadState.Loaded }
+        val prices = viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
         assertEquals("USD", (prices as PricesLoadState.Loaded).prices.allTimeLow?.currency)
         // 旧请求是被取消的，不是回来以后被忽略的。
         // The old request was cancelled, not answered and then ignored.

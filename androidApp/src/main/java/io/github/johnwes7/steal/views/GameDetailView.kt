@@ -104,9 +104,9 @@ fun GameDetailView(
     val appContainer = LocalAppContainer.current
     val viewModelFactory = appContainer.gameDetailViewModelFactory(appID = appID, uuid = uuid, title = title)
     val viewModel: GameDetailViewModel = viewModel(factory = viewModelFactory)
-    val detailState by viewModel.detailState.collectAsStateWithLifecycle()
-    val pricesState by viewModel.pricesState.collectAsStateWithLifecycle()
-    val infoState by viewModel.infoState.collectAsStateWithLifecycle()
+    val steamDetailState by viewModel.steamDetailState.collectAsStateWithLifecycle()
+    val itadPricesState by viewModel.itadPricesState.collectAsStateWithLifecycle()
+    val itadInfoState by viewModel.itadInfoState.collectAsStateWithLifecycle()
 
     // 2. 交进界面实际显示的那份翻译里的 Steam 语言代码：界面语言变了会再交一次，ViewModel 据此重新加载
     // 2. Hand in the Steam language code from the translation the UI actually shows: a UI language change hands it
@@ -121,10 +121,10 @@ fun GameDetailView(
     val uriHandler = LocalUriHandler.current
     GameDetailContent(
         appID = appID,
-        title = detailState.title(fallback = viewModel.initialTitle),
-        detailState = detailState,
-        pricesState = pricesState,
-        infoState = infoState,
+        title = steamDetailState.title(fallback = viewModel.initialTitle),
+        steamDetailState = steamDetailState,
+        pricesState = itadPricesState,
+        infoState = itadInfoState,
         onBack = onBack,
         onRetry = { viewModel.retry() },
         onRetryPrices = { viewModel.retryPrices() },
@@ -163,7 +163,7 @@ private fun openExternalPage(uriHandler: UriHandler, url: String) {
 private fun GameDetailContent(
     appID: Int,
     title: String,
-    detailState: DetailLoadState,
+    steamDetailState: DetailLoadState,
     pricesState: PricesLoadState,
     infoState: InfoLoadState,
     onBack: () -> Unit,
@@ -212,7 +212,7 @@ private fun GameDetailContent(
             state = listState,
             contentPadding = listPadding,
         ) {
-            when (detailState) {
+            when (steamDetailState) {
                 DetailLoadState.Loading -> item(key = "detailLoading") {
                     CenteredPageItem {
                         GameDetailLoading()
@@ -229,11 +229,11 @@ private fun GameDetailContent(
                 }
                 is DetailLoadState.Failed -> item(key = "detailError") {
                     CenteredPageItem {
-                        LoadErrorView(error = detailState.error, onRetry = onRetry)
+                        LoadErrorView(error = steamDetailState.error, onRetry = onRetry)
                     }
                 }
                 is DetailLoadState.Loaded -> {
-                    val details = detailState.details
+                    val details = steamDetailState.details
                     val demoLink = demoLink(
                         details = details,
                         fallbackName = demoFallbackName,
@@ -478,7 +478,7 @@ private fun GameDetailContentLoadedPreview() {
         GameDetailContent(
             appID = 3357650,
             title = "PRAGMATA",
-            detailState = DetailLoadState.Loaded(details = previewAppDetails),
+            steamDetailState = DetailLoadState.Loaded(details = previewAppDetails),
             pricesState = PricesLoadState.Loaded(prices = previewPriceGame),
             infoState = InfoLoadState.Loaded(info = previewGameInfo),
             onBack = {},
@@ -499,7 +499,7 @@ private fun GameDetailContentLoadingPreview() {
         GameDetailContent(
             appID = 1245620,
             title = "ELDEN RING",
-            detailState = DetailLoadState.Loading,
+            steamDetailState = DetailLoadState.Loading,
             pricesState = PricesLoadState.Hidden,
             infoState = InfoLoadState.Hidden,
             onBack = {},
@@ -520,7 +520,7 @@ private fun GameDetailContentNotFoundPreview() {
         GameDetailContent(
             appID = 1245620,
             title = "ELDEN RING",
-            detailState = DetailLoadState.NotFound,
+            steamDetailState = DetailLoadState.NotFound,
             pricesState = PricesLoadState.Hidden,
             infoState = InfoLoadState.Hidden,
             onBack = {},
@@ -541,7 +541,7 @@ private fun GameDetailContentFailedPreview() {
         GameDetailContent(
             appID = 1245620,
             title = "ELDEN RING",
-            detailState = DetailLoadState.Failed(error = LoadError.Offline),
+            steamDetailState = DetailLoadState.Failed(error = LoadError.Offline),
             pricesState = PricesLoadState.Hidden,
             infoState = InfoLoadState.Hidden,
             onBack = {},
