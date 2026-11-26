@@ -52,16 +52,16 @@ fun LazyListScope.giveawaysSectionItems(
 ) {
     when (state) {
         GiveawaysLoadState.Loading -> item(key = "giveawaysLoading") {
-            GiveawaysLoading()
+            GiveawaysLoading(modifier = Modifier.animateItem())
         }
         is GiveawaysLoadState.Failed -> item(key = "giveawaysError") {
-            LoadErrorView(error = state.error, onRetry = onRetry)
+            LoadErrorView(error = state.error, onRetry = onRetry, modifier = Modifier.animateItem())
         }
         is GiveawaysLoadState.Loaded -> {
             val giveaways = state.giveaways
             if (giveaways.isEmpty()) {
                 item(key = "giveawaysEmpty") {
-                    GiveawaysEmptyNote()
+                    GiveawaysEmptyNote(modifier = Modifier.animateItem())
                 }
             } else {
                 items(
@@ -89,9 +89,9 @@ fun LazyListScope.giveawaysSectionItems(
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun GiveawaysLoading() {
+private fun GiveawaysLoading(modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 32.dp),
         contentAlignment = Alignment.Center,
@@ -105,12 +105,12 @@ private fun GiveawaysLoading() {
  * A single muted line when there are no giveaways right now, with no button since pull to refresh is available.
  */
 @Composable
-private fun GiveawaysEmptyNote() {
+private fun GiveawaysEmptyNote(modifier: Modifier = Modifier) {
     Text(
         text = stringResource(R.string.giveaways_empty),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
     )

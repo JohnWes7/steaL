@@ -202,7 +202,7 @@ private fun GameDetailContent(
         // 贴到屏幕两边。
         // The scaffold's padding goes inside the list so content scrolls behind both bars, plus the list's own top and
         // bottom margins. Sections that need side margins add their own, so the gallery can run edge to edge.
-        val listPadding = contentPadding + PaddingValues(top = 4.dp, bottom = 24.dp)
+        val listPadding = contentPadding + PaddingValues(bottom = 24.dp)
 
         // 列表一直在，加载中、没找到、失败都是列表里的一项（理由同 Sales 页：旧滚动位置、出场动画）。
         // The list is always there, with loading, not found and failure as items in it (as on the Sales page: the
@@ -245,17 +245,18 @@ private fun GameDetailContent(
                         MediaGalleryView(
                             headerImageUrl = details.headerImage,
                             screenshotUrls = screenshotUrls(details = details),
+                            modifier = Modifier.animateItem(),
                         )
                     }
                     item(key = "genresAndRelease") {
-                        GenresAndReleaseDate(details = details)
+                        GenresAndReleaseDate(details = details, modifier = Modifier.animateItem())
                     }
                     item(key = "about") {
                         SteamDetailSectionView(
                             details = details,
                             isExpanded = isSteamDetailExpanded,
                             onToggleExpanded = { isSteamDetailExpanded = !isSteamDetailExpanded },
-                            modifier = Modifier.padding(SECTION_PADDING),
+                            modifier = Modifier.animateItem().padding(SECTION_PADDING),
                         )
                     }
                     if (demoLink != null) {
@@ -263,7 +264,7 @@ private fun GameDetailContent(
                             DemoSectionView(
                                 name = demoLink.name,
                                 onClick = { onOpenDemoStorePage(demoLink.appID) },
-                                modifier = Modifier.padding(SECTION_PADDING),
+                                modifier = Modifier.animateItem().padding(SECTION_PADDING),
                             )
                         }
                     }
@@ -272,7 +273,7 @@ private fun GameDetailContent(
                             FullGameSectionView(
                                 name = fullGameRoute.title,
                                 onClick = { onOpenGameDetail(fullGameRoute) },
-                                modifier = Modifier.padding(SECTION_PADDING),
+                                modifier = Modifier.animateItem().padding(SECTION_PADDING),
                             )
                         }
                     }
@@ -288,7 +289,7 @@ private fun GameDetailContent(
                                 onToggleOffers = { isShowingAllOffers = !isShowingAllOffers },
                                 onRetry = onRetryPrices,
                                 onOfferClick = { deal -> onOpenOffer(deal.url) },
-                                modifier = Modifier.padding(SECTION_PADDING),
+                                modifier = Modifier.animateItem().padding(SECTION_PADDING),
                             )
                         }
                     }
@@ -297,7 +298,7 @@ private fun GameDetailContent(
                             ItadInfoSectionView(
                                 state = infoState,
                                 onRetry = onRetryInfo,
-                                modifier = Modifier.padding(SECTION_PADDING),
+                                modifier = Modifier.animateItem().padding(SECTION_PADDING),
                             )
                         }
                     }
@@ -305,7 +306,7 @@ private fun GameDetailContent(
                         DetailFooterView(
                             appID = appID,
                             itadID = itadID(infoState = infoState),
-                            modifier = Modifier.padding(SECTION_PADDING),
+                            modifier = Modifier.animateItem().padding(SECTION_PADDING),
                         )
                     }
                 }
@@ -341,13 +342,13 @@ private fun GameDetailLoading() {
  * from the ITAD data.
  */
 @Composable
-private fun GenresAndReleaseDate(details: SteamAppDetails) {
+private fun GenresAndReleaseDate(details: SteamAppDetails, modifier: Modifier = Modifier) {
     val genres = details.genres.orEmpty()
     val genreNames = genres.mapNotNull { genre -> genre.description }
     val nonEmptyGenreNames = genreNames.filter { name -> name.isNotEmpty() }
     val releaseDate = details.releaseDate?.date
 
-    Column(modifier = Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (nonEmptyGenreNames.isNotEmpty()) {
             // 左右边距放在滑动里面，滑到头时标签才贴边。
             // The margins sit inside the scroll, so the tags only reach the edge when scrolled.
