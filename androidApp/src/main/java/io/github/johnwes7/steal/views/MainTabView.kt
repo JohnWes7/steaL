@@ -87,6 +87,7 @@ fun MainTabView() {
                     uuid = key.uuid,
                     title = key.title,
                     onBack = { navigator.goBack() },
+                    onOpenGameDetail = { route -> navigator.navigate(route) },
                 )
             }
             is SearchRoute -> NavEntry(key) { SearchView() }
