@@ -314,6 +314,49 @@ class GameDetailViewModel(
         }
     }
 
+    /**
+     * 整页失败后的重试：用最近一次的地区和语言重新加载，先切回 Loading；还没开始加载时不做事。
+     * Retries the whole page after a failure with the latest region and language, showing Loading again; does
+     * nothing before the first load.
+     */
+    fun retry() {
+        val request = loadedRequest
+        if (request == null) {
+            return
+        }
+        loadDetail(request = request)
+    }
+
+    /**
+     * 比价失败后的重试：只重查比价，UUID 还没有时先查；Steam 详情还没到时不做事。
+     * Retries the prices after a failure, refetching only them and looking the UUID up first when there is none;
+     * does nothing until the Steam details are in.
+     */
+    fun retryPrices() {
+        val request = loadedRequest
+        if (request == null) {
+            return
+        }
+        val state = _detailState.value
+        if (state !is DetailLoadState.Loaded) {
+            return
+        }
+        loadPrices(region = request.region, kind = state.details.gameKind)
+    }
+
+    /**
+     * 游戏信息失败后的重试：只重查信息，UUID 还没有时先查；Steam 详情还没到时不做事。
+     * Retries the game info after a failure, refetching only it and looking the UUID up first when there is none;
+     * does nothing until the Steam details are in.
+     */
+    fun retryInfo() {
+        val state = _detailState.value
+        if (state !is DetailLoadState.Loaded) {
+            return
+        }
+        loadInfo()
+    }
+
     // MARK: - 订阅地区和语言 / Region and language subscription
 
     /**
