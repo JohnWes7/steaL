@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +27,7 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
@@ -212,6 +214,28 @@ fun PageBackButton(onClick: () -> Unit) {
             painter = painterResource(R.drawable.arrow_back_24px),
             contentDescription = stringResource(R.string.action_back),
         )
+    }
+}
+
+/**
+ * 列表里占满一屏、内容居中的一项，放加载中、失败和空状态；出现和消失时淡入淡出。
+ * A list item that fills one screen with its content centered, for loading, failure and empty states; it fades
+ * in and out.
+ *
+ * 一屏是列表的可见区域减去 contentPadding，所以内容居中在两条栏之间。有列表的页面让列表一直在、把这些状态做成这一项，
+ * 不按状态换整页。
+ * One screen is the list's viewport minus its contentPadding, so the content centers between the two bars. Pages
+ * with a list keep the list and show these states as this item instead of swapping the whole page by state.
+ */
+@Composable
+fun LazyItemScope.CenteredPageItem(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .animateItem()
+            .fillParentMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 

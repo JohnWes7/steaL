@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnwes7.steal.LocalAppContainer
 import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.navigation.GameDetailRoute
 import io.github.johnwes7.steal.previews.previewDealItems
 import io.github.johnwes7.steal.previews.previewGiveaways
 import io.github.johnwes7.steal.shared.config.AppLog
@@ -58,11 +59,15 @@ import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
- * Games tab 的根页面：Hot deals 与 Giveaways 两个区块。
- * The Games tab's root screen: the Hot deals and Giveaways sections.
+ * Games tab 的根页面：Hot deals 与 Giveaways 两个区块；点查到 appID 的卡片时调 [onOpenGameDetail] 打开详情页。
+ * The Games tab's root screen: the Hot deals and Giveaways sections; tapping a card whose appID is resolved calls
+ * [onOpenGameDetail] to open the detail screen.
  */
 @Composable
-fun GamesView(modifier: Modifier = Modifier) {
+fun GamesView(
+    onOpenGameDetail: (GameDetailRoute) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     // 1. 取这一页的 ViewModel，收集它的状态
     // 1. Get this page's view model and collect its state
     val viewModel: GamesViewModel = viewModel(factory = LocalAppContainer.current.gamesViewModelFactory)
@@ -80,20 +85,43 @@ fun GamesView(modifier: Modifier = Modifier) {
     // 3. Get the UriHandler for external links: giveaway claim pages open outside the app
     val uriHandler = LocalUriHandler.current
 
-    // 4. 状态和操作交给内容函数显示；Hot deals 列表页和详情页还没做，点了先不做事
-    // 4. Hand the state and actions to the content function; the Hot deals list and detail pages don't exist yet
+    // 4. 状态和操作交给内容函数显示；Hot deals 列表页还没做，点标题先不做事
+    // 4. Hand the state and actions to the content function; the Hot deals list doesn't exist yet, so its title does
+    //    nothing for now
     GamesContent(
         dealState = dealState,
         giveawaysState = giveawaysState,
         isRefreshing = isRefreshing,
         onRefresh = { viewModel.refresh() },
         onOpenHotDeals = {},
-        onSelectDeal = { _ -> },
+        onSelectDeal = { item -> openGameDetailIfResolved(item = item, onOpenGameDetail = onOpenGameDetail) },
         onOpenGiveaway = { giveaway -> openClaimPage(uriHandler = uriHandler, url = giveaway.url) },
         onRetryDeals = { viewModel.retryDeals() },
         onRetryGiveaways = { viewModel.retryGiveaways() },
         modifier = modifier,
     )
+}
+
+/**
+ * 点了一张 deal 卡片：查到 Steam appID 就调 [onOpenGameDetail] 打开详情页；还在查、查不到、查询失败时先只记日志。
+ * Handles a tapped deal card: calls [onOpenGameDetail] to open the detail screen when the Steam appID is resolved;
+ * while resolving, with no appID, or after a failed lookup it only logs for now.
+ *
+ * 详情页的 appID 是硬门槛，所以没有 appID 不能打开。查不到、查询失败时给用户的提示（Snackbar 还是对话框）还没定。
+ * The detail screen requires an appID, so it cannot open without one. The prompt for users when there is none or
+ * the lookup failed (a snackbar or a dialog) is not decided yet.
+ */
+private fun openGameDetailIfResolved(item: HomeDealItem, onOpenGameDetail: (GameDetailRoute) -> Unit) {
+    val title = item.deal.title
+    when (val steam = item.steam) {
+        is HomeDealItem.SteamLink.Resolved -> {
+            val route = GameDetailRoute(appID = steam.appID, uuid = item.itadUUID, title = title)
+            onOpenGameDetail(route)
+        }
+        HomeDealItem.SteamLink.Pending -> AppLog.games.d { "appID 还在查，先不打开 / Still resolving the appID: $title" }
+        HomeDealItem.SteamLink.NotFound -> AppLog.games.d { "Steam 上没有，打不开详情 / Not on Steam, no detail: $title" }
+        HomeDealItem.SteamLink.Failed -> AppLog.games.d { "appID 查询失败，打不开详情 / Lookup failed, no detail: $title" }
+    }
 }
 
 /**

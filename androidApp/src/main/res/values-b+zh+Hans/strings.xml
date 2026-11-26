@@ -36,6 +36,10 @@
     <string name="sale_events_empty_message">商店公布大促和 Fest 后会显示在这里。</string>
     <string name="sale_events_disclaimer">促销日期由 AI 从各商店的官方公告整理，可能有误。点活动可查看原始页面。</string>
 
+    <!-- 游戏详情页 / Game detail page -->
+    <string name="game_detail_not_found_title">无法查看这款游戏</string>
+    <string name="game_detail_not_found_message">这款游戏在你所在地区的 Steam 商店没有上架，或者已经下架。</string>
+
     <!-- 价格 / Prices -->
     <string name="price_free">免费</string>
 

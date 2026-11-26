@@ -16,6 +16,31 @@ import kotlinx.serialization.Serializable
 data object GamesRoute : NavKey
 
 /**
+ * 游戏详情页，从首页的卡片推入；试玩版的详情页也会推入它本体的详情页。
+ * The game detail screen, pushed from a home page card; a demo's detail screen also pushes its full game's.
+ */
+@Serializable
+data class GameDetailRoute(
+    /**
+     * Steam appID。
+     * The Steam appID.
+     */
+    val appID: Int,
+
+    /**
+     * ITAD 游戏 UUID；首页带着，从别处进来可能没有。
+     * The ITAD game UUID; the home page brings it, other entry points may not.
+     */
+    val uuid: String?,
+
+    /**
+     * 列表上的名字，Steam 详情回来之前当标题。
+     * The name shown in the list, used as the title until the Steam details arrive.
+     */
+    val title: String,
+) : NavKey
+
+/**
  * Search tab 的根页面。
  * The root screen of the Search tab.
  */

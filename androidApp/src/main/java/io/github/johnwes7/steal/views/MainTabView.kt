@@ -30,6 +30,7 @@ import io.github.johnwes7.steal.HTTP_CACHE_FOLDER
 import io.github.johnwes7.steal.LocalAppContainer
 import io.github.johnwes7.steal.config.Config
 import io.github.johnwes7.steal.navigation.AppTab
+import io.github.johnwes7.steal.navigation.GameDetailRoute
 import io.github.johnwes7.steal.navigation.GamesRoute
 import io.github.johnwes7.steal.navigation.Navigator
 import io.github.johnwes7.steal.navigation.SalesRoute
@@ -77,7 +78,17 @@ fun MainTabView() {
     // Turns a back stack key into a screen: one branch per key type; add a line here for each new screen.
     val entryProvider: (NavKey) -> NavEntry<NavKey> = { key ->
         when (key) {
-            is GamesRoute -> NavEntry(key) { GamesView() }
+            is GamesRoute -> NavEntry(key) {
+                GamesView(onOpenGameDetail = { route -> navigator.navigate(route) })
+            }
+            is GameDetailRoute -> NavEntry(key) {
+                GameDetailView(
+                    appID = key.appID,
+                    uuid = key.uuid,
+                    title = key.title,
+                    onBack = { navigator.goBack() },
+                )
+            }
             is SearchRoute -> NavEntry(key) { SearchView() }
             is WishlistRoute -> NavEntry(key) { WishlistView() }
             is SalesRoute -> NavEntry(key) { SaleEventsView() }

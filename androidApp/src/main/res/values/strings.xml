@@ -53,6 +53,10 @@
     <string name="sale_event_store_itchio" translatable="false">itch.io</string>
     <string name="sale_event_store_gog" translatable="false">GOG</string>
 
+    <!-- 游戏详情页 / Game detail page -->
+    <string name="game_detail_not_found_title">Game unavailable</string>
+    <string name="game_detail_not_found_message">This game isn\'t on the Steam store in your region, or it has been removed.</string>
+
     <!-- 价格 / Prices -->
     <string name="price_free">Free</string>
 

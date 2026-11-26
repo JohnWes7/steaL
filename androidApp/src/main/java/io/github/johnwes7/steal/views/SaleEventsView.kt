@@ -1,12 +1,10 @@
 package io.github.johnwes7.steal.views
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
@@ -15,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -33,6 +30,7 @@ import io.github.johnwes7.steal.shared.models.saleevents.SaleEvent
 import io.github.johnwes7.steal.shared.viewmodels.SaleEventsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.SaleEventsViewModel.SaleEventsLoadState
 import io.github.johnwes7.steal.views.components.sales.saleEventSectionItems
+import io.github.johnwes7.steal.views.components.shared.CenteredPageItem
 import io.github.johnwes7.steal.views.components.shared.ContentUnavailableView
 import io.github.johnwes7.steal.views.components.shared.LoadErrorView
 import io.github.johnwes7.steal.views.components.shared.PageHeaderView
@@ -190,26 +188,6 @@ private fun SaleEventsDisclaimer(modifier: Modifier = Modifier) {
 @Composable
 private fun SaleEventsLoading() {
     LoadingIndicator()
-}
-
-/**
- * 列表里占满一屏、内容居中的一项，放加载中、失败和空列表；出现和消失时淡入淡出。
- * A list item that fills one screen with its content centered, for loading, failure and the empty list; it fades
- * in and out.
- *
- * 一屏是列表的可见区域减去 contentPadding，所以内容居中在两条栏之间。
- * One screen is the list's viewport minus its contentPadding, so the content centers between the two bars.
- */
-@Composable
-private fun LazyItemScope.CenteredPageItem(content: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier
-            .animateItem()
-            .fillParentMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
-    }
 }
 
 // MARK: - 预览 / Previews
