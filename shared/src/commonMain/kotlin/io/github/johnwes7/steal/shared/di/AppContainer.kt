@@ -11,6 +11,7 @@ import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamApi
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
 import io.github.johnwes7.steal.shared.services.createHttpClient
+import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RegionSettingsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RootViewModel
@@ -104,6 +105,33 @@ class AppContainer(
                 settingsRepository = settingsRepository,
             )
         }
+    }
+
+    /**
+     * 游戏详情页 [GameDetailViewModel] 的工厂，导航参数 [appID]、[uuid]、[title] 原样交给它。
+     * The factory for the game detail page's [GameDetailViewModel], handing it the navigation arguments [appID],
+     * [uuid] and [title] as they are.
+     *
+     * 要收参数，所以是函数不是属性。页面每次重组都会建一个新工厂，但 `viewModel()` 只在这一页还没有 ViewModel 时用它，
+     * 之后拿到的都是同一个。
+     * It takes arguments, so it is a function rather than a property. The page builds a new factory on every
+     * recomposition, but `viewModel()` only uses it while the page has no view model yet and returns the same one
+     * after that.
+     */
+    fun gameDetailViewModelFactory(appID: Int, uuid: String?, title: String): ViewModelProvider.Factory {
+        val factory = viewModelFactory {
+            initializer {
+                GameDetailViewModel(
+                    appID = appID,
+                    uuid = uuid,
+                    initialTitle = title,
+                    steamApi = steamApi,
+                    itadApi = itadApi,
+                    settingsRepository = settingsRepository,
+                )
+            }
+        }
+        return factory
     }
 
     /**
