@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.views
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,6 +33,7 @@ import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel.DetailLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel.InfoLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel.PricesLoadState
+import io.github.johnwes7.steal.views.components.detail.MediaGalleryView
 import io.github.johnwes7.steal.views.components.shared.CenteredPageItem
 import io.github.johnwes7.steal.views.components.shared.ContentUnavailableView
 import io.github.johnwes7.steal.views.components.shared.LoadErrorView
@@ -38,6 +41,12 @@ import io.github.johnwes7.steal.views.components.shared.PageBackButton
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.components.shared.PageTopBarStyle
 import io.github.johnwes7.steal.views.theme.SteaLTheme
+
+/**
+ * 页面内容左右的边距；画廊不用，贴到屏幕两边。
+ * The side margin of the page content; the gallery skips it and runs edge to edge.
+ */
+private val DETAIL_SIDE_MARGIN = 16.dp
 
 /**
  * 游戏详情页：Steam 详情是硬门槛，ITAD 的比价和游戏信息随后补上。
@@ -106,20 +115,22 @@ private fun GameDetailContent(
     onOpenGameDetail: (GameDetailRoute) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 顶栏在列表滚离顶部时换色、两行收成一行，所以列表的滚动状态要交给骨架。
-    // The top bar changes color and collapses as the list scrolls, so the scaffold gets the list's scroll state.
+    // 顶栏在列表滚离顶部时换色，所以列表的滚动状态要交给骨架。
+    // The top bar changes color once the list scrolls, so the scaffold gets the list's scroll state.
     val listState = rememberLazyListState()
 
     PageScaffold(
-        header = { Text(text = title) },
+        header = { Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         scrollState = listState,
         modifier = modifier,
         navigationIcon = { PageBackButton(onClick = onBack) },
-        topBarStyle = PageTopBarStyle.Collapsing,
+        topBarStyle = PageTopBarStyle.Small,
     ) { contentPadding ->
-        // 骨架给的留白加在列表里面，内容才会滚到两条栏后面；再加上列表自己的边距。
-        // The scaffold's padding goes inside the list so content scrolls behind both bars, plus the list's own margins.
-        val listPadding = contentPadding + PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 24.dp)
+        // 骨架给的留白加在列表里面，内容才会滚到两条栏后面；再加上列表自己的上下边距。左右边距由需要的区块自己加，画廊才能
+        // 贴到屏幕两边。
+        // The scaffold's padding goes inside the list so content scrolls behind both bars, plus the list's own top and
+        // bottom margins. Sections that need side margins add their own, so the gallery can run edge to edge.
+        val listPadding = contentPadding + PaddingValues(top = 4.dp, bottom = 24.dp)
 
         // 列表一直在，加载中、没找到、失败都是列表里的一项（理由同 Sales 页：旧滚动位置、出场动画）。
         // The list is always there, with loading, not found and failure as items in it (as on the Sales page: the
@@ -149,19 +160,37 @@ private fun GameDetailContent(
                         LoadErrorView(error = detailState.error, onRetry = onRetry)
                     }
                 }
-                // 详情的各区块第二部分再做；第一部分先放临时显示区。
-                // The detail sections come in part two; part one shows a temporary display for now.
-                is DetailLoadState.Loaded -> temporaryDetailItems(
-                    details = detailState.details,
-                    pricesState = pricesState,
-                    infoState = infoState,
-                    onRetryPrices = onRetryPrices,
-                    onRetryInfo = onRetryInfo,
-                    onOpenGameDetail = onOpenGameDetail,
-                )
+                is DetailLoadState.Loaded -> {
+                    val details = detailState.details
+                    item(key = "gallery") {
+                        MediaGalleryView(
+                            headerImageUrl = details.headerImage,
+                            screenshotUrls = screenshotUrls(details = details),
+                        )
+                    }
+                    // 画廊以外的区块还没做，先放临时显示区。
+                    // The sections below the gallery aren't built yet, so the temporary display stays for now.
+                    temporaryDetailItems(
+                        details = details,
+                        pricesState = pricesState,
+                        infoState = infoState,
+                        onRetryPrices = onRetryPrices,
+                        onRetryInfo = onRetryInfo,
+                        onOpenGameDetail = onOpenGameDetail,
+                    )
+                }
             }
         }
     }
+}
+
+/**
+ * 截图的完整尺寸地址；没有地址的截图跳过。
+ * The full-size screenshot URLs, skipping screenshots without one.
+ */
+private fun screenshotUrls(details: SteamAppDetails): List<String> {
+    val screenshots = details.screenshots.orEmpty()
+    return screenshots.mapNotNull { screenshot -> screenshot.full }
 }
 
 /**
@@ -193,20 +222,25 @@ private fun LazyListScope.temporaryDetailItems(
     onOpenGameDetail: (GameDetailRoute) -> Unit,
 ) {
     item(key = "temporarySteam") {
-        TemporarySection(heading = "Steam", lines = steamLines(details = details))
+        Box(modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN)) {
+            TemporarySection(heading = "Steam", lines = steamLines(details = details))
+        }
     }
 
     val fullGameRoute = fullGameRoute(details = details)
     if (fullGameRoute != null) {
         item(key = "temporaryFullGame") {
-            Button(onClick = { onOpenGameDetail(fullGameRoute) }) {
+            Button(
+                onClick = { onOpenGameDetail(fullGameRoute) },
+                modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN),
+            ) {
                 Text(text = "Open full game: ${fullGameRoute.title}")
             }
         }
     }
 
     item(key = "temporaryPrices") {
-        Column {
+        Column(modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN)) {
             val pricesHeading = "Prices: ${pricesState::class.simpleName}"
             TemporarySection(heading = pricesHeading, lines = pricesLines(state = pricesState))
             if (pricesState == PricesLoadState.Failed) {
@@ -218,7 +252,7 @@ private fun LazyListScope.temporaryDetailItems(
     }
 
     item(key = "temporaryInfo") {
-        Column {
+        Column(modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN)) {
             val infoHeading = "Info: ${infoState::class.simpleName}"
             TemporarySection(heading = infoHeading, lines = infoLines(state = infoState))
             if (infoState == InfoLoadState.Failed) {
