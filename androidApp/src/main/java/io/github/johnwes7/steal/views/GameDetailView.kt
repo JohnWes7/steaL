@@ -1,23 +1,33 @@
 package io.github.johnwes7.steal.views
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,13 +37,25 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnwes7.steal.LocalAppContainer
 import io.github.johnwes7.steal.R
 import io.github.johnwes7.steal.navigation.GameDetailRoute
+import io.github.johnwes7.steal.previews.previewAppDetails
+import io.github.johnwes7.steal.previews.previewGameInfo
+import io.github.johnwes7.steal.previews.previewPriceGame
+import io.github.johnwes7.steal.shared.config.AppLog
 import io.github.johnwes7.steal.shared.models.app.LoadError
 import io.github.johnwes7.steal.shared.models.steam.SteamAppDetails
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel.DetailLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel.InfoLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel.PricesLoadState
+import io.github.johnwes7.steal.views.components.detail.DemoSectionView
+import io.github.johnwes7.steal.views.components.detail.DetailFooterView
+import io.github.johnwes7.steal.views.components.detail.DetailTag
+import io.github.johnwes7.steal.views.components.detail.FullGameSectionView
+import io.github.johnwes7.steal.views.components.detail.ItadInfoSectionView
 import io.github.johnwes7.steal.views.components.detail.MediaGalleryView
+import io.github.johnwes7.steal.views.components.detail.OfferFilter
+import io.github.johnwes7.steal.views.components.detail.PriceSectionView
+import io.github.johnwes7.steal.views.components.detail.SteamDetailSectionView
 import io.github.johnwes7.steal.views.components.shared.CenteredPageItem
 import io.github.johnwes7.steal.views.components.shared.ContentUnavailableView
 import io.github.johnwes7.steal.views.components.shared.LoadErrorView
@@ -47,6 +69,18 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  * The side margin of the page content; the gallery skips it and runs edge to edge.
  */
 private val DETAIL_SIDE_MARGIN = 16.dp
+
+/**
+ * 画廊下面各区块之间的间距。
+ * The spacing between the sections below the gallery.
+ */
+private val DETAIL_SECTION_SPACING = 28.dp
+
+/**
+ * 画廊下面一个区块的外边距：左右是页面边距，上面是区块间距。
+ * The outer padding of a section below the gallery: the page margin on the sides, the section spacing on top.
+ */
+private val SECTION_PADDING = PaddingValues(start = DETAIL_SIDE_MARGIN, end = DETAIL_SIDE_MARGIN, top = DETAIL_SECTION_SPACING)
 
 /**
  * 游戏详情页：Steam 详情是硬门槛，ITAD 的比价和游戏信息随后补上。
@@ -82,9 +116,11 @@ fun GameDetailView(
         viewModel.loadIfNeeded(steamLanguage = steamLanguage)
     }
 
-    // 3. 状态和操作交给内容函数显示
-    // 3. Hand the state and actions to the content function
+    // 3. 状态和操作交给内容函数显示；离开 App 的网址在这一层打开
+    // 3. Hand the state and actions to the content function; URLs that leave the app are opened at this level
+    val uriHandler = LocalUriHandler.current
     GameDetailContent(
+        appID = appID,
         title = detailState.title(fallback = viewModel.initialTitle),
         detailState = detailState,
         pricesState = pricesState,
@@ -94,16 +130,38 @@ fun GameDetailView(
         onRetryPrices = { viewModel.retryPrices() },
         onRetryInfo = { viewModel.retryInfo() },
         onOpenGameDetail = onOpenGameDetail,
+        onOpenDemoStorePage = { demoAppID ->
+            val url = "https://store.steampowered.com/app/$demoAppID/"
+            openExternalPage(uriHandler = uriHandler, url = url)
+        },
+        onOpenOffer = { url -> openExternalPage(uriHandler = uriHandler, url = url) },
         modifier = modifier,
     )
 }
 
 /**
+ * 用外部 App（浏览器或商店 App）打开 [url]；没有 App 能打开时只记日志。
+ * Opens [url] in another app (a browser or the store's app); only logs when no app can open it.
+ */
+private fun openExternalPage(uriHandler: UriHandler, url: String) {
+    try {
+        uriHandler.openUri(url)
+    } catch (error: IllegalArgumentException) {
+        AppLog.gameDetail.e(error) { "打不开外部页面 / Can't open the external page: $url" }
+    }
+}
+
+/**
  * 页面内容：只接状态和回调，预览直接用它。
  * The screen content, taking only state and callbacks, so previews can use it directly.
+ *
+ * 简介展开、报价筛选和展开这三个界面状态放在这里：区块切到加载中再回来（重试）也不会丢。
+ * The description's expansion and the offer filter and expansion live here, so they survive a section going back
+ * to loading and returning (a retry).
  */
 @Composable
 private fun GameDetailContent(
+    appID: Int,
     title: String,
     detailState: DetailLoadState,
     pricesState: PricesLoadState,
@@ -113,10 +171,24 @@ private fun GameDetailContent(
     onRetryPrices: () -> Unit,
     onRetryInfo: () -> Unit,
     onOpenGameDetail: (GameDetailRoute) -> Unit,
+    onOpenDemoStorePage: (Int) -> Unit,
+    onOpenOffer: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 顶栏在列表滚离顶部时换色，所以列表的滚动状态要交给骨架。
-    // The top bar changes color once the list scrolls, so the scaffold gets the list's scroll state.
+    // 1. 界面状态
+    // 1. The UI state
+    var isSteamDetailExpanded by rememberSaveable { mutableStateOf(false) }
+    var offerFilter by rememberSaveable { mutableStateOf(OfferFilter.Steam) }
+    var isShowingAllOffers by rememberSaveable { mutableStateOf(false) }
+
+    // 2. 列表里用到的文字先取好：列表的构建函数不是 Composable，读不了资源
+    // 2. Read the text the list needs up front: the list builder isn't composable, so it can't read resources
+    val demoFallbackName = stringResource(R.string.game_detail_demo_fallback_name, title)
+    val demoOwnFallbackName = stringResource(R.string.game_detail_section_demo)
+    val fullGameFallbackName = stringResource(R.string.game_detail_section_full_game)
+
+    // 3. 顶栏在列表滚离顶部时换色，所以列表的滚动状态要交给骨架
+    // 3. The top bar changes color once the list scrolls, so the scaffold gets the list's scroll state
     val listState = rememberLazyListState()
 
     PageScaffold(
@@ -162,22 +234,80 @@ private fun GameDetailContent(
                 }
                 is DetailLoadState.Loaded -> {
                     val details = detailState.details
+                    val demoLink = demoLink(
+                        details = details,
+                        fallbackName = demoFallbackName,
+                        ownFallbackName = demoOwnFallbackName,
+                    )
+                    val fullGameRoute = fullGameRoute(details = details, fallbackName = fullGameFallbackName)
+
                     item(key = "gallery") {
                         MediaGalleryView(
                             headerImageUrl = details.headerImage,
                             screenshotUrls = screenshotUrls(details = details),
                         )
                     }
-                    // 画廊以外的区块还没做，先放临时显示区。
-                    // The sections below the gallery aren't built yet, so the temporary display stays for now.
-                    temporaryDetailItems(
-                        details = details,
-                        pricesState = pricesState,
-                        infoState = infoState,
-                        onRetryPrices = onRetryPrices,
-                        onRetryInfo = onRetryInfo,
-                        onOpenGameDetail = onOpenGameDetail,
-                    )
+                    item(key = "genresAndRelease") {
+                        GenresAndReleaseDate(details = details)
+                    }
+                    item(key = "about") {
+                        SteamDetailSectionView(
+                            details = details,
+                            isExpanded = isSteamDetailExpanded,
+                            onToggleExpanded = { isSteamDetailExpanded = !isSteamDetailExpanded },
+                            modifier = Modifier.padding(SECTION_PADDING),
+                        )
+                    }
+                    if (demoLink != null) {
+                        item(key = "demo") {
+                            DemoSectionView(
+                                name = demoLink.name,
+                                onClick = { onOpenDemoStorePage(demoLink.appID) },
+                                modifier = Modifier.padding(SECTION_PADDING),
+                            )
+                        }
+                    }
+                    if (fullGameRoute != null) {
+                        item(key = "fullGame") {
+                            FullGameSectionView(
+                                name = fullGameRoute.title,
+                                onClick = { onOpenGameDetail(fullGameRoute) },
+                                modifier = Modifier.padding(SECTION_PADDING),
+                            )
+                        }
+                    }
+                    // 该不该出现由 ViewModel 定成 Hidden（试玩版、未开预购），Hidden 时不占位置。
+                    // The view model decides via Hidden (demos, no pre-order yet), and Hidden takes no space.
+                    if (pricesState != PricesLoadState.Hidden) {
+                        item(key = "prices") {
+                            PriceSectionView(
+                                state = pricesState,
+                                offerFilter = offerFilter,
+                                onSelectOfferFilter = { newFilter -> offerFilter = newFilter },
+                                isShowingAllOffers = isShowingAllOffers,
+                                onToggleOffers = { isShowingAllOffers = !isShowingAllOffers },
+                                onRetry = onRetryPrices,
+                                onOfferClick = { deal -> onOpenOffer(deal.url) },
+                                modifier = Modifier.padding(SECTION_PADDING),
+                            )
+                        }
+                    }
+                    if (infoState != InfoLoadState.Hidden) {
+                        item(key = "info") {
+                            ItadInfoSectionView(
+                                state = infoState,
+                                onRetry = onRetryInfo,
+                                modifier = Modifier.padding(SECTION_PADDING),
+                            )
+                        }
+                    }
+                    item(key = "footer") {
+                        DetailFooterView(
+                            appID = appID,
+                            itadID = itadID(infoState = infoState),
+                            modifier = Modifier.padding(SECTION_PADDING),
+                        )
+                    }
                 }
             }
         }
@@ -203,156 +333,117 @@ private fun GameDetailLoading() {
     LoadingIndicator()
 }
 
-// MARK: - 临时显示区 / Temporary display
-// 临时：第一部分只为在模拟器上确认数据对，第二部分换成正式组件时整节删掉。文字直接写英文、不进 strings.xml。
-// Temporary: part one only checks the data on the emulator; the whole section goes when part two adds the real
-// components. The text is plain English and stays out of strings.xml.
+// MARK: - 类型标签、发售日 / Genres and release date
 
 /**
- * 临时：用纯文字列出 Steam 详情、比价和游戏信息，失败的区块给重试，试玩版给推入本体的按钮。
- * Temporary: lists the Steam details, prices and game info as plain text, with retries for failed sections and a
- * button that pushes a demo's full game.
- */
-private fun LazyListScope.temporaryDetailItems(
-    details: SteamAppDetails,
-    pricesState: PricesLoadState,
-    infoState: InfoLoadState,
-    onRetryPrices: () -> Unit,
-    onRetryInfo: () -> Unit,
-    onOpenGameDetail: (GameDetailRoute) -> Unit,
-) {
-    item(key = "temporarySteam") {
-        Box(modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN)) {
-            TemporarySection(heading = "Steam", lines = steamLines(details = details))
-        }
-    }
-
-    val fullGameRoute = fullGameRoute(details = details)
-    if (fullGameRoute != null) {
-        item(key = "temporaryFullGame") {
-            Button(
-                onClick = { onOpenGameDetail(fullGameRoute) },
-                modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN),
-            ) {
-                Text(text = "Open full game: ${fullGameRoute.title}")
-            }
-        }
-    }
-
-    item(key = "temporaryPrices") {
-        Column(modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN)) {
-            val pricesHeading = "Prices: ${pricesState::class.simpleName}"
-            TemporarySection(heading = pricesHeading, lines = pricesLines(state = pricesState))
-            if (pricesState == PricesLoadState.Failed) {
-                Button(onClick = onRetryPrices) {
-                    Text(text = "Retry prices")
-                }
-            }
-        }
-    }
-
-    item(key = "temporaryInfo") {
-        Column(modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN)) {
-            val infoHeading = "Info: ${infoState::class.simpleName}"
-            TemporarySection(heading = infoHeading, lines = infoLines(state = infoState))
-            if (infoState == InfoLoadState.Failed) {
-                Button(onClick = onRetryInfo) {
-                    Text(text = "Retry info")
-                }
-            }
-        }
-    }
-}
-
-/**
- * 临时：一段标题加几行文字。
- * Temporary: a heading followed by lines of text.
+ * 画廊下面的 Steam 类型标签（横向滑动）和发售日；只显示 Steam 的事实，不和 ITAD 的数据混在一起。
+ * The Steam genre tags below the gallery (scrolling sideways) and the release date; Steam's facts only, kept apart
+ * from the ITAD data.
  */
 @Composable
-private fun TemporarySection(heading: String, lines: List<String>) {
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(text = heading, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        for (line in lines) {
-            Text(text = line, style = MaterialTheme.typography.bodyMedium)
+private fun GenresAndReleaseDate(details: SteamAppDetails) {
+    val genres = details.genres.orEmpty()
+    val genreNames = genres.mapNotNull { genre -> genre.description }
+    val nonEmptyGenreNames = genreNames.filter { name -> name.isNotEmpty() }
+    val releaseDate = details.releaseDate?.date
+
+    Column(modifier = Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (nonEmptyGenreNames.isNotEmpty()) {
+            // 左右边距放在滑动里面，滑到头时标签才贴边。
+            // The margins sit inside the scroll, so the tags only reach the edge when scrolled.
+            Row(
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = DETAIL_SIDE_MARGIN),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for (name in nonEmptyGenreNames) {
+                    DetailTag(text = name)
+                }
+            }
+        }
+        if (releaseDate != null) {
+            ReleaseDateRow(date = releaseDate, isComingSoon = details.isComingSoon)
         }
     }
 }
 
 /**
- * 临时：Steam 详情的几行文字。
- * Temporary: the Steam details as lines of text.
+ * 发售日一行：「已发售 · 日期」或「即将推出 · 日期」；日期是 Steam 按请求语言给的文字，原样显示。
+ * The release date line: "Released · date" or "Coming soon · date"; the date is Steam's text in the requested
+ * language, shown as it is.
  */
-private fun steamLines(details: SteamAppDetails): List<String> {
-    val price = details.priceOverview
-    val priceText = if (price == null) {
-        "none"
-    } else {
-        "${price.currency} ${price.final} (regular ${price.initial}, -${price.discountPercent}%)"
+@Composable
+private fun ReleaseDateRow(date: String, isComingSoon: Boolean) {
+    val textRes = if (isComingSoon) R.string.game_detail_coming_soon else R.string.game_detail_released
+    Row(
+        modifier = Modifier.padding(horizontal = DETAIL_SIDE_MARGIN),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.calendar_month_24px),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = stringResource(textRes, date),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
-    val genreNames = details.genres.orEmpty().map { genre -> genre.description }
-    val demoAppIDs = details.demos.orEmpty().map { demo -> demo.appID }
-    return listOf(
-        "appID: ${details.steamAppID}",
-        "name: ${details.name}",
-        "type: ${details.type} / kind: ${details.gameKind}",
-        "release: ${details.releaseDate?.date} (coming soon: ${details.isComingSoon})",
-        "required age: ${details.requiredAge}",
-        "price: $priceText",
-        "genres: $genreNames",
-        "movies: ${details.movies?.size} / screenshots: ${details.screenshots?.size}",
-        "demos: $demoAppIDs",
-        "full game: ${details.fullGame?.appID} ${details.fullGame?.name}",
-    )
+}
+
+// MARK: - 试玩版 / 本体入口 / Demo and full game entries
+
+/**
+ * 试玩版入口要打开的 Steam appID 和显示的名字。
+ * The Steam appID the demo entry opens and the name it shows.
+ */
+private class DemoLink(val appID: Int, val name: String)
+
+/**
+ * 试玩版入口：本体页面上是 Steam 列的第一个试玩版，试玩版自己的页面上（`demos` 是空的）是它自己；都没有时是 `null`。
+ * The demo entry: the first demo Steam lists on a base game, or the demo itself on a demo's own page (where `demos`
+ * is empty); `null` when neither applies.
+ *
+ * Steam 很少填试玩版的名字，空的时候用 [fallbackName]（「本体名 + 试玩版」）；试玩版自己没有名字时用 [ownFallbackName]。
+ * Steam rarely fills in a demo's name, so an empty one becomes [fallbackName] ("base name + Demo"); a demo page
+ * without a name uses [ownFallbackName].
+ */
+private fun demoLink(details: SteamAppDetails, fallbackName: String, ownFallbackName: String): DemoLink? {
+    // 1. 本体页面：Steam 列的第一个试玩版
+    // 1. A base game's page: the first demo Steam lists
+    val demos = details.demos.orEmpty()
+    val firstDemo = demos.firstOrNull()
+    val firstDemoAppID = firstDemo?.appID
+    if (firstDemoAppID != null) {
+        val description = firstDemo.description
+        val name = if (description.isNullOrEmpty()) fallbackName else description
+        return DemoLink(appID = firstDemoAppID, name = name)
+    }
+
+    // 2. 试玩版自己的页面：它自己
+    // 2. A demo's own page: the demo itself
+    if (!details.isDemo) {
+        return null
+    }
+    val ownAppID = details.steamAppID
+    if (ownAppID == null) {
+        return null
+    }
+    val ownName = details.name
+    val name = if (ownName.isNullOrEmpty()) ownFallbackName else ownName
+    return DemoLink(appID = ownAppID, name = name)
 }
 
 /**
- * 临时：比价的几行文字；没到手时是空的。
- * Temporary: the prices as lines of text; empty until they are in.
+ * 试玩版的本体路由；不是试玩版，或 `fullgame.appid`（字符串）转不成数字时是 `null`。名字缺了用 [fallbackName]。
+ * The route to a demo's full game; `null` when the entry isn't a demo or `fullgame.appid` (a string) isn't a
+ * number. A missing name becomes [fallbackName].
  */
-private fun pricesLines(state: PricesLoadState): List<String> {
-    val prices = when (state) {
-        is PricesLoadState.Loaded -> state.prices
-        is PricesLoadState.LoadedWithoutHistory -> state.prices
-        else -> null
-    }
-    if (prices == null) {
-        return emptyList()
-    }
-    val history = prices.historyLow
-    val historyLine =
-        "lows: all ${history.all?.amount} / 1y ${history.y1?.amount} / 3m ${history.m3?.amount} ${history.all?.currency}"
-    val bestSteamLine = "best Steam: ${prices.bestSteamDeal?.shop?.name}"
-    val dealLines = prices.deals.map { deal ->
-        val drmNames = deal.drm.map { drm -> drm.name }
-        "${deal.shop.name}: ${deal.price.amount} ${deal.price.currency} (-${deal.cut}%) drm $drmNames"
-    }
-    return listOf(historyLine, bestSteamLine) + dealLines
-}
-
-/**
- * 临时：游戏信息的几行文字；没到手时是空的。
- * Temporary: the game info as lines of text; empty until it is in.
- */
-private fun infoLines(state: InfoLoadState): List<String> {
-    if (state !is InfoLoadState.Loaded) {
-        return emptyList()
-    }
-    val info = state.info
-    val reviewLines = info.reviews.orEmpty().map { review -> "${review.source}: ${review.score} (${review.count})" }
-    val summaryLines = listOf(
-        "players: recent ${info.players?.recent} / peak ${info.players?.peak}",
-        "rank: ${info.stats?.rank}",
-        "tags: ${info.tags}",
-    )
-    return summaryLines + reviewLines
-}
-
-/**
- * 临时：试玩版的本体路由；不是试玩版，或 `fullgame.appid`（字符串）转不成数字时是 `null`。
- * Temporary: the route to a demo's full game; `null` when the entry isn't a demo or `fullgame.appid` (a string)
- * isn't a number.
- */
-private fun fullGameRoute(details: SteamAppDetails): GameDetailRoute? {
+private fun fullGameRoute(details: SteamAppDetails, fallbackName: String): GameDetailRoute? {
     val fullGame = details.fullGame
     if (fullGame == null) {
         return null
@@ -361,17 +452,52 @@ private fun fullGameRoute(details: SteamAppDetails): GameDetailRoute? {
     if (appID == null) {
         return null
     }
-    val title = fullGame.name ?: "Full game"
+    val name = fullGame.name
+    val title = if (name.isNullOrEmpty()) fallbackName else name
     return GameDetailRoute(appID = appID, uuid = null, title = title)
 }
 
+/**
+ * 底部显示的 ITAD ID：从信息区块的数据读，只有一个数据源；信息没到手（或没有）时是 `null`。
+ * The ITAD ID shown at the bottom, read from the info section's data so there's one source; `null` until the info
+ * is in (or when there is none).
+ */
+private fun itadID(infoState: InfoLoadState): String? {
+    if (infoState is InfoLoadState.Loaded) {
+        return infoState.info.id
+    }
+    return null
+}
+
 // MARK: - 预览 / Previews
+
+@Preview(heightDp = 2400)
+@Composable
+private fun GameDetailContentLoadedPreview() {
+    SteaLTheme(darkTheme = true) {
+        GameDetailContent(
+            appID = 3357650,
+            title = "PRAGMATA",
+            detailState = DetailLoadState.Loaded(details = previewAppDetails),
+            pricesState = PricesLoadState.Loaded(prices = previewPriceGame),
+            infoState = InfoLoadState.Loaded(info = previewGameInfo),
+            onBack = {},
+            onRetry = {},
+            onRetryPrices = {},
+            onRetryInfo = {},
+            onOpenGameDetail = { _ -> },
+            onOpenDemoStorePage = { _ -> },
+            onOpenOffer = { _ -> },
+        )
+    }
+}
 
 @Preview
 @Composable
 private fun GameDetailContentLoadingPreview() {
     SteaLTheme(darkTheme = true) {
         GameDetailContent(
+            appID = 1245620,
             title = "ELDEN RING",
             detailState = DetailLoadState.Loading,
             pricesState = PricesLoadState.Hidden,
@@ -381,6 +507,8 @@ private fun GameDetailContentLoadingPreview() {
             onRetryPrices = {},
             onRetryInfo = {},
             onOpenGameDetail = { _ -> },
+            onOpenDemoStorePage = { _ -> },
+            onOpenOffer = { _ -> },
         )
     }
 }
@@ -390,6 +518,7 @@ private fun GameDetailContentLoadingPreview() {
 private fun GameDetailContentNotFoundPreview() {
     SteaLTheme(darkTheme = true) {
         GameDetailContent(
+            appID = 1245620,
             title = "ELDEN RING",
             detailState = DetailLoadState.NotFound,
             pricesState = PricesLoadState.Hidden,
@@ -399,6 +528,8 @@ private fun GameDetailContentNotFoundPreview() {
             onRetryPrices = {},
             onRetryInfo = {},
             onOpenGameDetail = { _ -> },
+            onOpenDemoStorePage = { _ -> },
+            onOpenOffer = { _ -> },
         )
     }
 }
@@ -408,6 +539,7 @@ private fun GameDetailContentNotFoundPreview() {
 private fun GameDetailContentFailedPreview() {
     SteaLTheme(darkTheme = true) {
         GameDetailContent(
+            appID = 1245620,
             title = "ELDEN RING",
             detailState = DetailLoadState.Failed(error = LoadError.Offline),
             pricesState = PricesLoadState.Hidden,
@@ -417,6 +549,8 @@ private fun GameDetailContentFailedPreview() {
             onRetryPrices = {},
             onRetryInfo = {},
             onOpenGameDetail = { _ -> },
+            onOpenDemoStorePage = { _ -> },
+            onOpenOffer = { _ -> },
         )
     }
 }

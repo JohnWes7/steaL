@@ -41,6 +41,44 @@
     <!-- 游戏详情页 / Game detail page -->
     <string name="game_detail_not_found_title">无法查看这款游戏</string>
     <string name="game_detail_not_found_message">这款游戏在你所在地区的 Steam 商店没有上架，或者已经下架。</string>
+    <string name="game_detail_released">已发售 · %1$s</string>
+    <string name="game_detail_coming_soon">即将推出 · %1$s</string>
+    <string name="game_detail_section_about">游戏详情</string>
+    <string name="game_detail_more">更多</string>
+    <string name="game_detail_show_less">收起</string>
+    <string name="game_detail_developer">开发商</string>
+    <string name="game_detail_publisher">发行商</string>
+    <string name="game_detail_categories">分类</string>
+    <string name="game_detail_platforms">平台</string>
+    <string name="game_detail_section_demo">试玩版</string>
+    <string name="game_detail_demo_fallback_name">%1$s 试玩版</string>
+    <string name="game_detail_demo_subtitle">打开 Steam 商店页面</string>
+    <string name="game_detail_section_full_game">完整游戏</string>
+    <string name="game_detail_full_game_subtitle">在 App 内打开</string>
+    <string name="game_detail_section_prices">价格</string>
+    <string name="game_detail_section_current_offers">当前报价</string>
+    <string name="game_detail_offers_steam">Steam（%1$d）</string>
+    <string name="game_detail_offers_all">全部（%1$d）</string>
+    <string name="game_detail_offers_empty">暂无报价</string>
+    <string name="game_detail_offer_best">最低</string>
+    <string name="game_detail_offer_save">省 %1$d%%</string>
+    <string name="game_detail_offer_current_price">当前价格</string>
+    <string name="game_detail_offer_drm_unavailable">DRM 未知</string>
+    <string name="game_detail_prices_not_found">没有找到这款游戏的价格。</string>
+    <string name="game_detail_prices_failed">价格加载失败。</string>
+    <string name="game_detail_section_price_history">历史价格</string>
+    <string name="game_detail_history_all_time">史低</string>
+    <string name="game_detail_history_one_year">一年最低</string>
+    <string name="game_detail_history_three_months">三个月最低</string>
+    <string name="game_detail_history_empty">暂无历史价格</string>
+    <string name="game_detail_itad_not_found">IsThereAnyDeal 没有这款游戏的信息。</string>
+    <string name="game_detail_itad_failed">信息加载失败。</string>
+    <plurals name="game_detail_review_count">
+        <item quantity="other">%1$s 条评价</item>
+    </plurals>
+    <string name="game_detail_review_count_unavailable">评价数未知</string>
+    <string name="game_detail_players_online">在线玩家</string>
+    <string name="game_detail_itad_rank">ITAD 排名</string>
 
     <!-- 价格 / Prices -->
     <string name="price_free">免费</string>

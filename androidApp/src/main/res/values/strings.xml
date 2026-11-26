@@ -59,6 +59,53 @@
     <!-- 游戏详情页 / Game detail page -->
     <string name="game_detail_not_found_title">Game unavailable</string>
     <string name="game_detail_not_found_message">This game isn\'t on the Steam store in your region, or it has been removed.</string>
+    <string name="game_detail_released">Released · %1$s</string>
+    <string name="game_detail_coming_soon">Coming soon · %1$s</string>
+    <string name="game_detail_section_about">Game detail</string>
+    <string name="game_detail_more">More</string>
+    <string name="game_detail_show_less">Show less</string>
+    <string name="game_detail_developer">Developer</string>
+    <string name="game_detail_publisher">Publisher</string>
+    <string name="game_detail_categories">Categories</string>
+    <string name="game_detail_platforms">Platforms</string>
+    <string name="game_detail_platform_windows" translatable="false">Windows</string>
+    <string name="game_detail_platform_macos" translatable="false">macOS</string>
+    <string name="game_detail_platform_linux" translatable="false">Linux</string>
+    <string name="game_detail_section_demo">Demo</string>
+    <string name="game_detail_demo_fallback_name">%1$s Demo</string>
+    <string name="game_detail_demo_subtitle">Opens the Steam store page</string>
+    <string name="game_detail_section_full_game">Full game</string>
+    <string name="game_detail_full_game_subtitle">Opens in this app</string>
+    <string name="game_detail_section_prices">Prices</string>
+    <string name="game_detail_section_current_offers">Current offers</string>
+    <string name="game_detail_offers_steam">Steam (%1$d)</string>
+    <string name="game_detail_offers_all">All (%1$d)</string>
+    <string name="game_detail_offers_empty">No current offers</string>
+    <string name="game_detail_offer_best">Best</string>
+    <string name="game_detail_offer_save">Save %1$d%%</string>
+    <string name="game_detail_offer_current_price">Current price</string>
+    <string name="game_detail_offer_drm_unavailable">DRM unavailable</string>
+    <string name="game_detail_prices_not_found">No prices found for this game.</string>
+    <string name="game_detail_prices_failed">Couldn\'t load prices.</string>
+    <string name="game_detail_section_price_history">Price history</string>
+    <string name="game_detail_history_all_time">All-time low</string>
+    <string name="game_detail_history_one_year">1 year low</string>
+    <string name="game_detail_history_three_months">3 months low</string>
+    <string name="game_detail_history_empty">No historical price data</string>
+    <string name="game_detail_section_itad" translatable="false">IsThereAnyDeal</string>
+    <string name="game_detail_itad_not_found">No IsThereAnyDeal details for this game.</string>
+    <string name="game_detail_itad_failed">Couldn\'t load details.</string>
+    <plurals name="game_detail_review_count">
+        <item quantity="one">%1$s review</item>
+        <item quantity="other">%1$s reviews</item>
+    </plurals>
+    <string name="game_detail_review_count_unavailable">Review count unavailable</string>
+    <string name="game_detail_review_score_max" translatable="false">/ 100</string>
+    <string name="game_detail_players_online">Players online</string>
+    <string name="game_detail_itad_rank">ITAD rank</string>
+    <string name="game_detail_rank_value" translatable="false">#%1$d</string>
+    <string name="game_detail_steam_app_id" translatable="false">Steam App ID</string>
+    <string name="game_detail_itad_id" translatable="false">ITAD ID</string>
 
     <!-- 价格 / Prices -->
     <string name="price_free">Free</string>
