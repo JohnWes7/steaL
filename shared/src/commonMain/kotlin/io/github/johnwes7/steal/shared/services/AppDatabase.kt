@@ -29,7 +29,14 @@ import kotlin.time.Instant
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 @ColumnTypeConverters(AppDatabaseConverters::class)
-abstract class AppDatabase : RoomDatabase()
+abstract class AppDatabase : RoomDatabase() {
+
+    /**
+     * 愿望单表的读写，实现由 Room 生成。
+     * Access to the wishlist table, implemented by Room.
+     */
+    abstract fun wishlistDao(): WishlistDao
+}
 
 /**
  * Room 在每个平台生成 `actual`，这里只声明。
