@@ -34,6 +34,7 @@ import androidx.media3.ui.compose.material3.indicator.ProgressSlider
 import androidx.media3.ui.compose.state.rememberErrorState
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.previews.previewMovie
 import io.github.johnwes7.steal.views.components.shared.ArtworkImage
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 import kotlinx.coroutines.delay
@@ -221,7 +222,7 @@ private fun trailerButtonColors(): IconButtonColors {
 private fun TrailerPosterViewPreview() {
     SteaLTheme(darkTheme = true) {
         TrailerPosterView(
-            posterUrl = null,
+            posterUrl = previewMovie.thumbnail,
             onPlay = {},
             modifier = Modifier
                 .fillMaxWidth()

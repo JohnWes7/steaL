@@ -16,6 +16,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import coil3.compose.AsyncImage
 import io.github.johnwes7.steal.platform.rememberTrailerPlayer
 import io.github.johnwes7.steal.previews.PREVIEW_HEADER_IMAGE_URL
 import io.github.johnwes7.steal.previews.previewManyScreenshotUrls
+import io.github.johnwes7.steal.previews.previewMovie
 import io.github.johnwes7.steal.previews.previewScreenshotUrls
 import io.github.johnwes7.steal.shared.models.steam.SteamMovie
 import io.github.johnwes7.steal.views.components.shared.ArtworkImage
@@ -87,6 +89,18 @@ fun MediaGalleryView(
     // a language change) goes back to the posters. One player serves the whole gallery.
     var playingMovie by remember(movies) { mutableStateOf<SteamMovie?>(null) }
     val trailerPlayer = rememberTrailerPlayer(movie = playingMovie)
+
+    // 翻到别的页、停稳以后停播（回到封面、释放播放器）；只滑了一半又回来不算翻页，接着播。
+    // Stop playback (back to the poster, player released) once the pager settles on another page; a half swipe that
+    // springs back is not a page change and keeps playing.
+    val settledPage = pagerState.settledPage
+    LaunchedEffect(settledPage) {
+        val page = pages.getOrNull(settledPage)
+        val isOnPlayingMovie = page is GalleryPage.Movie && page.movie == playingMovie
+        if (!isOnPlayingMovie) {
+            playingMovie = null
+        }
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (pages.isEmpty()) {
@@ -276,6 +290,21 @@ private fun MediaGalleryViewPreview() {
         MediaGalleryView(
             headerImageUrl = PREVIEW_HEADER_IMAGE_URL,
             movies = emptyList(),
+            screenshotUrls = previewScreenshotUrls,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MediaGalleryViewWithMoviePreview() {
+    // 主图 → 视频 → 截图；翻到第二页是视频封面和播放键（预览里点了不会播）。
+    // Header → movie → screenshots; the second page is the movie poster with its play button (tapping it in a preview
+    // does not play).
+    SteaLTheme(darkTheme = true) {
+        MediaGalleryView(
+            headerImageUrl = PREVIEW_HEADER_IMAGE_URL,
+            movies = listOf(previewMovie),
             screenshotUrls = previewScreenshotUrls,
         )
     }
