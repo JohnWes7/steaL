@@ -16,6 +16,10 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -24,7 +28,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.Player
 import coil3.compose.AsyncImage
+import io.github.johnwes7.steal.platform.rememberTrailerPlayer
 import io.github.johnwes7.steal.previews.PREVIEW_HEADER_IMAGE_URL
 import io.github.johnwes7.steal.previews.previewManyScreenshotUrls
 import io.github.johnwes7.steal.previews.previewScreenshotUrls
@@ -76,6 +82,12 @@ fun MediaGalleryView(
     val pages = galleryPages(headerImageUrl = headerImageUrl, movies = movies, screenshotUrls = screenshotUrls)
     val pagerState = rememberPagerState(pageCount = { pages.size })
 
+    // 正在播的那条，`null` = 所有视频页都停在封面；换了一批视频（例如换语言重载）就回到封面。全画廊共用一个播放器。
+    // The movie being played, `null` meaning every movie page shows its poster; a new set of movies (e.g. a reload after
+    // a language change) goes back to the posters. One player serves the whole gallery.
+    var playingMovie by remember(movies) { mutableStateOf<SteamMovie?>(null) }
+    val trailerPlayer = rememberTrailerPlayer(movie = playingMovie)
+
     Column(modifier = modifier.fillMaxWidth()) {
         if (pages.isEmpty()) {
             // 没有地址时 ArtworkImage 显示占位底色和破图图标。
@@ -96,7 +108,16 @@ fun MediaGalleryView(
                 val page = pages[pageIndex]
                 when (page) {
                     is GalleryPage.Image -> GalleryImagePage(url = page.url)
-                    is GalleryPage.Movie -> GalleryMoviePage(movie = page.movie)
+                    is GalleryPage.Movie -> {
+                        val isPlayingThisMovie = page.movie == playingMovie
+                        val pagePlayer = if (isPlayingThisMovie) trailerPlayer else null
+                        GalleryMoviePage(
+                            movie = page.movie,
+                            player = pagePlayer,
+                            onPlay = { playingMovie = page.movie },
+                            onClose = { playingMovie = null },
+                        )
+                    }
                 }
             }
         }
@@ -174,16 +195,31 @@ private fun GalleryImagePage(url: String) {
 }
 
 /**
- * 一页视频：先只有封面（Steam 的封面本身是 16:9，铺满整页）。
- * A movie page, only the poster for now (Steam's poster is 16:9 and fills the page).
+ * 一页视频：有 [player] 时显示播放器，没有（没在播，或 App 在后台时播放器已释放）时显示封面和播放键。
+ * A movie page: the player when there is a [player], otherwise the poster and a play button (not playing, or the
+ * player was released while the app is in the background).
  */
 @Composable
-private fun GalleryMoviePage(movie: SteamMovie) {
-    ArtworkImage(
-        url = movie.thumbnail,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize(),
-    )
+private fun GalleryMoviePage(
+    movie: SteamMovie,
+    player: Player?,
+    onPlay: () -> Unit,
+    onClose: () -> Unit,
+) {
+    if (player == null) {
+        TrailerPosterView(
+            posterUrl = movie.thumbnail,
+            onPlay = onPlay,
+            modifier = Modifier.fillMaxSize(),
+        )
+    } else {
+        TrailerPlayerView(
+            player = player,
+            posterUrl = movie.thumbnail,
+            onClose = onClose,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }
 
 /**
