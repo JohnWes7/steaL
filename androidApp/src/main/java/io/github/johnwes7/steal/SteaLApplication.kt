@@ -7,6 +7,7 @@ import io.github.johnwes7.steal.config.Config
 import io.github.johnwes7.steal.platform.AppLocaleController
 import io.github.johnwes7.steal.shared.di.AppContainer
 import io.github.johnwes7.steal.shared.services.createSettingsDataStore
+import io.github.johnwes7.steal.shared.services.database.createAppDatabase
 import java.io.File
 
 /**
@@ -45,6 +46,7 @@ class SteaLApplication : Application() {
             itadApiKey = Config.ITAD_API_KEY,
             backendBaseUrl = Config.BACKEND_BASE_URL,
             settingsDataStore = createSettingsDataStore(context = this),
+            appDatabase = createAppDatabase(context = this),
         )
     }
 }

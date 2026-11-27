@@ -43,6 +43,7 @@ import io.github.johnwes7.steal.navigation.WishlistRoute
 import io.github.johnwes7.steal.navigation.rememberNavigationState
 import io.github.johnwes7.steal.shared.di.AppContainer
 import io.github.johnwes7.steal.shared.services.createSettingsDataStore
+import io.github.johnwes7.steal.shared.services.database.createAppDatabase
 import io.github.johnwes7.steal.views.components.shared.LocalBarBlurSettings
 import io.github.johnwes7.steal.views.components.shared.LocalTabBarHeight
 import io.github.johnwes7.steal.views.components.shared.barBackground
@@ -218,6 +219,7 @@ private fun MainTabViewPreview() {
             itadApiKey = Config.ITAD_API_KEY,
             backendBaseUrl = Config.BACKEND_BASE_URL,
             settingsDataStore = createSettingsDataStore(context = context),
+            appDatabase = createAppDatabase(context = context),
         )
     }
     CompositionLocalProvider(LocalAppContainer provides appContainer) {
