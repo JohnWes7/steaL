@@ -30,6 +30,8 @@
 
     <!-- Search 页 / Search page -->
     <string name="search_placeholder">搜索 Steam 游戏</string>
+    <string name="wishlist_empty_title">还没有收藏</string>
+    <string name="wishlist_empty_message">在游戏详情页点心形，就会收藏到这里。</string>
     <string name="search_idle_title">搜索 Steam 商店</string>
     <string name="search_idle_message">按名字查找游戏、DLC 和原声音乐。</string>
     <string name="search_no_results_title">没有找到“%1$s”</string>

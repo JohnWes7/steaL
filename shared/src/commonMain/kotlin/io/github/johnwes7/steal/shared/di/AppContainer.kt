@@ -21,6 +21,7 @@ import io.github.johnwes7.steal.shared.viewmodels.SaleEventsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.SearchViewModel
 import io.github.johnwes7.steal.shared.viewmodels.SettingsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.ThemeSettingsViewModel
+import io.github.johnwes7.steal.shared.viewmodels.WishlistViewModel
 import io.ktor.client.HttpClient
 
 /**
@@ -152,6 +153,16 @@ class AppContainer(
     val searchViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         initializer {
             SearchViewModel(steamApi = steamApi, settingsRepository = settingsRepository)
+        }
+    }
+
+    /**
+     * Wishlist tab 根页面 [WishlistViewModel] 的工厂。
+     * The factory for the Wishlist tab root screen's [WishlistViewModel].
+     */
+    val wishlistViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            WishlistViewModel(wishlistRepository = wishlistRepository)
         }
     }
 
