@@ -28,6 +28,7 @@ import coil3.compose.AsyncImage
 import io.github.johnwes7.steal.previews.PREVIEW_HEADER_IMAGE_URL
 import io.github.johnwes7.steal.previews.previewManyScreenshotUrls
 import io.github.johnwes7.steal.previews.previewScreenshotUrls
+import io.github.johnwes7.steal.shared.models.steam.SteamMovie
 import io.github.johnwes7.steal.views.components.shared.ArtworkImage
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
@@ -42,6 +43,12 @@ private sealed interface GalleryPage {
      * An image: the header or a screenshot.
      */
     data class Image(val url: String) : GalleryPage
+
+    /**
+     * 一个能播的预告片。
+     * A playable trailer.
+     */
+    data class Movie(val movie: SteamMovie) : GalleryPage
 }
 
 /**
@@ -55,17 +62,18 @@ private const val MAX_VISIBLE_DOTS = 9
  * The media gallery at the top of the detail screen: 16:9 and swiped sideways, with page dots below; a placeholder
  * when there are no images at all.
  *
- * 页的顺序是主图 [headerImageUrl] 在前、截图 [screenshotUrls] 在后。宽度由 [modifier] 决定，详情页让它贴到屏幕两边。
- * The header [headerImageUrl] comes first, then the [screenshotUrls]. [modifier] decides the width; the detail
- * screen runs it edge to edge.
+ * 页的顺序是主图 [headerImageUrl]、能播的视频 [movies]、截图 [screenshotUrls]。宽度由 [modifier] 决定，详情页让它贴到屏幕两边。
+ * The header [headerImageUrl] comes first, then the playable [movies], then the [screenshotUrls]. [modifier] decides
+ * the width; the detail screen runs it edge to edge.
  */
 @Composable
 fun MediaGalleryView(
     headerImageUrl: String?,
+    movies: List<SteamMovie>,
     screenshotUrls: List<String>,
     modifier: Modifier = Modifier,
 ) {
-    val pages = galleryPages(headerImageUrl = headerImageUrl, screenshotUrls = screenshotUrls)
+    val pages = galleryPages(headerImageUrl = headerImageUrl, movies = movies, screenshotUrls = screenshotUrls)
     val pagerState = rememberPagerState(pageCount = { pages.size })
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -88,6 +96,7 @@ fun MediaGalleryView(
                 val page = pages[pageIndex]
                 when (page) {
                     is GalleryPage.Image -> GalleryImagePage(url = page.url)
+                    is GalleryPage.Movie -> GalleryMoviePage(movie = page.movie)
                 }
             }
         }
@@ -105,13 +114,20 @@ fun MediaGalleryView(
 }
 
 /**
- * 画廊的页：主图在前、截图在后。
- * The gallery's pages: the header first, then the screenshots.
+ * 画廊的页：主图、能播的视频、截图。
+ * The gallery's pages: the header, the playable movies, then the screenshots.
  */
-private fun galleryPages(headerImageUrl: String?, screenshotUrls: List<String>): List<GalleryPage> {
+private fun galleryPages(
+    headerImageUrl: String?,
+    movies: List<SteamMovie>,
+    screenshotUrls: List<String>,
+): List<GalleryPage> {
     val headerUrls = listOfNotNull(headerImageUrl)
-    val imageUrls = headerUrls + screenshotUrls
-    return imageUrls.map { url -> GalleryPage.Image(url = url) }
+    val headerPages = headerUrls.map { url -> GalleryPage.Image(url = url) }
+    val playableMovies = movies.filter { movie -> movie.isPlayable }
+    val moviePages = playableMovies.map { movie -> GalleryPage.Movie(movie = movie) }
+    val screenshotPages = screenshotUrls.map { url -> GalleryPage.Image(url = url) }
+    return headerPages + moviePages + screenshotPages
 }
 
 /**
@@ -155,6 +171,19 @@ private fun GalleryImagePage(url: String) {
             modifier = Modifier.fillMaxSize(),
         )
     }
+}
+
+/**
+ * 一页视频：先只有封面（Steam 的封面本身是 16:9，铺满整页）。
+ * A movie page, only the poster for now (Steam's poster is 16:9 and fills the page).
+ */
+@Composable
+private fun GalleryMoviePage(movie: SteamMovie) {
+    ArtworkImage(
+        url = movie.thumbnail,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 /**
@@ -208,7 +237,11 @@ private fun GalleryPageDots(
 @Composable
 private fun MediaGalleryViewPreview() {
     SteaLTheme(darkTheme = true) {
-        MediaGalleryView(headerImageUrl = PREVIEW_HEADER_IMAGE_URL, screenshotUrls = previewScreenshotUrls)
+        MediaGalleryView(
+            headerImageUrl = PREVIEW_HEADER_IMAGE_URL,
+            movies = emptyList(),
+            screenshotUrls = previewScreenshotUrls,
+        )
     }
 }
 
@@ -216,7 +249,11 @@ private fun MediaGalleryViewPreview() {
 @Composable
 private fun MediaGalleryViewManyPagesPreview() {
     SteaLTheme(darkTheme = true) {
-        MediaGalleryView(headerImageUrl = PREVIEW_HEADER_IMAGE_URL, screenshotUrls = previewManyScreenshotUrls)
+        MediaGalleryView(
+            headerImageUrl = PREVIEW_HEADER_IMAGE_URL,
+            movies = emptyList(),
+            screenshotUrls = previewManyScreenshotUrls,
+        )
     }
 }
 
@@ -224,7 +261,7 @@ private fun MediaGalleryViewManyPagesPreview() {
 @Composable
 private fun MediaGalleryViewEmptyPreview() {
     SteaLTheme(darkTheme = true) {
-        MediaGalleryView(headerImageUrl = null, screenshotUrls = emptyList())
+        MediaGalleryView(headerImageUrl = null, movies = emptyList(), screenshotUrls = emptyList())
     }
 }
 

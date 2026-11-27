@@ -244,6 +244,7 @@ private fun GameDetailContent(
                     item(key = "gallery") {
                         MediaGalleryView(
                             headerImageUrl = details.headerImage,
+                            movies = details.movies.orEmpty(),
                             screenshotUrls = screenshotUrls(details = details),
                             modifier = Modifier.animateItem(),
                         )
