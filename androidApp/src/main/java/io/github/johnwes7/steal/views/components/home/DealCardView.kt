@@ -38,11 +38,18 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  * 首页最上面的大卡：整张是横幅封面，折扣、品质标签、标题、商店压在渐变上，价格在绿色容器的胶囊里；整张卡可点。
  * The home page's large lead card: the whole card is the wide cover, with the discount, quality tag, title and shop
  * on its gradient and the prices in a green container pill; the whole card is clickable.
+ *
+ * 右上角的心形自己接点击（[onToggleWishlist]），点它不会进详情页；[isWishlistEnabled] 为 `false` 时变暗。
+ * The heart at the top right takes its own taps ([onToggleWishlist]) without opening the detail page; it is dimmed
+ * when [isWishlistEnabled] is `false`.
  */
 @Composable
 fun DealCardView(
     deal: ItadDeal,
+    isSaved: Boolean,
+    isWishlistEnabled: Boolean,
     onClick: () -> Unit,
+    onToggleWishlist: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val info = deal.deal
@@ -66,6 +73,11 @@ fun DealCardView(
                         .matchParentSize()
                         .background(coverScrim),
                 )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(coverTopScrim),
+                )
                 if (info.cut > 0) {
                     DiscountBadge(
                         cut = info.cut,
@@ -75,6 +87,17 @@ fun DealCardView(
                             .padding(14.dp),
                     )
                 }
+                // 按钮比图标大一圈，边距比折扣小，看得见的心形才和折扣对齐。
+                // The button is larger than its icon, so a smaller inset than the discount lines the visible heart up
+                // with it.
+                CoverWishlistButton(
+                    isSaved = isSaved,
+                    isEnabled = isWishlistEnabled,
+                    onToggle = onToggleWishlist,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp),
+                )
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -204,7 +227,29 @@ private fun qualityLabelRes(info: ItadDealInfo): Int? {
 private fun DealCardViewPreview() {
     SteaLTheme(darkTheme = true) {
         Box(modifier = Modifier.padding(16.dp)) {
-            DealCardView(deal = previewDeals[1], onClick = {})
+            DealCardView(
+                deal = previewDeals[1],
+                isSaved = false,
+                isWishlistEnabled = true,
+                onClick = {},
+                onToggleWishlist = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun DealCardViewSavedPreview() {
+    SteaLTheme(darkTheme = true) {
+        Box(modifier = Modifier.padding(16.dp)) {
+            DealCardView(
+                deal = previewDeals[1],
+                isSaved = true,
+                isWishlistEnabled = true,
+                onClick = {},
+                onToggleWishlist = {},
+            )
         }
     }
 }

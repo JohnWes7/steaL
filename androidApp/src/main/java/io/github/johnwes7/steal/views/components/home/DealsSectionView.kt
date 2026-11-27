@@ -44,9 +44,11 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  * The Hot deals section content: a loading placeholder, a failure, an empty list, or one large card plus a grid,
  * depending on [state].
  *
- * 失败和空列表的按钮都调 [onRetry]；点卡片调 [onSelect]，去哪里由页面决定。
+ * 失败和空列表的按钮都调 [onRetry]；点卡片调 [onSelect]，去哪里由页面决定。卡片上的心形按 [savedAppIDs] 显示实心或空心，
+ * 点了调 [onToggleWishlist]；还没有 Steam appID 的卡心形变暗。
  * The failure and empty-list buttons both call [onRetry]; tapping a card calls [onSelect] and the page decides
- * where it leads.
+ * where it leads. Each card's heart is filled or outlined from [savedAppIDs] and calls [onToggleWishlist] when
+ * tapped; cards without a Steam appID dim it.
  *
  * 只有状态的种类变了（如加载中 → 有数据）才淡入淡出；同一种状态的更新（补上 appID 后的新 [DealLoadState.Loaded]）就地刷新，
  * 卡片不重建。
@@ -56,7 +58,9 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
 @Composable
 fun DealsSectionView(
     state: DealLoadState,
+    savedAppIDs: Set<Int>,
     onSelect: (HomeDealItem) -> Unit,
+    onToggleWishlist: (HomeDealItem) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -81,7 +85,12 @@ fun DealsSectionView(
                         onAction = onRetry,
                     )
                 } else {
-                    DealsContent(items = targetState.items, onSelect = onSelect)
+                    DealsContent(
+                        items = targetState.items,
+                        savedAppIDs = savedAppIDs,
+                        onSelect = onSelect,
+                        onToggleWishlist = onToggleWishlist,
+                    )
                 }
             }
         }
@@ -99,7 +108,9 @@ private val MIN_GRID_CARD_WIDTH = 160.dp
 @Composable
 private fun DealsContent(
     items: List<HomeDealItem>,
+    savedAppIDs: Set<Int>,
     onSelect: (HomeDealItem) -> Unit,
+    onToggleWishlist: (HomeDealItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val firstItem = items.first()
@@ -109,15 +120,40 @@ private fun DealsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
     ) {
-        DealCardView(deal = firstItem.deal, onClick = { onSelect(firstItem) })
-        DealsGrid(items = otherItems, onSelect = onSelect)
+        DealCardView(
+            deal = firstItem.deal,
+            isSaved = isSaved(item = firstItem, savedAppIDs = savedAppIDs),
+            isWishlistEnabled = firstItem.steamAppID != null,
+            onClick = { onSelect(firstItem) },
+            onToggleWishlist = { onToggleWishlist(firstItem) },
+        )
+        DealsGrid(
+            items = otherItems,
+            savedAppIDs = savedAppIDs,
+            onSelect = onSelect,
+            onToggleWishlist = onToggleWishlist,
+        )
     }
+}
+
+/**
+ * 这张卡的游戏在不在愿望单里；还没有 Steam appID 的一定不在。
+ * Whether this card's game is on the wishlist; one without a Steam appID never is.
+ */
+private fun isSaved(item: HomeDealItem, savedAppIDs: Set<Int>): Boolean {
+    val appID = item.steamAppID
+    if (appID == null) {
+        return false
+    }
+    return appID in savedAppIDs
 }
 
 @Composable
 private fun DealsGrid(
     items: List<HomeDealItem>,
+    savedAppIDs: Set<Int>,
     onSelect: (HomeDealItem) -> Unit,
+    onToggleWishlist: (HomeDealItem) -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val columnCount = gridColumnCount(availableWidth = maxWidth)
@@ -132,7 +168,10 @@ private fun DealsGrid(
                         key(item.itadUUID) {
                             DealGridCardView(
                                 deal = item.deal,
+                                isSaved = isSaved(item = item, savedAppIDs = savedAppIDs),
+                                isWishlistEnabled = item.steamAppID != null,
                                 onClick = { onSelect(item) },
+                                onToggleWishlist = { onToggleWishlist(item) },
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -212,7 +251,9 @@ private fun DealsSectionViewLoadedPreview() {
     SteaLTheme(darkTheme = true) {
         DealsSectionView(
             state = DealLoadState.Loaded(items = previewDealItems),
+            savedAppIDs = emptySet(),
             onSelect = { _ -> },
+            onToggleWishlist = { _ -> },
             onRetry = {},
             modifier = Modifier.padding(16.dp),
         )
@@ -224,9 +265,27 @@ private fun DealsSectionViewLoadedPreview() {
 private fun DealsSectionViewOtherStatesPreview() {
     SteaLTheme(darkTheme = true) {
         Column(modifier = Modifier.padding(16.dp)) {
-            DealsSectionView(state = DealLoadState.Loading, onSelect = { _ -> }, onRetry = {})
-            DealsSectionView(state = DealLoadState.Failed(error = LoadError.Offline), onSelect = { _ -> }, onRetry = {})
-            DealsSectionView(state = DealLoadState.Loaded(items = emptyList()), onSelect = { _ -> }, onRetry = {})
+            DealsSectionView(
+                state = DealLoadState.Loading,
+                savedAppIDs = emptySet(),
+                onSelect = { _ -> },
+                onToggleWishlist = { _ -> },
+                onRetry = {},
+            )
+            DealsSectionView(
+                state = DealLoadState.Failed(error = LoadError.Offline),
+                savedAppIDs = emptySet(),
+                onSelect = { _ -> },
+                onToggleWishlist = { _ -> },
+                onRetry = {},
+            )
+            DealsSectionView(
+                state = DealLoadState.Loaded(items = emptyList()),
+                savedAppIDs = emptySet(),
+                onSelect = { _ -> },
+                onToggleWishlist = { _ -> },
+                onRetry = {},
+            )
         }
     }
 }

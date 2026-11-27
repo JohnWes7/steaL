@@ -3,8 +3,12 @@ package io.github.johnwes7.steal.views.components.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -15,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -22,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.johnwes7.steal.R
+import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -32,6 +38,16 @@ internal val coverScrim: Brush = Brush.verticalGradient(
     0.3f to Color.Transparent,
     0.6f to Color.Black.copy(alpha = 0.4f),
     1f to Color.Black.copy(alpha = 0.88f),
+)
+
+/**
+ * 封面顶部压暗：右上角没有底的白色心形在亮封面上也看得清，往下很快变透明。
+ * Darkens the top of a cover so the white heart at the top right, which has no container, stays visible on bright
+ * artwork, fading out quickly below.
+ */
+internal val coverTopScrim: Brush = Brush.verticalGradient(
+    0f to Color.Black.copy(alpha = 0.45f),
+    0.28f to Color.Transparent,
 )
 
 /**
@@ -89,6 +105,47 @@ internal fun DiscountBadge(
     }
 }
 
+/**
+ * 封面右上角的心形：已收藏是粉色实心，没收藏是白色空心；[isEnabled] 为 `false`（还没有 Steam appID）时变暗、点了没反应。
+ * The heart at a cover's top right: solid pink when saved, a white outline otherwise; dimmed and inert when
+ * [isEnabled] is `false` (no Steam appID yet).
+ *
+ * 变暗而不是隐藏：appID 一般几百毫秒就查到，隐藏的话心形会突然冒出来。
+ * Dimmed rather than hidden: the appID usually arrives within a few hundred milliseconds, and a hidden heart would
+ * pop in.
+ */
+@Composable
+internal fun CoverWishlistButton(
+    isSaved: Boolean,
+    isEnabled: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // 1. 图标和朗读文字
+    // 1. The icon and the spoken label
+    val iconRes = if (isSaved) R.drawable.favorite_fill1_24px else R.drawable.favorite_24px
+    val descriptionRes = if (isSaved) R.string.action_remove_from_wishlist else R.string.action_add_to_wishlist
+
+    // 2. 颜色：没有底，封面上一律用白色（不跟主题），已收藏用收藏粉；靠卡片画的 coverTopScrim 衬着
+    // 2. Colors: no container, white on covers regardless of theme, the favorite pink when saved; the card's
+    //    coverTopScrim sits behind it
+    val colors = IconButtonDefaults.iconToggleButtonColors(
+        contentColor = Color.White,
+        disabledContentColor = Color.White.copy(alpha = 0.4f),
+        checkedContentColor = ExtendedTheme.colors.favorite,
+    )
+
+    IconToggleButton(
+        checked = isSaved,
+        onCheckedChange = { _ -> onToggle() },
+        modifier = modifier,
+        enabled = isEnabled,
+        colors = colors,
+    ) {
+        Icon(painter = painterResource(iconRes), contentDescription = stringResource(descriptionRes))
+    }
+}
+
 @Preview
 @Composable
 private fun DealCardPartsPreview() {
@@ -105,6 +162,11 @@ private fun DealCardPartsPreview() {
                     .align(Alignment.TopStart)
                     .padding(10.dp),
             )
+            Row(modifier = Modifier.align(Alignment.TopEnd)) {
+                CoverWishlistButton(isSaved = false, isEnabled = false, onToggle = {})
+                CoverWishlistButton(isSaved = false, isEnabled = true, onToggle = {})
+                CoverWishlistButton(isSaved = true, isEnabled = true, onToggle = {})
+            }
             Column(modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)) {
                 CoverTitle(title = "No Man's Sky", style = MaterialTheme.typography.titleMedium)
             }

@@ -84,6 +84,7 @@ fun GamesView(
     val dealState by viewModel.dealState.collectAsStateWithLifecycle()
     val giveawaysState by viewModel.giveawaysState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val savedAppIDs by viewModel.savedAppIDs.collectAsStateWithLifecycle()
 
     // 2. 页面出现时让 ViewModel 开始加载：地区它自己从设置里读，加载过就不再请求
     // 2. Ask the view model to start loading when the page appears; it reads the region itself and won't refetch
@@ -109,6 +110,7 @@ fun GamesView(
         dealState = dealState,
         giveawaysState = giveawaysState,
         isRefreshing = isRefreshing,
+        savedAppIDs = savedAppIDs,
         snackbarHostState = snackbarHostState,
         onRefresh = { viewModel.refresh() },
         onOpenHotDeals = {},
@@ -122,6 +124,7 @@ fun GamesView(
                 onRetryAppIDs = { viewModel.retryAppIDs() },
             )
         },
+        onToggleWishlist = { item -> viewModel.toggleWishlist(item = item) },
         onOpenGiveaway = { giveaway -> openClaimPage(uriHandler = uriHandler, url = giveaway.url) },
         onRetryDeals = { viewModel.retryDeals() },
         onRetryGiveaways = { viewModel.retryGiveaways() },
@@ -230,10 +233,12 @@ private fun GamesContent(
     dealState: DealLoadState,
     giveawaysState: GiveawaysLoadState,
     isRefreshing: Boolean,
+    savedAppIDs: Set<Int>,
     snackbarHostState: SnackbarHostState,
     onRefresh: () -> Unit,
     onOpenHotDeals: () -> Unit,
     onSelectDeal: (HomeDealItem) -> Unit,
+    onToggleWishlist: (HomeDealItem) -> Unit,
     onOpenGiveaway: (ItadGiveaway) -> Unit,
     onRetryDeals: () -> Unit,
     onRetryGiveaways: () -> Unit,
@@ -281,7 +286,13 @@ private fun GamesContent(
                     HotDealsHeader(onClick = onOpenHotDeals)
                 }
                 item(key = "deals") {
-                    DealsSectionView(state = dealState, onSelect = onSelectDeal, onRetry = onRetryDeals)
+                    DealsSectionView(
+                        state = dealState,
+                        savedAppIDs = savedAppIDs,
+                        onSelect = onSelectDeal,
+                        onToggleWishlist = onToggleWishlist,
+                        onRetry = onRetryDeals,
+                    )
                 }
                 item(key = "giveawaysHeader") {
                     GiveawaysHeader()
@@ -404,10 +415,12 @@ private fun GamesContentPreview() {
             dealState = DealLoadState.Loaded(items = previewDealItems),
             giveawaysState = GiveawaysLoadState.Loaded(giveaways = previewGiveaways),
             isRefreshing = false,
+            savedAppIDs = emptySet(),
             snackbarHostState = remember { SnackbarHostState() },
             onRefresh = {},
             onOpenHotDeals = {},
             onSelectDeal = { _ -> },
+            onToggleWishlist = { _ -> },
             onOpenGiveaway = { _ -> },
             onRetryDeals = {},
             onRetryGiveaways = {},

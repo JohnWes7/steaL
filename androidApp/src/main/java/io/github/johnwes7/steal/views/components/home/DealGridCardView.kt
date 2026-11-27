@@ -34,11 +34,17 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  * 宽度由父布局给（网格里平分），高度是宽度的 1.5 倍，同一行的卡一样高。
  * The parent sets the width (an equal share of the grid row) and the height is 1.5 times that, so cards in a row
  * match.
+ *
+ * 右上角的心形同 [DealCardView]。
+ * The heart at the top right works as in [DealCardView].
  */
 @Composable
 fun DealGridCardView(
     deal: ItadDeal,
+    isSaved: Boolean,
+    isWishlistEnabled: Boolean,
     onClick: () -> Unit,
+    onToggleWishlist: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val info = deal.deal
@@ -62,6 +68,11 @@ fun DealGridCardView(
                     .matchParentSize()
                     .background(coverScrim),
             )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(coverTopScrim),
+            )
             if (info.cut > 0) {
                 DiscountBadge(
                     cut = info.cut,
@@ -71,6 +82,14 @@ fun DealGridCardView(
                         .padding(10.dp),
                 )
             }
+            CoverWishlistButton(
+                isSaved = isSaved,
+                isEnabled = isWishlistEnabled,
+                onToggle = onToggleWishlist,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(2.dp),
+            )
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -123,7 +142,14 @@ private fun PriceBar(deal: ItadDeal) {
 private fun DealGridCardViewPreview() {
     SteaLTheme(darkTheme = true) {
         Box(modifier = Modifier.padding(16.dp)) {
-            DealGridCardView(deal = previewDeals[3], onClick = {}, modifier = Modifier.width(180.dp))
+            DealGridCardView(
+                deal = previewDeals[3],
+                isSaved = false,
+                isWishlistEnabled = true,
+                onClick = {},
+                onToggleWishlist = {},
+                modifier = Modifier.width(180.dp),
+            )
         }
     }
 }

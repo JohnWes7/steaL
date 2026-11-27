@@ -42,7 +42,7 @@
     <!-- Search 页 / Search page -->
     <string name="search_placeholder">Search Steam games</string>
     <string name="wishlist_empty_title">No games yet</string>
-    <string name="wishlist_empty_message">Tap the heart on a game\'s page to save it here.</string>
+    <string name="wishlist_empty_message">Tap the heart on any game to save it here.</string>
     <string name="search_idle_title">Search the Steam store</string>
     <string name="search_idle_message">Find games, DLC and soundtracks by name.</string>
     <!-- %1$s 是真正搜过的那个词 / %1$s is the query that was actually searched -->
