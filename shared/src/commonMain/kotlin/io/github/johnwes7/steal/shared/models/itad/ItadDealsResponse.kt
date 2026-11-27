@@ -142,6 +142,21 @@ data class ItadAssets(
             val candidates = listOfNotNull(boxart, banner600, banner400, banner300, banner145)
             return candidates.firstOrNull()
         }
+
+    /**
+     * 和 Steam header 同为 460:215 的图，收藏时存它；`banner400` 优先，都没有时依次退到别的横幅和竖版封面；一张都没有是 `null`。
+     * The image sharing Steam's 460:215 header ratio, saved with a wishlisted game: `banner400` first, then the other
+     * banners and the box art in turn; `null` when there is none.
+     *
+     * 愿望单的行混着显示它和详情页存的 Steam header，比例一样才能完整显示，所以不用 [wideArtworkUrl] 那样最大的优先。
+     * Wishlist rows mix it with the Steam headers the detail page saves and only show whole when the ratios match, so
+     * it doesn't put the largest first the way [wideArtworkUrl] does.
+     */
+    val headerRatioArtworkUrl: String?
+        get() {
+            val candidates = listOfNotNull(banner400, banner300, banner600, banner145, boxart)
+            return candidates.firstOrNull()
+        }
 }
 
 // 优惠详情 / Deal detail

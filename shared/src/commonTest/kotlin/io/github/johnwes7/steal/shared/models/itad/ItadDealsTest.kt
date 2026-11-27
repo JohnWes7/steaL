@@ -97,6 +97,31 @@ class ItadDealsTest {
         val sparse = appNetworkJson.decodeFromString<ItadDealsResponse>(SPARSE_RESPONSE)
         assertNull(sparse.list[0].assets.wideArtworkUrl)
         assertNull(sparse.list[0].assets.portraitArtworkUrl)
+        assertNull(sparse.list[0].assets.headerRatioArtworkUrl)
+    }
+
+    /**
+     * 收藏用的图：`banner400` 优先（和 Steam header 同比例），缺了先退到 `banner300`，再退到 `banner600`。
+     * The image saved with a wishlisted game: `banner400` first (Steam's header ratio), then `banner300`, then
+     * `banner600`.
+     */
+    @Test
+    fun headerRatioArtworkPrefersBanner400() {
+        val response = appNetworkJson.decodeFromString<ItadDealsResponse>(REAL_RESPONSE)
+        val assets = response.list[0].assets
+        assertEquals(assets.banner400, assets.headerRatioArtworkUrl)
+
+        val withoutBanner400 = assets.copy(banner400 = null)
+        assertEquals(assets.banner300, withoutBanner400.headerRatioArtworkUrl)
+
+        val onlyBanner600 = ItadAssets(
+            boxart = assets.boxart,
+            banner145 = assets.banner145,
+            banner300 = null,
+            banner400 = null,
+            banner600 = assets.banner600,
+        )
+        assertEquals(assets.banner600, onlyBanner600.headerRatioArtworkUrl)
     }
 
     /**

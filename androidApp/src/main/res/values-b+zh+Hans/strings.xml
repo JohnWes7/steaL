@@ -54,8 +54,6 @@
     <string name="game_detail_coming_soon">即将推出 · %1$s</string>
     <string name="game_detail_section_about">游戏详情</string>
     <string name="game_detail_play_trailer">播放预告片</string>
-    <string name="game_detail_add_to_wishlist">加入愿望单</string>
-    <string name="game_detail_remove_from_wishlist">移出愿望单</string>
     <string name="game_detail_more">更多</string>
     <string name="game_detail_show_less">收起</string>
     <string name="game_detail_developer">开发商</string>
@@ -100,6 +98,8 @@
     <string name="action_close">关闭</string>
     <string name="action_refresh">刷新</string>
     <string name="action_retry">重试</string>
+    <string name="action_add_to_wishlist">加入愿望单</string>
+    <string name="action_remove_from_wishlist">移出愿望单</string>
 
     <!-- 设置 / Settings -->
     <string name="settings_theme_and_color">主题与色彩</string>

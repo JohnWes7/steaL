@@ -387,7 +387,7 @@ private fun wishlistButtonState(steamDetailState: DetailLoadState, isSaved: Bool
 @Composable
 private fun WishlistButton(isSaved: Boolean, onToggle: () -> Unit) {
     val iconRes = if (isSaved) R.drawable.favorite_fill1_24px else R.drawable.favorite_24px
-    val descriptionRes = if (isSaved) R.string.game_detail_remove_from_wishlist else R.string.game_detail_add_to_wishlist
+    val descriptionRes = if (isSaved) R.string.action_remove_from_wishlist else R.string.action_add_to_wishlist
     val colors = IconButtonDefaults.iconToggleButtonColors(checkedContentColor = ExtendedTheme.colors.favorite)
     IconToggleButton(
         checked = isSaved,
