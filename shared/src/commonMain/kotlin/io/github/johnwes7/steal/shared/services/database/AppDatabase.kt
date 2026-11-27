@@ -1,4 +1,4 @@
-package io.github.johnwes7.steal.shared.services
+package io.github.johnwes7.steal.shared.services.database
 
 import androidx.room3.ConstructedBy
 import androidx.room3.Database

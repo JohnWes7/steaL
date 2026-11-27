@@ -1,6 +1,7 @@
 package io.github.johnwes7.steal.shared.services
 
 import io.github.johnwes7.steal.shared.models.app.WishlistItem
+import io.github.johnwes7.steal.shared.services.database.WishlistDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.time.Clock
