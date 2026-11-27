@@ -199,6 +199,106 @@ class SteamApiTest {
         assertEquals(LoadError.Server(429), LoadError.from(error))
     }
 
+    // MARK: - 搜索 / Search
+
+    /**
+     * 搜索请求发到 `GET /api/storesearch`，`term` 去掉首尾空白，带地区代码（Europe 是 `DE`）和 `l=`。
+     * The search request goes to `GET /api/storesearch` with `term` trimmed, the region code (`DE` for Europe)
+     * and `l=`.
+     */
+    @Test
+    fun fetchSearchResultsSendsExpectedQuery() = runTest {
+        var captured: HttpRequestData? = null
+        val api = makeApi { request ->
+            captured = request
+            respond(content = SEARCH_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        api.fetchSearchResults(query = "  elden ring ", region = AppRegion.Europe, steamLanguage = "schinese")
+
+        val request = captured!!
+        assertEquals(HttpMethod.Get, request.method)
+        assertEquals("store.steampowered.com", request.url.host)
+        assertEquals("/api/storesearch", request.url.encodedPath)
+        assertEquals("elden ring", request.url.parameters["term"])
+        assertEquals("DE", request.url.parameters["cc"])
+        assertEquals("schinese", request.url.parameters["l"])
+    }
+
+    /**
+     * 响应解成 `SteamSearchResponse`。
+     * The response decodes into `SteamSearchResponse`.
+     */
+    @Test
+    fun fetchSearchResultsReturnsItems() = runTest {
+        val api = makeApi {
+            respond(content = SEARCH_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val response = api.fetchSearchResults(query = "elden ring", region = AppRegion.Australia, steamLanguage = "english")
+
+        assertEquals(1, response.items.size)
+        assertEquals(ELDEN_RING, response.items[0].id)
+        assertEquals("ELDEN RING", response.items[0].name)
+        assertEquals(8995, response.items[0].price?.final)
+    }
+
+    /**
+     * 空白的搜索词不发请求，直接返回空结果（空的 `term` 会让 Steam 返回热门游戏）。
+     * A blank query sends no request and returns an empty result (an empty `term` makes Steam return popular
+     * games).
+     */
+    @Test
+    fun fetchSearchResultsSkipsBlankQuery() = runTest {
+        var requestCount = 0
+        val api = makeApi {
+            requestCount += 1
+            respond(content = SEARCH_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        val response = api.fetchSearchResults(query = "   ", region = AppRegion.Australia, steamLanguage = "english")
+
+        assertEquals(0, requestCount)
+        assertTrue(response.items.isEmpty())
+    }
+
+    /**
+     * 响应不带缓存头，搜同一个词两次会发两次请求，不读 HTTP 缓存。
+     * The response has no cache headers, so searching the same term twice sends two requests instead of reading
+     * the HTTP cache.
+     */
+    @Test
+    fun fetchSearchResultsIsNotCached() = runTest {
+        var requestCount = 0
+        val api = makeApi {
+            requestCount += 1
+            respond(content = SEARCH_BODY, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        api.fetchSearchResults(query = "elden ring", region = AppRegion.Australia, steamLanguage = "english")
+        api.fetchSearchResults(query = "elden ring", region = AppRegion.Australia, steamLanguage = "english")
+
+        assertEquals(2, requestCount)
+    }
+
+    /**
+     * 搜索请求非 2xx 也抛 [SteamApiException]，归成 `LoadError.Server`。
+     * A non-2xx search request also throws [SteamApiException], normalised to `LoadError.Server`.
+     */
+    @Test
+    fun fetchSearchResultsThrowsOnNonSuccess() = runTest {
+        val api = makeApi {
+            respond(content = "Bad Gateway", status = HttpStatusCode.BadGateway)
+        }
+
+        val error = assertFailsWith<SteamApiException> {
+            api.fetchSearchResults(query = "elden ring", region = AppRegion.Australia, steamLanguage = "english")
+        }
+
+        assertEquals(502, error.statusCode)
+        assertEquals(LoadError.Server(502), LoadError.from(error))
+    }
+
     private companion object {
 
         /** ELDEN RING 的 Steam appID / ELDEN RING's Steam appID. */
@@ -217,6 +317,13 @@ class SteamApiTest {
          */
         const val AVAILABILITY_BODY =
             """{"601100":{"success":false},"743980":{"success":false},"582010":{"success":true,"data":{"price_overview":{"currency":"AUD","initial":4494,"final":4494,"discount_percent":0,"initial_formatted":"","final_formatted":"A$ 44.94"}}}}"""
+
+        /**
+         * 只留一条的搜索结果（完整的真实样例在 `SteamSearchResponseTest`）。
+         * A search result trimmed to one item (the full real sample is in `SteamSearchResponseTest`).
+         */
+        const val SEARCH_BODY =
+            """{"total":1,"items":[{"type":"app","name":"ELDEN RING","id":1245620,"price":{"currency":"AUD","initial":8995,"final":8995},"tiny_image":"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/capsule_231x87.jpg"}]}"""
 
         /** JSON 响应头 / The JSON response header. */
         val JSON_HEADERS = headersOf(HttpHeaders.ContentType, "application/json")

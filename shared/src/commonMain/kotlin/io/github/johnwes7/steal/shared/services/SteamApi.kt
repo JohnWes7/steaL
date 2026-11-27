@@ -6,6 +6,7 @@ import io.github.johnwes7.steal.shared.models.steam.SteamAppAvailabilityResponse
 import io.github.johnwes7.steal.shared.models.steam.SteamAppDetails
 import io.github.johnwes7.steal.shared.models.steam.SteamAppDetailsEntry
 import io.github.johnwes7.steal.shared.models.steam.SteamAppDetailsResponse
+import io.github.johnwes7.steal.shared.models.steam.SteamSearchResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -82,6 +83,36 @@ class SteamApi(
         val appDetailsResponse = SteamAppDetailsResponse(entries = entries)
         val details = appDetailsResponse.details(appID)
         return details
+    }
+
+    /**
+     * 按名字搜 Steam 商店（`GET /api/storesearch`），返回列表用的轻量结果，最多 10 条。
+     * Searches the Steam store by name (`GET /api/storesearch`), returning light list results, at most 10.
+     *
+     * [query] 去掉首尾空白后为空时直接返回空结果、不发请求：空的 `term` 会返回 Steam 推荐的热门游戏，不是空列表。
+     * [region] 决定价格的货币；[steamLanguage] 是 `l=` 的语言代码（如 `schinese`），决定名字的语言。
+     * 响应不带缓存头，每次都会发请求。非 2xx 抛 [SteamApiException]；断网、超时、解码失败抛 Ktor 自己的异常。
+     * A [query] that is empty after trimming returns an empty result without a request: an empty `term` returns
+     * Steam's popular games, not an empty list. [region] decides the price currency; [steamLanguage] is the `l=`
+     * language code (such as `schinese`) for the names. The response has no cache headers, so every call sends a
+     * request. A non-2xx status throws [SteamApiException]; lost connections, timeouts and decoding failures throw
+     * Ktor's own exceptions.
+     */
+    suspend fun fetchSearchResults(query: String, region: AppRegion, steamLanguage: String): SteamSearchResponse {
+        val trimmedQuery = query.trim()
+        if (trimmedQuery.isEmpty()) {
+            return SteamSearchResponse.Empty
+        }
+
+        val response = client.get("$BASE_URL/api/storesearch") {
+            parameter("term", trimmedQuery)
+            parameter("cc", region.apiRegionCode)
+            parameter("l", steamLanguage)
+        }
+        ensureSuccess(response)
+
+        val searchResponse: SteamSearchResponse = response.body()
+        return searchResponse
     }
 
     /**
