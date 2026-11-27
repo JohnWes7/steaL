@@ -1,13 +1,16 @@
 package io.github.johnwes7.steal.shared.viewmodels
 
 import io.github.johnwes7.steal.shared.models.app.LoadError
+import io.github.johnwes7.steal.shared.models.app.WishlistItem
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.models.settings.AppTheme
 import io.github.johnwes7.steal.shared.models.steam.SteamAppDetails
 import io.github.johnwes7.steal.shared.services.InMemoryPreferencesDataStore
+import io.github.johnwes7.steal.shared.services.InMemoryWishlistDao
 import io.github.johnwes7.steal.shared.services.ItadApi
 import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamApi
+import io.github.johnwes7.steal.shared.services.WishlistRepository
 import io.github.johnwes7.steal.shared.services.appNetworkJson
 import io.github.johnwes7.steal.shared.services.installAppPlugins
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel.DetailLoadState
@@ -39,6 +42,8 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -405,6 +410,133 @@ class GameDetailViewModelTest {
         servers.cancelledPricesCountries.first { countries -> countries.contains("AU") }
     }
 
+    // MARK: - 愿望单 / Wishlist
+
+    /**
+     * 点心形加入、再点移出；加入的一行用 Steam 详情和记下的 UUID 填，比价里没有报价时没有已知低价。
+     * Tapping the heart adds the game and tapping again removes it; the row is filled from the Steam details and the
+     * remembered UUID, with no known low when the prices have no offers.
+     */
+    @Test
+    fun toggleAddsThenRemoves() = runTest {
+        val servers = FakeServers()
+        val wishlistDao = InMemoryWishlistDao()
+        val viewModel = servers.makeViewModel(uuid = GAME_UUID, wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded(steamLanguage = "english")
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
+        viewModel.isSaved.first { saved -> saved == false }
+
+        viewModel.toggleWishlist()
+
+        viewModel.isSaved.first { saved -> saved == true }
+        val item = wishlistDao.rows.value.single()
+        assertEquals(APP_ID, item.appID)
+        assertEquals("Game AU english", item.name)
+        assertEquals(HEADER_IMAGE, item.headerImageURL)
+        assertEquals(GAME_UUID, item.itadID)
+        assertEquals(false, item.isComingSoon)
+        assertNotNull(item.releaseCheckedAt)
+        assertNull(item.knownLow)
+
+        viewModel.toggleWishlist()
+
+        viewModel.isSaved.first { saved -> saved == false }
+        assertTrue(wishlistDao.rows.value.isEmpty())
+    }
+
+    /**
+     * Steam 能激活的最低价在打折：记成已知低价（地区是当前地区）；更便宜但不能在 Steam 激活的不算。
+     * The best Steam-activated deal is on sale: it becomes the known low for the current region; a cheaper offer
+     * that doesn't activate on Steam doesn't count.
+     */
+    @Test
+    fun steamSaleBecomesKnownLow() = runTest {
+        val servers = FakeServers()
+        servers.pricesDeals = STEAM_SALE_DEALS
+        val wishlistDao = InMemoryWishlistDao()
+        val viewModel = servers.makeViewModel(uuid = GAME_UUID, wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded(steamLanguage = "english")
+        viewModel.itadPricesState.first { state -> state is PricesLoadState.Loaded }
+
+        viewModel.toggleWishlist()
+
+        viewModel.isSaved.first { saved -> saved == true }
+        val item = wishlistDao.rows.value.single()
+        assertEquals(WishlistItem.KnownPrice(amount = 499, region = AppRegion.Australia), item.knownLow)
+    }
+
+    /**
+     * Steam 详情还没到时点心形：什么也不写。
+     * Tapping the heart before the Steam details arrive writes nothing.
+     */
+    @Test
+    fun toggleBeforeDetailsDoesNothing() = runTest {
+        val servers = FakeServers()
+        val steamGate = CompletableDeferred<Unit>()
+        servers.steamGate = steamGate
+        val wishlistDao = InMemoryWishlistDao()
+        val viewModel = servers.makeViewModel(uuid = GAME_UUID, wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded(steamLanguage = "english")
+        servers.steamRequests.first { requests -> requests.isNotEmpty() }
+
+        viewModel.toggleWishlist()
+        advanceUntilIdle()
+
+        assertEquals(0, wishlistDao.writeCount.value)
+        steamGate.complete(Unit)
+    }
+
+    /**
+     * 上一次还没写完时再点：第二下不算，最后还是加入了，只写了一次。
+     * A second tap while the first write is still in progress is ignored: the game ends up added, with one write.
+     */
+    @Test
+    fun tapWhileWritingIsIgnored() = runTest {
+        val servers = FakeServers()
+        val wishlistDao = InMemoryWishlistDao()
+        val writeGate = CompletableDeferred<Unit>()
+        wishlistDao.writeGate = writeGate
+        val viewModel = servers.makeViewModel(uuid = GAME_UUID, wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded(steamLanguage = "english")
+        viewModel.steamDetailState.first { state -> state is DetailLoadState.Loaded }
+
+        viewModel.toggleWishlist()
+        wishlistDao.writeCount.first { count -> count == 1 }
+        viewModel.toggleWishlist()
+        writeGate.complete(Unit)
+
+        viewModel.isSaved.first { saved -> saved == true }
+        advanceUntilIdle()
+        assertEquals(1, wishlistDao.writeCount.value)
+        assertEquals(1, wishlistDao.rows.value.size)
+    }
+
+    /**
+     * 写入失败：不崩、心形不变；之后再点还能正常加入。
+     * A failed write doesn't crash and leaves the heart as it was; a later tap still adds the game.
+     */
+    @Test
+    fun failedWriteLeavesHeartUnchanged() = runTest {
+        val servers = FakeServers()
+        val wishlistDao = InMemoryWishlistDao()
+        wishlistDao.failsWrites = true
+        val viewModel = servers.makeViewModel(uuid = GAME_UUID, wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded(steamLanguage = "english")
+        viewModel.steamDetailState.first { state -> state is DetailLoadState.Loaded }
+
+        viewModel.toggleWishlist()
+        wishlistDao.writeCount.first { count -> count == 1 }
+        advanceUntilIdle()
+
+        val savedAfterFailure = viewModel.isSaved.first { saved -> saved != null }
+        assertEquals(false, savedAfterFailure)
+
+        wishlistDao.failsWrites = false
+        viewModel.toggleWishlist()
+
+        viewModel.isSaved.first { saved -> saved == true }
+    }
+
     // MARK: - 标题 / Title
 
     /**
@@ -458,6 +590,9 @@ class GameDetailViewModelTest {
         /** 比价接口的状态码 / The prices endpoint's status code. */
         var pricesStatus: HttpStatusCode = HttpStatusCode.OK
 
+        /** 比价里的报价（JSON 数组）/ The offers in the prices (a JSON array). */
+        var pricesDeals: String = "[]"
+
         /** 按地区代码卡住比价请求的闸门 / Gates holding prices requests, by region code. */
         val pricesGates = mutableMapOf<String, CompletableDeferred<Unit>>()
 
@@ -484,6 +619,7 @@ class GameDetailViewModelTest {
         fun makeViewModel(
             uuid: String?,
             settingsRepository: SettingsRepository = SettingsRepository(dataStore = InMemoryPreferencesDataStore()),
+            wishlistDao: InMemoryWishlistDao = InMemoryWishlistDao(),
         ): GameDetailViewModel {
             val engine = MockEngine { request -> answer(request) }
             val client = HttpClient(engine) {
@@ -496,6 +632,7 @@ class GameDetailViewModelTest {
                 steamApi = SteamApi(client = client),
                 itadApi = ItadApi(client = client, apiKey = "test-key"),
                 settingsRepository = settingsRepository,
+                wishlistRepository = WishlistRepository(wishlistDao = wishlistDao),
             )
         }
 
@@ -568,7 +705,7 @@ class GameDetailViewModelTest {
             }
             val currency = if (country == "AU") "AUD" else "USD"
             val price = """{"amount":9.99,"amountInt":999,"currency":"$currency"}"""
-            val body = """[{"id":"$GAME_UUID","historyLow":{"all":$price,"y1":null,"m3":null},"deals":[]}]"""
+            val body = """[{"id":"$GAME_UUID","historyLow":{"all":$price,"y1":null,"m3":null},"deals":$pricesDeals}]"""
             return respond(content = body, status = pricesStatus, headers = JSON_HEADERS)
         }
     }
@@ -584,9 +721,12 @@ class GameDetailViewModelTest {
         /** 导航传进来的标题 / The title passed in by navigation. */
         const val TITLE = "Route Title"
 
+        /** 付费游戏的封面 / The paid game's header image. */
+        const val HEADER_IMAGE = "https://example.com/header.jpg"
+
         /** 付费游戏 / A paid game. */
         const val PAID_DATA =
-            """"type":"game","is_free":false,"release_date":{"coming_soon":false,"date":"1 Jan, 2020"},"price_overview":{"currency":"AUD","initial":1000,"final":1000,"discount_percent":0}"""
+            """"type":"game","is_free":false,"header_image":"$HEADER_IMAGE","release_date":{"coming_soon":false,"date":"1 Jan, 2020"},"price_overview":{"currency":"AUD","initial":1000,"final":1000,"discount_percent":0}"""
 
         /** 试玩版 / A demo. */
         const val DEMO_DATA = """"type":"demo","is_free":true,"fullgame":{"appid":"200","name":"Full Game"}"""
@@ -596,6 +736,21 @@ class GameDetailViewModelTest {
 
         /** 永久免费 / Free forever. */
         const val FREE_FOREVER_DATA = """"type":"game","is_free":true,"release_date":{"coming_soon":false,"date":"1 Jan, 2020"}"""
+
+        /**
+         * 两条报价：Steam 半价 4.99，GOG 激活的 2.99 更便宜但不能在 Steam 激活。
+         * Two offers: Steam at half price, 4.99, and a cheaper 2.99 that activates on GOG, not Steam.
+         */
+        const val STEAM_SALE_DEALS = """[
+            {"shop":{"id":61,"name":"Steam"},"price":{"amount":4.99,"amountInt":499,"currency":"AUD"},
+             "regular":{"amount":9.99,"amountInt":999,"currency":"AUD"},"cut":50,"voucher":null,"storeLow":null,
+             "flag":null,"drm":[],"platforms":[],"timestamp":"2026-11-27T00:00:00+00:00","expiry":null,
+             "url":"https://example.com/steam"},
+            {"shop":{"id":35,"name":"GOG"},"price":{"amount":2.99,"amountInt":299,"currency":"AUD"},
+             "regular":{"amount":9.99,"amountInt":999,"currency":"AUD"},"cut":70,"voucher":null,"storeLow":null,
+             "flag":null,"drm":[{"id":1000,"name":"GOG"}],"platforms":[],"timestamp":"2026-11-27T00:00:00+00:00",
+             "expiry":null,"url":"https://example.com/gog"}
+        ]"""
 
         /** 只有必填字段的游戏信息 / Game info with only the required fields. */
         const val INFO_BODY = """{"id":"game-uuid","slug":"game","title":"Game","type":"game","mature":false}"""

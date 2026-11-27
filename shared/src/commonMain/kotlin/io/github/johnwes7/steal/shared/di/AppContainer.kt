@@ -138,6 +138,7 @@ class AppContainer(
                     steamApi = steamApi,
                     itadApi = itadApi,
                     settingsRepository = settingsRepository,
+                    wishlistRepository = wishlistRepository,
                 )
             }
         }
