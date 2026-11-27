@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -62,6 +64,7 @@ import io.github.johnwes7.steal.views.components.shared.LoadErrorView
 import io.github.johnwes7.steal.views.components.shared.PageBackButton
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.components.shared.PageTopBarStyle
+import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -107,6 +110,7 @@ fun GameDetailView(
     val steamDetailState by viewModel.steamDetailState.collectAsStateWithLifecycle()
     val itadPricesState by viewModel.itadPricesState.collectAsStateWithLifecycle()
     val itadInfoState by viewModel.itadInfoState.collectAsStateWithLifecycle()
+    val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
 
     // 2. 交进界面实际显示的那份翻译里的 Steam 语言代码：界面语言变了会再交一次，ViewModel 据此重新加载
     // 2. Hand in the Steam language code from the translation the UI actually shows: a UI language change hands it
@@ -125,7 +129,9 @@ fun GameDetailView(
         steamDetailState = steamDetailState,
         pricesState = itadPricesState,
         infoState = itadInfoState,
+        isSaved = isSaved,
         onBack = onBack,
+        onToggleWishlist = { viewModel.toggleWishlist() },
         onRetry = { viewModel.retry() },
         onRetryPrices = { viewModel.retryPrices() },
         onRetryInfo = { viewModel.retryInfo() },
@@ -155,9 +161,10 @@ private fun openExternalPage(uriHandler: UriHandler, url: String) {
  * 页面内容：只接状态和回调，预览直接用它。
  * The screen content, taking only state and callbacks, so previews can use it directly.
  *
- * 简介展开、报价筛选和展开这三个界面状态放在这里：区块切到加载中再回来（重试）也不会丢。
+ * 简介展开、报价筛选和展开这三个界面状态放在这里：区块切到加载中再回来（重试）也不会丢。[isSaved] 是 `null` 时
+ * （还没读到愿望单）不显示心形。
  * The description's expansion and the offer filter and expansion live here, so they survive a section going back
- * to loading and returning (a retry).
+ * to loading and returning (a retry). No heart shows while [isSaved] is `null` (the wishlist hasn't been read yet).
  */
 @Composable
 private fun GameDetailContent(
@@ -166,7 +173,9 @@ private fun GameDetailContent(
     steamDetailState: DetailLoadState,
     pricesState: PricesLoadState,
     infoState: InfoLoadState,
+    isSaved: Boolean?,
     onBack: () -> Unit,
+    onToggleWishlist: () -> Unit,
     onRetry: () -> Unit,
     onRetryPrices: () -> Unit,
     onRetryInfo: () -> Unit,
@@ -191,11 +200,20 @@ private fun GameDetailContent(
     // 3. The top bar changes color once the list scrolls, so the scaffold gets the list's scroll state
     val listState = rememberLazyListState()
 
+    // 4. 心形只在 Steam 详情到了以后出现，加载中、没找到、失败时没有
+    // 4. The heart appears only once the Steam details are in, never while loading, not found or failed
+    val wishlistButtonState = wishlistButtonState(steamDetailState = steamDetailState, isSaved = isSaved)
+
     PageScaffold(
         header = { Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         scrollState = listState,
         modifier = modifier,
         navigationIcon = { PageBackButton(onClick = onBack) },
+        actions = {
+            if (wishlistButtonState != null) {
+                WishlistButton(isSaved = wishlistButtonState, onToggle = onToggleWishlist)
+            }
+        },
         topBarStyle = PageTopBarStyle.Small,
     ) { contentPadding ->
         // 骨架给的留白加在列表里面，内容才会滚到两条栏后面；再加上列表自己的上下边距。左右边距由需要的区块自己加，画廊才能
@@ -333,6 +351,51 @@ private fun screenshotUrls(details: SteamAppDetails): List<String> {
 @Composable
 private fun GameDetailLoading() {
     LoadingIndicator()
+}
+
+// MARK: - 心形 / Heart
+
+/**
+ * 心形要不要显示、显示成什么：返回已收藏与否，不显示时是 `null`。
+ * Whether the heart shows and how: returns whether the game is saved, or `null` when the heart is hidden.
+ *
+ * Steam 详情没到、或还没读到愿望单时不显示；试玩版、永久免费不能收藏，但已收藏的总是显示，免得在这里取消不了。
+ * Hidden until the Steam details are in and the wishlist has been read; demos and free-forever titles can't be
+ * saved, but a saved game always shows the heart so it can still be removed here.
+ */
+private fun wishlistButtonState(steamDetailState: DetailLoadState, isSaved: Boolean?): Boolean? {
+    if (steamDetailState !is DetailLoadState.Loaded) {
+        return null
+    }
+    if (isSaved == null) {
+        return null
+    }
+    if (isSaved) {
+        return true
+    }
+    val canWishlist = steamDetailState.details.gameKind.canWishlist
+    if (!canWishlist) {
+        return null
+    }
+    return false
+}
+
+/**
+ * 顶栏右边的心形：已收藏是粉色实心，没收藏是空心。
+ * The heart at the end of the top bar: solid pink when saved, outlined otherwise.
+ */
+@Composable
+private fun WishlistButton(isSaved: Boolean, onToggle: () -> Unit) {
+    val iconRes = if (isSaved) R.drawable.favorite_fill1_24px else R.drawable.favorite_24px
+    val descriptionRes = if (isSaved) R.string.game_detail_remove_from_wishlist else R.string.game_detail_add_to_wishlist
+    val colors = IconButtonDefaults.iconToggleButtonColors(checkedContentColor = ExtendedTheme.colors.favorite)
+    IconToggleButton(
+        checked = isSaved,
+        onCheckedChange = { _ -> onToggle() },
+        colors = colors,
+    ) {
+        Icon(painter = painterResource(iconRes), contentDescription = stringResource(descriptionRes))
+    }
 }
 
 // MARK: - 类型标签、发售日 / Genres and release date
@@ -483,7 +546,9 @@ private fun GameDetailContentLoadedPreview() {
             steamDetailState = DetailLoadState.Loaded(details = previewAppDetails),
             pricesState = PricesLoadState.Loaded(prices = previewPriceGame),
             infoState = InfoLoadState.Loaded(info = previewGameInfo),
+            isSaved = true,
             onBack = {},
+            onToggleWishlist = {},
             onRetry = {},
             onRetryPrices = {},
             onRetryInfo = {},
@@ -504,7 +569,9 @@ private fun GameDetailContentLoadingPreview() {
             steamDetailState = DetailLoadState.Loading,
             pricesState = PricesLoadState.Hidden,
             infoState = InfoLoadState.Hidden,
+            isSaved = false,
             onBack = {},
+            onToggleWishlist = {},
             onRetry = {},
             onRetryPrices = {},
             onRetryInfo = {},
@@ -525,7 +592,9 @@ private fun GameDetailContentNotFoundPreview() {
             steamDetailState = DetailLoadState.NotFound,
             pricesState = PricesLoadState.Hidden,
             infoState = InfoLoadState.Hidden,
+            isSaved = false,
             onBack = {},
+            onToggleWishlist = {},
             onRetry = {},
             onRetryPrices = {},
             onRetryInfo = {},
@@ -546,7 +615,9 @@ private fun GameDetailContentFailedPreview() {
             steamDetailState = DetailLoadState.Failed(error = LoadError.Offline),
             pricesState = PricesLoadState.Hidden,
             infoState = InfoLoadState.Hidden,
+            isSaved = false,
             onBack = {},
+            onToggleWishlist = {},
             onRetry = {},
             onRetryPrices = {},
             onRetryInfo = {},

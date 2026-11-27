@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
@@ -97,9 +98,9 @@ enum class PageTopBarStyle {
 }
 
 /**
- * 页面的骨架：毛玻璃顶栏叠在内容上，[header] 放在顶栏的标题位，[navigationIcon] 放在标题左边。
- * The skeleton of a page: a frosted top bar over the content, with [header] in the bar's title slot and
- * [navigationIcon] before it.
+ * 页面的骨架：毛玻璃顶栏叠在内容上，[header] 放在顶栏的标题位，[navigationIcon] 放在标题左边，[actions]（图标按钮）放在右边。
+ * The skeleton of a page: a frosted top bar over the content, with [header] in the bar's title slot,
+ * [navigationIcon] before it and [actions] (icon buttons) at the end.
  *
  * 推进来的页面要自己传返回箭头（Material 的顶栏不会像 iOS 那样自动加）；tab 的根页面不传。
  * Pushed screens pass their own back arrow (Material's top bar doesn't add one the way iOS does); tab root screens
@@ -127,6 +128,7 @@ fun PageScaffold(
     scrollState: ScrollableState,
     modifier: Modifier = Modifier,
     navigationIcon: @Composable () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
     topBarStyle: PageTopBarStyle = PageTopBarStyle.Small,
     snackbarHost: @Composable () -> Unit = {},
     content: @Composable (contentPadding: PaddingValues) -> Unit,
@@ -182,12 +184,14 @@ fun PageScaffold(
                 PageTopBarStyle.Small -> TopAppBar(
                     title = header,
                     navigationIcon = navigationIcon,
+                    actions = actions,
                     modifier = barModifier,
                     colors = barColors,
                 )
                 PageTopBarStyle.Collapsing -> MediumFlexibleTopAppBar(
                     title = header,
                     navigationIcon = navigationIcon,
+                    actions = actions,
                     modifier = barModifier,
                     colors = barColors,
                     scrollBehavior = collapseBehavior,

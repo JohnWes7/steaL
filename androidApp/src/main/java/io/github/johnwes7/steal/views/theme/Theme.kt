@@ -58,6 +58,11 @@ data class ExtendedColors(
      * Icons on [giftContainer].
      */
     val onGiftContainer: Color,
+    /**
+     * 已收藏的心形。
+     * A saved heart.
+     */
+    val favorite: Color,
 )
 
 private val LightExtendedColors = ExtendedColors(
@@ -67,6 +72,7 @@ private val LightExtendedColors = ExtendedColors(
     onHotContainer = OnOrangeContainerLight,
     giftContainer = GreenContainerLight,
     onGiftContainer = OnGreenContainerLight,
+    favorite = FavoritePinkLight,
 )
 
 private val DarkExtendedColors = ExtendedColors(
@@ -76,6 +82,7 @@ private val DarkExtendedColors = ExtendedColors(
     onHotContainer = OnOrangeContainerDark,
     giftContainer = GreenContainerDark,
     onGiftContainer = OnGreenContainerDark,
+    favorite = FavoritePinkDark,
 )
 
 /**
@@ -90,6 +97,7 @@ val LocalExtendedColors = staticCompositionLocalOf {
         onHotContainer = Color.Unspecified,
         giftContainer = Color.Unspecified,
         onGiftContainer = Color.Unspecified,
+        favorite = Color.Unspecified,
     )
 }
 

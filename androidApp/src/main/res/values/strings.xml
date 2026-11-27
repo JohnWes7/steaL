@@ -71,6 +71,8 @@
     <string name="game_detail_coming_soon">Coming soon · %1$s</string>
     <string name="game_detail_section_about">Game detail</string>
     <string name="game_detail_play_trailer">Play trailer</string>
+    <string name="game_detail_add_to_wishlist">Add to wishlist</string>
+    <string name="game_detail_remove_from_wishlist">Remove from wishlist</string>
     <string name="game_detail_more">More</string>
     <string name="game_detail_show_less">Show less</string>
     <string name="game_detail_developer">Developer</string>

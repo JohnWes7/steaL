@@ -91,3 +91,17 @@ internal val GreenContainerLight = Color(0xFFB1F66C)
  * Icons on the container (light, tone 10 of the same palette).
  */
 internal val OnGreenContainerLight = Color(0xFF0E2000)
+
+// MARK: - 收藏的粉色 / The favorite pink
+
+/**
+ * 已收藏的心形（深色）：iOS 系统粉（`systemPink` 深色）。
+ * A saved heart (dark): the iOS system pink (`systemPink`, dark).
+ */
+internal val FavoritePinkDark = Color(0xFFFF375F)
+
+/**
+ * 已收藏的心形（浅色）：iOS 系统粉（`systemPink` 浅色）。
+ * A saved heart (light): the iOS system pink (`systemPink`, light).
+ */
+internal val FavoritePinkLight = Color(0xFFFF2D55)
