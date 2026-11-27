@@ -25,6 +25,9 @@ haze = "2.1.0"
 datastore = "1.3.0"
 coreSplashscreen = "1.2.0"
 media3 = "1.11.1"
+room3 = "3.0.3"
+sqlite = "2.7.1"
+ksp = "2.3.14"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -88,6 +91,10 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
 androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
 androidx-media3-ui-compose-material3 = { group = "androidx.media3", name = "media3-ui-compose-material3", version.ref = "media3" }
+# 本地数据库（愿望单）：Room 3 的运行库与 KSP 编译器，以及各平台同一版本的 SQLite / Local database (wishlist): Room 3's runtime and KSP compiler, plus the same SQLite build on every platform
+androidx-room3-runtime = { group = "androidx.room3", name = "room3-runtime", version.ref = "room3" }
+androidx-room3-compiler = { group = "androidx.room3", name = "room3-compiler", version.ref = "room3" }
+androidx-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqlite" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -96,3 +103,6 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 android-lint = { id = "com.android.lint", version.ref = "agp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+# Room 3 的代码生成靠 KSP；Room 插件管 schema 文件的导出目录 / Room 3 generates code through KSP; the Room plugin manages where schema files are exported
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+androidx-room3 = { id = "androidx.room3", version.ref = "room3" }

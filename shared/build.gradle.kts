@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.android.lint)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.room3)
 }
 
 kotlin {
@@ -105,6 +107,15 @@ kotlin {
                 // Time zones and calendars (month sections and calendar days in the user's time zone); api because
                 // model functions take a public TimeZone parameter, which androidApp passes as TimeZone.currentSystemDefault().
                 api(libs.kotlinx.datetime)
+                // 本地数据库（愿望单）；用 api 是因为 AppContainer 的公开构造参数是 AppDatabase（RoomDatabase 的子类），
+                // 平台入口要建好传进来。
+                // The local database (wishlist); api because AppContainer's public constructor takes an AppDatabase
+                // (a RoomDatabase subclass), which the platform entry point creates and passes in.
+                api(libs.androidx.room3.runtime)
+                // Room 用的 SQLite 驱动：自带一份编译好的 SQLite，各平台版本一致，不用系统的那份。
+                // The SQLite driver Room uses: it ships its own compiled SQLite, the same version on every platform,
+                // instead of the system's.
+                implementation(libs.androidx.sqlite.bundled)
             }
         }
 
@@ -147,4 +158,21 @@ kotlin {
         }
     }
 
+}
+
+// Room 的编译器按 target 分别加（KSP 2.3.12 起，多平台项目里统一的 ksp(...) 会直接报错）；每个 target 都要有，
+// 否则那个平台没有生成的 AppDatabaseConstructor，编译不过。
+// Room's compiler is added per target (since KSP 2.3.12 the catch-all ksp(...) is an error in multiplatform
+// projects); every target needs it, or that platform has no generated AppDatabaseConstructor and fails to compile.
+dependencies {
+    add("kspAndroid", libs.androidx.room3.compiler)
+    add("kspIosArm64", libs.androidx.room3.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room3.compiler)
+}
+
+// 每个数据库版本的表结构导出成 JSON 放这里，要提交进仓库：以后写迁移、自动迁移和迁移测试都靠它。
+// Each database version's schema is exported here as JSON and must be committed: migrations, auto-migrations
+// and migration tests rely on it.
+room3 {
+    schemaDirectory("$projectDir/schemas")
 }
