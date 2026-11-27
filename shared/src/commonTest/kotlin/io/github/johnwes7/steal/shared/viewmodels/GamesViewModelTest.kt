@@ -1,14 +1,18 @@
 package io.github.johnwes7.steal.shared.viewmodels
 
+import io.github.johnwes7.steal.shared.models.app.HomeDealItem
 import io.github.johnwes7.steal.shared.models.app.HomeDealItem.SteamLink
 import io.github.johnwes7.steal.shared.models.app.LoadError
+import io.github.johnwes7.steal.shared.models.app.WishlistItem
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.models.settings.AppTheme
 import io.github.johnwes7.steal.shared.services.InMemoryPreferencesDataStore
+import io.github.johnwes7.steal.shared.services.InMemoryWishlistDao
 import io.github.johnwes7.steal.shared.services.ItadApi
 import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamApi
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
+import io.github.johnwes7.steal.shared.services.WishlistRepository
 import io.github.johnwes7.steal.shared.services.installAppPlugins
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.DealLoadState
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel.GiveawaysLoadState
@@ -43,6 +47,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -403,7 +408,128 @@ class GamesViewModelTest {
         assertEquals(listOf("AU", "US", "US", "US"), servers.dealsCountries.value)
     }
 
+    // MARK: - 愿望单 / Wishlist
+
+    /**
+     * 点卡片的心形加入、再点移出；加入的一行用 deal 填：同比例的横幅、ITAD UUID、发售状态不知道、正在打的折记成已知低价。
+     * Tapping a card's heart adds the game and tapping again removes it; the row comes from the deal: the
+     * header-ratio banner, the ITAD UUID, an unknown release status, and the current sale as the known low.
+     */
+    @Test
+    fun toggleAddsDealThenRemoves() = runTest {
+        val servers = FakeServers()
+        val wishlistDao = InMemoryWishlistDao()
+        val viewModel = servers.makeViewModel(wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded()
+        val settled = viewModel.dealState.first { state -> isSettled(state) }
+        val foundItem = itemWithUUID(state = settled, uuid = "AU-found")
+
+        viewModel.toggleWishlist(item = foundItem)
+
+        viewModel.savedAppIDs.first { appIDs -> appIDs == setOf(FOUND_APP_ID) }
+        val saved = wishlistDao.rows.value.single()
+        assertEquals(FOUND_APP_ID, saved.appID)
+        assertEquals("AU-found", saved.name)
+        assertEquals(BANNER_400, saved.headerImageURL)
+        assertEquals("AU-found", saved.itadID)
+        assertNull(saved.isComingSoon)
+        assertNull(saved.releaseCheckedAt)
+        assertEquals(WishlistItem.KnownPrice(amount = 999, region = AppRegion.Australia), saved.knownLow)
+
+        viewModel.toggleWishlist(item = foundItem)
+
+        viewModel.savedAppIDs.first { appIDs -> appIDs.isEmpty() }
+        assertTrue(wishlistDao.rows.value.isEmpty())
+    }
+
+    /**
+     * 没有 appID 的卡片（还在查、Steam 上没有）点心形什么也不写。
+     * A card without an appID (still resolving, or not on Steam) writes nothing when its heart is tapped.
+     */
+    @Test
+    fun cardWithoutAppIDWritesNothing() = runTest {
+        val servers = FakeServers()
+        val lookupGate = CompletableDeferred<Unit>()
+        servers.lookupGate = lookupGate
+        val wishlistDao = InMemoryWishlistDao()
+        val viewModel = servers.makeViewModel(wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded()
+
+        val pending = viewModel.dealState.first { state -> state is DealLoadState.Loaded }
+        viewModel.toggleWishlist(item = itemWithUUID(state = pending, uuid = "AU-found"))
+        lookupGate.complete(Unit)
+        val settled = viewModel.dealState.first { state -> isSettled(state) }
+        viewModel.toggleWishlist(item = itemWithUUID(state = settled, uuid = "AU-missing"))
+        advanceUntilIdle()
+
+        assertEquals(0, wishlistDao.writeCount.value)
+    }
+
+    /**
+     * 一张卡还在写时：再点同一张不算，点另一张照常写；最后两张都加入了，一共写两次。
+     * While one card is being written, another tap on it is ignored but another card still writes; both end up
+     * added, with two writes in total.
+     */
+    @Test
+    fun otherCardStillWritesWhileOneIsWriting() = runTest {
+        val servers = FakeServers()
+        servers.resolvesMissing = true
+        val wishlistDao = InMemoryWishlistDao()
+        val writeGate = CompletableDeferred<Unit>()
+        wishlistDao.writeGate = writeGate
+        val viewModel = servers.makeViewModel(wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded()
+        val settled = viewModel.dealState.first { state -> isSettled(state) }
+        val foundItem = itemWithUUID(state = settled, uuid = "AU-found")
+        val otherItem = itemWithUUID(state = settled, uuid = "AU-missing")
+
+        viewModel.toggleWishlist(item = foundItem)
+        wishlistDao.writeCount.first { count -> count == 1 }
+        viewModel.toggleWishlist(item = foundItem)
+        viewModel.toggleWishlist(item = otherItem)
+        wishlistDao.writeCount.first { count -> count == 2 }
+        writeGate.complete(Unit)
+
+        viewModel.savedAppIDs.first { appIDs -> appIDs == setOf(FOUND_APP_ID, MISSING_APP_ID) }
+        advanceUntilIdle()
+        assertEquals(2, wishlistDao.writeCount.value)
+    }
+
+    /**
+     * 写入失败：不崩，什么也没存；之后再点能正常加入。
+     * A failed write doesn't crash and saves nothing; a later tap still adds the game.
+     */
+    @Test
+    fun failedWriteSavesNothingAndAllowsRetry() = runTest {
+        val servers = FakeServers()
+        val wishlistDao = InMemoryWishlistDao()
+        wishlistDao.failsWrites = true
+        val viewModel = servers.makeViewModel(wishlistDao = wishlistDao)
+        viewModel.loadIfNeeded()
+        val settled = viewModel.dealState.first { state -> isSettled(state) }
+        val foundItem = itemWithUUID(state = settled, uuid = "AU-found")
+
+        viewModel.toggleWishlist(item = foundItem)
+        wishlistDao.writeCount.first { count -> count == 1 }
+        advanceUntilIdle()
+        assertTrue(wishlistDao.rows.value.isEmpty())
+
+        wishlistDao.failsWrites = false
+        viewModel.toggleWishlist(item = foundItem)
+
+        viewModel.savedAppIDs.first { appIDs -> appIDs == setOf(FOUND_APP_ID) }
+    }
+
     // MARK: - 小工具 / Helpers
+
+    /**
+     * [state] 里 UUID 是 [uuid] 的那一条；没有就让测试失败。
+     * The row in [state] whose UUID is [uuid]; fails the test when there is none.
+     */
+    private fun itemWithUUID(state: DealLoadState, uuid: String): HomeDealItem {
+        val loaded = state as DealLoadState.Loaded
+        return loaded.items.first { item -> item.itadUUID == uuid }
+    }
 
     /**
      * [state] 是不是已发布、且每条的 appID 都查完了。
@@ -462,6 +588,9 @@ class GamesViewModelTest {
         /** 卡住 lookup 请求的闸门，`null` 是马上回答 / The gate holding lookups; `null` answers at once. */
         var lookupGate: CompletableDeferred<Unit>? = null
 
+        /** 为 `true` 时 `-missing` 也查得到（`app/200`）/ When `true`, `-missing` resolves too (to `app/200`). */
+        var resolvesMissing: Boolean = false
+
         /** 收到的 deals 请求里的地区，按顺序 / The region of each deals request received, in order. */
         val dealsCountries = MutableStateFlow<List<String>>(emptyList())
 
@@ -485,6 +614,7 @@ class GamesViewModelTest {
          */
         fun makeViewModel(
             settingsRepository: SettingsRepository = SettingsRepository(dataStore = InMemoryPreferencesDataStore()),
+            wishlistDao: InMemoryWishlistDao = InMemoryWishlistDao(),
         ): GamesViewModel {
             val engine = MockEngine { request -> answer(request) }
             val client = HttpClient(engine) {
@@ -497,6 +627,7 @@ class GamesViewModelTest {
                 itadApi = itadApi,
                 steamAppIDResolver = resolver,
                 settingsRepository = settingsRepository,
+                wishlistRepository = WishlistRepository(wishlistDao = wishlistDao),
             )
         }
 
@@ -578,6 +709,9 @@ class GamesViewModelTest {
             if (uuid.endsWith(FOUND_SUFFIX)) {
                 return "\"$uuid\":[\"app/$FOUND_APP_ID\"]"
             }
+            if (resolvesMissing) {
+                return "\"$uuid\":[\"app/$MISSING_APP_ID\"]"
+            }
             return "\"$uuid\":null"
         }
 
@@ -592,13 +726,15 @@ class GamesViewModelTest {
         }
 
         /**
-         * 一条最小的 deal，可选字段都不出现（同 `ItadDealsTest` 的稀疏响应）。
-         * One minimal deal with every optional field absent (as in `ItadDealsTest`'s sparse response).
+         * 一条最小的 deal：可选字段都不出现（同 `ItadDealsTest` 的稀疏响应），只有两张横幅，好看出收藏存的是哪张。
+         * One minimal deal: every optional field absent (as in `ItadDealsTest`'s sparse response) except two banners,
+         * to tell which one a saved game keeps.
          */
         private fun dealJSON(id: String): String {
             return """
             {
-              "id": "$id", "slug": "$id", "title": "$id", "type": "game", "mature": false, "assets": {},
+              "id": "$id", "slug": "$id", "title": "$id", "type": "game", "mature": false,
+              "assets": { "banner400": "$BANNER_400", "banner600": "https://example.com/banner600.jpg" },
               "deal": {
                 "shop": { "id": 61, "name": "Steam" },
                 "price": { "amount": 9.99, "amountInt": 999, "currency": "AUD" },
@@ -621,6 +757,12 @@ class GamesViewModelTest {
 
         /** 查到的 appID / The appID they resolve to. */
         const val FOUND_APP_ID = 100
+
+        /** `resolvesMissing` 时 `-missing` 查到的 appID / The appID `-missing` resolves to with `resolvesMissing`. */
+        const val MISSING_APP_ID = 200
+
+        /** 每条 deal 的 `banner400` / Every deal's `banner400`. */
+        const val BANNER_400 = "https://example.com/banner400.jpg"
 
         /**
          * 一条 giveaway，取自 `ItadGiveawaysTest` 的真实响应（2026-11-18）。

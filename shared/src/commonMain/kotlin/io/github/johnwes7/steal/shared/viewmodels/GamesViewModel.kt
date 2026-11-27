@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.johnwes7.steal.shared.config.AppLog
 import io.github.johnwes7.steal.shared.models.app.HomeDealItem
 import io.github.johnwes7.steal.shared.models.app.LoadError
+import io.github.johnwes7.steal.shared.models.app.WishlistItem
 import io.github.johnwes7.steal.shared.models.itad.ItadDealsFilter
 import io.github.johnwes7.steal.shared.models.itad.ItadDealsRequest
 import io.github.johnwes7.steal.shared.models.itad.ItadGiveaway
@@ -13,13 +14,17 @@ import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import io.github.johnwes7.steal.shared.services.ItadApi
 import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
+import io.github.johnwes7.steal.shared.services.WishlistRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
@@ -37,6 +42,7 @@ class GamesViewModel(
     private val itadApi: ItadApi,
     private val steamAppIDResolver: SteamAppIDResolver,
     private val settingsRepository: SettingsRepository,
+    private val wishlistRepository: WishlistRepository,
 ) : ViewModel() {
 
     // MARK: - 状态类型 / State types
@@ -117,6 +123,20 @@ class GamesViewModel(
      */
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    /**
+     * 已收藏的 appID，给卡片上的心形判断实心还是空心。
+     * The saved appIDs, which the cards' hearts use to decide between filled and outlined.
+     *
+     * 初始是空集合，不用 `null` 表示「还没读到」：卡片要等网络上的 deals 回来才出现，那时本机数据库早就读完了。
+     * It starts as an empty set rather than `null` for "not read yet": the cards only appear once the deals arrive
+     * over the network, long after the on-device database has been read.
+     */
+    val savedAppIDs: StateFlow<Set<Int>> = wishlistRepository.savedAppIDs.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+        initialValue = emptySet(),
+    )
+
     // MARK: - 内部记录 / Internal bookkeeping
 
     /**
@@ -141,6 +161,13 @@ class GamesViewModel(
      * The appID lookup retry; the lookup that follows a deals load runs inside [dealsJob], not here.
      */
     private var appIDsJob: Job? = null
+
+    /**
+     * 正在收藏或取消收藏的 appID，写完前同一张卡的点击不算；按 appID 分开记，写一张时点别的卡照常。
+     * The appIDs being added or removed; taps on the same card are ignored until the write lands. Kept per appID, so
+     * other cards still respond meanwhile.
+     */
+    private val writingAppIDs = mutableSetOf<Int>()
 
     // MARK: - 界面调用 / Called by the UI
 
@@ -252,6 +279,79 @@ class GamesViewModel(
         appIDsJob = viewModelScope.launch {
             resolveAppIDs(region = region)
         }
+    }
+
+    /**
+     * 卡片上的心形被点了：在愿望单里就移出，不在就加入；appID 还没查到、或这张卡上一次点击还没写完时不做事。
+     * A card's heart was tapped: removes the game when it is on the wishlist and adds it otherwise; does nothing
+     * while the appID is unresolved or this card's previous tap is still being written.
+     */
+    fun toggleWishlist(item: HomeDealItem) {
+        val appID = item.steamAppID
+        if (appID == null) {
+            return
+        }
+        if (appID in writingAppIDs) {
+            return
+        }
+        writingAppIDs.add(appID)
+
+        viewModelScope.launch {
+            try {
+                updateWishlist(item = item, appID = appID)
+            } finally {
+                writingAppIDs.remove(appID)
+            }
+        }
+    }
+
+    // MARK: - 愿望单 / Wishlist
+
+    private suspend fun updateWishlist(item: HomeDealItem, appID: Int) {
+        try {
+            // 1. 从数据库读现在在不在：不用 savedAppIDs，它没人订阅时不更新
+            // 1. Read from the database whether it is saved: not savedAppIDs, which stops updating with no subscriber
+            val currentAppIDs = wishlistRepository.savedAppIDs.first()
+            if (appID in currentAppIDs) {
+                wishlistRepository.remove(appID = appID)
+                return
+            }
+
+            // 2. 不在就加入：首页只有 ITAD 的 deal，拿不到 Steam 的发售状态，愿望单页核对后回写
+            // 2. Otherwise add it: the home page only has ITAD's deal, without Steam's release status, which the
+            //    wishlist page checks and writes back
+            wishlistRepository.add(
+                appID = appID,
+                name = item.deal.title,
+                // 要和详情页存的 Steam header 同比例，愿望单的行才能完整显示。
+                // The same ratio as the Steam header the detail page saves, so wishlist rows show it whole.
+                headerImageURL = item.deal.assets.headerRatioArtworkUrl,
+                itadID = item.itadUUID,
+                isComingSoon = null,
+                knownLow = knownLowOf(item = item),
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            AppLog.games.e(error) { "愿望单写入失败 / Writing the wishlist failed: $appID" }
+        }
+    }
+
+    /**
+     * 用户正看着的这个折扣，作为已知低价：没打折或还没收到地区时是 `null`。
+     * The sale the user is looking at, as the known low: `null` when it isn't on sale or before the region arrives.
+     *
+     * 首页只请求 Steam 能激活的 deal，所以这个价格可以拿来和以后的 Steam 价格比。
+     * The home page only requests Steam-activated deals, so this price compares with later Steam prices.
+     */
+    private fun knownLowOf(item: HomeDealItem): WishlistItem.KnownPrice? {
+        val region = loadedRegion
+        if (region == null) {
+            return null
+        }
+        val info = item.deal.deal
+        val knownLow = WishlistItem.KnownPrice.fromSaleOrNull(price = info.price, cut = info.cut, region = region)
+        return knownLow
     }
 
     // MARK: - 订阅地区 / Region subscription
