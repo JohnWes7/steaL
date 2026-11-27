@@ -321,6 +321,17 @@ data class SteamAppDetails(
          */
         val showsPriceHistory: Boolean
             get() = this != FreeForever
+
+        /**
+         * 能不能收藏：试玩版不单独卖、永久免费不用等降价，都不能收藏。
+         * Whether it can be wishlisted; a demo is never sold on its own and a free-forever title has no price drop
+         * to wait for.
+         */
+        val canWishlist: Boolean
+            get() = when (this) {
+                Demo, FreeForever -> false
+                Unreleased, Paid -> true
+            }
     }
 }
 

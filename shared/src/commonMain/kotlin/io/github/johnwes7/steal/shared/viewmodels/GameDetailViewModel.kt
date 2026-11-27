@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.johnwes7.steal.shared.config.AppLog
 import io.github.johnwes7.steal.shared.models.app.LoadError
+import io.github.johnwes7.steal.shared.models.app.WishlistItem
 import io.github.johnwes7.steal.shared.models.itad.ItadGameInfoResponse
 import io.github.johnwes7.steal.shared.models.itad.ItadPriceGame
 import io.github.johnwes7.steal.shared.models.itad.game
@@ -13,15 +14,19 @@ import io.github.johnwes7.steal.shared.models.steam.SteamAppDetails.GameKind
 import io.github.johnwes7.steal.shared.services.ItadApi
 import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamApi
+import io.github.johnwes7.steal.shared.services.WishlistRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -56,6 +61,7 @@ class GameDetailViewModel(
     private val steamApi: SteamApi,
     private val itadApi: ItadApi,
     private val settingsRepository: SettingsRepository,
+    private val wishlistRepository: WishlistRepository,
 ) : ViewModel() {
 
     // MARK: - 状态类型 / State types
@@ -247,6 +253,19 @@ class GameDetailViewModel(
      */
     val itadInfoState: StateFlow<InfoLoadState> = _infoState.asStateFlow()
 
+    private val _isSaved = wishlistRepository.savedAppIDs.map { savedAppIDs -> appID in savedAppIDs }
+
+    /**
+     * 这个游戏在不在愿望单里，给心形用；`null` 表示还没读到（页面出现时的一瞬间）。
+     * Whether this game is on the wishlist, for the heart; `null` until it is read (only for a moment as the page
+     * appears).
+     */
+    val isSaved: StateFlow<Boolean?> = _isSaved.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+        initialValue = null,
+    )
+
     // MARK: - 内部记录 / Internal bookkeeping
 
     /**
@@ -285,6 +304,12 @@ class GameDetailViewModel(
     private var pricesJob: Job? = null
 
     private var infoJob: Job? = null
+
+    /**
+     * 正在进行的收藏 / 取消收藏；`null` 或已结束表示没有。
+     * The add or remove in progress; none when `null` or finished.
+     */
+    private var wishlistJob: Job? = null
 
     // MARK: - 界面调用 / Called by the UI
 
@@ -355,6 +380,87 @@ class GameDetailViewModel(
             return
         }
         loadInfo()
+    }
+
+    /**
+     * 心形被点了：在愿望单里就移出，不在就加入；Steam 详情还没到、或上一次点击还没写完时不做事。
+     * The heart was tapped: removes the game when it is on the wishlist and adds it otherwise; does nothing until
+     * the Steam details are in, or while the previous tap is still being written.
+     */
+    fun toggleWishlist() {
+        val state = _detailState.value
+        if (state !is DetailLoadState.Loaded) {
+            return
+        }
+        // 连点时上一次还没写完就读「在不在」，会读到旧值，所以写完前不接新的点击。
+        // A quick second tap would read whether the game is saved before the first write lands, so taps are ignored
+        // until it does.
+        if (wishlistJob?.isActive == true) {
+            return
+        }
+        wishlistJob = viewModelScope.launch {
+            updateWishlist(details = state.details)
+        }
+    }
+
+    // MARK: - 愿望单 / Wishlist
+
+    private suspend fun updateWishlist(details: SteamAppDetails) {
+        try {
+            // 1. 从数据库读现在在不在：不用 isSaved，它没人订阅时不更新
+            // 1. Read from the database whether it is saved: not isSaved, which stops updating with no subscriber
+            val savedAppIDs = wishlistRepository.savedAppIDs.first()
+            if (appID in savedAppIDs) {
+                wishlistRepository.remove(appID = appID)
+                return
+            }
+
+            // 2. 不在就加入：比价到了且 Steam 能激活的最低价在打折，记成已知低价
+            // 2. Otherwise add it, with the best Steam-activated deal as the known low when prices are in and on sale
+            wishlistRepository.add(
+                appID = appID,
+                name = _detailState.value.title(fallback = initialTitle),
+                headerImageURL = details.headerImage,
+                // UUID 可能还在查，`null` 也能存，愿望单页之后会补。
+                // The UUID may still be resolving; `null` is fine to store and the wishlist page fills it in later.
+                itadID = uuid,
+                // 不用 `gameKind == Unreleased`：未发售的试玩版算 `Demo`。
+                // Not `gameKind == Unreleased`: an unreleased demo counts as `Demo`.
+                isComingSoon = details.isComingSoon,
+                knownLow = currentKnownLow(),
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            AppLog.gameDetail.e(error) { "愿望单写入失败 / Writing the wishlist failed: $appID" }
+        }
+    }
+
+    /**
+     * 比价里 Steam 能激活的最低价在打折时，返回它作为已知低价；比价没到、没有 Steam 报价或没打折返回 `null`。
+     * The best Steam-activated deal as the known low when it is on sale; `null` when the prices are not in, there is
+     * no Steam offer, or it is not on sale.
+     */
+    private fun currentKnownLow(): WishlistItem.KnownPrice? {
+        val request = loadedRequest
+        if (request == null) {
+            return null
+        }
+        val prices = when (val pricesState = _pricesState.value) {
+            is PricesLoadState.Loaded -> pricesState.prices
+            is PricesLoadState.LoadedWithoutHistory -> pricesState.prices
+            else -> return null
+        }
+        val bestSteamDeal = prices.bestSteamDeal
+        if (bestSteamDeal == null) {
+            return null
+        }
+        val knownLow = WishlistItem.KnownPrice.fromSaleOrNull(
+            price = bestSteamDeal.price,
+            cut = bestSteamDeal.cut,
+            region = request.region,
+        )
+        return knownLow
     }
 
     // MARK: - 订阅地区和语言 / Region and language subscription

@@ -4,6 +4,7 @@ import androidx.room3.ColumnInfo
 import androidx.room3.Embedded
 import androidx.room3.Entity
 import androidx.room3.PrimaryKey
+import io.github.johnwes7.steal.shared.models.itad.ItadPrice
 import io.github.johnwes7.steal.shared.models.settings.AppRegion
 import kotlin.time.Instant
 
@@ -103,5 +104,21 @@ data class WishlistItem(
          */
         @ColumnInfo(name = "region")
         val region: AppRegion,
-    )
+    ) {
+
+        companion object {
+
+            /**
+             * 收藏时用：在打折（[cut] 大于 0）就记下现价 [price]，没打折返回 `null`。
+             * For saving: records the current [price] when on sale ([cut] above 0), or returns `null` when not.
+             */
+            fun fromSaleOrNull(price: ItadPrice, cut: Int, region: AppRegion): KnownPrice? {
+                if (cut <= 0) {
+                    return null
+                }
+                val knownPrice = KnownPrice(amount = price.amountInt, region = region)
+                return knownPrice
+            }
+        }
+    }
 }
