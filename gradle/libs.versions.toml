@@ -24,6 +24,7 @@ coil = "3.6.3"
 haze = "2.1.0"
 datastore = "1.3.0"
 coreSplashscreen = "1.2.0"
+media3 = "1.11.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -83,6 +84,10 @@ androidx-datastore-core = { group = "androidx.datastore", name = "datastore-core
 androidx-datastore-preferences-core = { group = "androidx.datastore", name = "datastore-preferences-core", version.ref = "datastore" }
 # 启动画面：Android 12 的启动画面 API 向下兼容到 API 23 / Splash screen: the Android 12 splash screen API back to API 23
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
+# 详情页画廊的预告片：ExoPlayer、它的 HLS 模块（Steam 给的是 .m3u8）与 Material 3 的 Compose 播放器 / Gallery trailers: ExoPlayer, its HLS module (Steam serves .m3u8) and the Material 3 Compose player
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
+androidx-media3-ui-compose-material3 = { group = "androidx.media3", name = "media3-ui-compose-material3", version.ref = "media3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
