@@ -10,7 +10,9 @@ import io.github.johnwes7.steal.shared.services.SaleEventsApi
 import io.github.johnwes7.steal.shared.services.SettingsRepository
 import io.github.johnwes7.steal.shared.services.SteamApi
 import io.github.johnwes7.steal.shared.services.SteamAppIDResolver
+import io.github.johnwes7.steal.shared.services.WishlistRepository
 import io.github.johnwes7.steal.shared.services.createHttpClient
+import io.github.johnwes7.steal.shared.services.database.AppDatabase
 import io.github.johnwes7.steal.shared.viewmodels.GameDetailViewModel
 import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RegionSettingsViewModel
@@ -31,11 +33,11 @@ import io.ktor.client.HttpClient
  *
  * [logsRequests] 决定是否打印 HTTP 请求与响应，调试版传 `true`；[httpCacheDirectory] 是 HTTP 缓存的目录；
  * [itadApiKey] 和自建后端的地址 [backendBaseUrl]（到 `/v1` 为止）由平台从自己的配置读出来传入；
- * [settingsDataStore] 由平台建好传入（文件放在哪里各平台不同），容器只用这一份。
+ * [settingsDataStore] 和 [appDatabase] 由平台建好传入（文件放在哪里各平台不同），容器只用这一份。
  * [logsRequests] decides whether HTTP requests and responses are logged (debug builds pass `true`);
  * [httpCacheDirectory] is where the HTTP cache lives; the platform reads [itadApiKey] and our backend's address
- * [backendBaseUrl] (up to `/v1`) from its own configuration; the platform creates [settingsDataStore] (where the
- * file lives differs per platform), and the container uses only that one.
+ * [backendBaseUrl] (up to `/v1`) from its own configuration; the platform creates [settingsDataStore] and
+ * [appDatabase] (where the files live differs per platform), and the container uses only those.
  */
 class AppContainer(
     logsRequests: Boolean,
@@ -43,6 +45,7 @@ class AppContainer(
     itadApiKey: String,
     backendBaseUrl: String,
     settingsDataStore: DataStore<Preferences>,
+    appDatabase: AppDatabase,
 ) {
 
     /**
@@ -83,6 +86,12 @@ class AppContainer(
      * Reads and writes the user's settings.
      */
     val settingsRepository: SettingsRepository = SettingsRepository(dataStore = settingsDataStore)
+
+    /**
+     * 愿望单的读写，ViewModel 只通过它碰本地数据库。
+     * Reads and writes the wishlist; ViewModels reach the local database only through it.
+     */
+    val wishlistRepository: WishlistRepository = WishlistRepository(wishlistDao = appDatabase.wishlistDao())
 
     /**
      * App 最外层 [RootViewModel] 的工厂，交给平台入口。
