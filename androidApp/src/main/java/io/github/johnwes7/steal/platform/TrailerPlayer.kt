@@ -56,7 +56,7 @@ fun rememberTrailerPlayer(movie: SteamMovie?): Player? {
             resumePoint.positionMs = exoPlayer.currentPosition
             exoPlayer.release()
             playerState.value = null
-        }v
+        }
     }
 
     return playerState.value

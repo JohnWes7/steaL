@@ -28,6 +28,13 @@
     <string name="giveaway_ends_today">今天截止</string>
     <string name="giveaway_days_left">剩 %1$d 天</string>
 
+    <!-- Search 页 / Search page -->
+    <string name="search_placeholder">搜索 Steam 游戏</string>
+    <string name="search_idle_title">搜索 Steam 商店</string>
+    <string name="search_idle_message">按名字查找游戏、DLC 和原声音乐。</string>
+    <string name="search_no_results_title">没有找到“%1$s”</string>
+    <string name="search_no_results_message">检查一下拼写，或者换个词再搜。</string>
+
     <!-- Sales 页 / Sales page -->
     <string name="sale_events_happening_now">正在进行</string>
     <string name="sale_event_ends">%1$s结束</string>
