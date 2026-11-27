@@ -30,12 +30,12 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * 搜索词由页面经 [applyQuery] 交进来，停止输入 500ms 后才搜，清空时马上回到 [SearchState.Idle]；地区由 ViewModel
  * 自己订阅设置，语言由页面经 [loadIfNeeded] 交进来。三者有一个变了就搜一次，新的一次会取消还在途中的旧请求。
- * 搜下一个词时，正在显示的结果留着，直到新结果回来。
+ * 搜下一个词时，正在显示的结果留着（标上 `isSearching`），直到新结果回来。
  * The page hands the query in through [applyQuery]; a search starts 500 ms after typing stops, and clearing the
  * query returns to [SearchState.Idle] at once. The view model subscribes to the region in the settings itself,
  * while the page hands the language in through [loadIfNeeded]. A change to any of the three searches again, and the
  * new search cancels an old request still in flight. While the next query is being searched, the results on screen
- * stay until the new ones arrive.
+ * stay (marked with `isSearching`) until the new ones arrive.
  */
 class SearchViewModel(
     private val steamApi: SteamApi,
@@ -63,16 +63,23 @@ class SearchViewModel(
         data object Loading : SearchState
 
         /**
-         * 搜到了：[query] 是这批结果对应的搜索词（去掉了首尾空白），[items] 不为空。
-         * Results arrived: [query] is the query they belong to (trimmed), and [items] is not empty.
+         * 搜到了：[query] 是这批结果对应的搜索词（去掉了首尾空白），[items] 不为空；[isSearching] 为 `true` 时这批结果
+         * 留在屏幕上，同时正在搜下一个词。
+         * Results arrived: [query] is the query they belong to (trimmed), and [items] is not empty; when [isSearching]
+         * is `true` these results stay on screen while the next query is being searched.
          */
-        data class Loaded(val query: String, val items: List<SteamSearchItem>) : SearchState
+        data class Loaded(
+            val query: String,
+            val items: List<SteamSearchItem>,
+            val isSearching: Boolean = false,
+        ) : SearchState
 
         /**
-         * 请求成功，但 [query] 什么都没搜到；不是失败，换个词再搜。
-         * The request worked, but [query] matched nothing; not a failure, so try another query.
+         * 请求成功，但 [query] 什么都没搜到；不是失败，换个词再搜。[isSearching] 同 [Loaded]。
+         * The request worked, but [query] matched nothing; not a failure, so try another query. [isSearching] works
+         * as in [Loaded].
          */
-        data class NoResults(val query: String) : SearchState
+        data class NoResults(val query: String, val isSearching: Boolean = false) : SearchState
 
         /**
          * 请求失败，原因在 [error]；不给重试，改一下搜索词就会再搜。
@@ -213,16 +220,17 @@ class SearchViewModel(
             return
         }
 
-        // 2. 和上次搜成功的一样（删一个字又打回来）：不重发
-        // 2. Same as the last successful search (a letter deleted and typed back): don't send it again
+        // 2. 和上次搜成功的一样（删一个字又打回来）：不重发；被取消的那次可能已经标了「正在搜」，要清掉
+        // 2. Same as the last successful search (a letter deleted and typed back): don't send it again; the cancelled
+        //    search may have marked "searching", so clear it
         if (request == loadedRequest) {
+            applySearchingFlag(isSearching = false)
             return
         }
 
-        // 3. 屏幕上有上一次的结果就留着，没有才显示加载中
-        // 3. Keep earlier results on screen; show Loading only when there are none
-        val currentState = _searchState.value
-        val isShowingResults = currentState is SearchState.Loaded || currentState is SearchState.NoResults
+        // 3. 屏幕上有上一次的结果就留着、标上「正在搜」，没有才显示加载中
+        // 3. Keep earlier results on screen marked as "searching"; show Loading only when there are none
+        val isShowingResults = applySearchingFlag(isSearching = true)
         if (!isShowingResults) {
             _searchState.value = SearchState.Loading
         }
@@ -255,6 +263,25 @@ class SearchViewModel(
             return
         }
         _searchState.value = SearchState.Loaded(query = request.query, items = response.items)
+    }
+
+    /**
+     * 屏幕上是结果（`Loaded` / `NoResults`）时把它的 `isSearching` 设成 [isSearching]，返回 `true`；别的状态不动，返回
+     * `false`。
+     * Sets `isSearching` to [isSearching] when results are on screen (`Loaded` / `NoResults`) and returns `true`;
+     * leaves other states alone and returns `false`.
+     */
+    private fun applySearchingFlag(isSearching: Boolean): Boolean {
+        val currentState = _searchState.value
+        if (currentState is SearchState.Loaded) {
+            _searchState.value = currentState.copy(isSearching = isSearching)
+            return true
+        }
+        if (currentState is SearchState.NoResults) {
+            _searchState.value = currentState.copy(isSearching = isSearching)
+            return true
+        }
+        return false
     }
 
     private companion object {

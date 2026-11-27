@@ -240,8 +240,9 @@ class SearchViewModelTest {
     }
 
     /**
-     * 搜下一个词时上一次的结果留着，新结果回来才换。
-     * While the next query is searched the earlier results stay, and are replaced only when the new ones arrive.
+     * 搜下一个词时上一次的结果留着、标上 `isSearching`，新结果回来才换，标记也跟着没了。
+     * While the next query is searched the earlier results stay, marked with `isSearching`; they are replaced only
+     * when the new ones arrive, and the mark goes with them.
      */
     @Test
     fun nextSearchKeepsEarlierResults() = runTest {
@@ -251,15 +252,58 @@ class SearchViewModelTest {
         val viewModel = server.makeViewModel()
         viewModel.loadIfNeeded(steamLanguage = "english")
         viewModel.applyQuery(query = "elden")
-        val settled = viewModel.searchState.first { state -> state is SearchState.Loaded }
+        val settled = viewModel.searchState.first { state -> state is SearchState.Loaded } as SearchState.Loaded
 
         viewModel.applyQuery(query = "portal")
         server.requests.first { requests -> requests.size == 2 }
 
-        assertSame(settled, viewModel.searchState.value)
+        assertEquals(settled.copy(isSearching = true), viewModel.searchState.value)
         portalGate.complete(Unit)
         val state = viewModel.searchState.first { state -> state is SearchState.Loaded && state.query == "portal" }
-        assertTrue(state is SearchState.Loaded)
+        assertEquals(false, (state as SearchState.Loaded).isSearching)
+    }
+
+    /**
+     * 没搜到时搜下一个词：`NoResults` 也留着、标上 `isSearching`。
+     * Searching the next query after no match keeps `NoResults` on screen, marked with `isSearching` too.
+     */
+    @Test
+    fun nextSearchAfterNoResultsMarksSearching() = runTest {
+        val server = FakeServer()
+        server.noMatchTerms.add("zzz")
+        server.gates["portal"] = CompletableDeferred()
+        val viewModel = server.makeViewModel()
+        viewModel.loadIfNeeded(steamLanguage = "english")
+        viewModel.applyQuery(query = "zzz")
+        viewModel.searchState.first { state -> state is SearchState.NoResults }
+
+        viewModel.applyQuery(query = "portal")
+        server.requests.first { requests -> requests.size == 2 }
+
+        assertEquals(SearchState.NoResults(query = "zzz", isSearching = true), viewModel.searchState.value)
+    }
+
+    /**
+     * 正在搜新词时又删回上次搜成功的词：新词的请求被取消、不重发旧词，`isSearching` 清掉（不然指示器会一直转）。
+     * Going back to the last successful query while a new one is in flight cancels the new request, sends nothing
+     * for the old query, and clears `isSearching` (otherwise the indicator would spin forever).
+     */
+    @Test
+    fun backToLastQueryClearsSearching() = runTest {
+        val server = FakeServer()
+        server.gates["eldenx"] = CompletableDeferred()
+        val viewModel = server.makeViewModel()
+        viewModel.loadIfNeeded(steamLanguage = "english")
+        viewModel.applyQuery(query = "elden")
+        val settled = viewModel.searchState.first { state -> state is SearchState.Loaded } as SearchState.Loaded
+        viewModel.applyQuery(query = "eldenx")
+        viewModel.searchState.first { state -> state is SearchState.Loaded && state.isSearching }
+
+        viewModel.applyQuery(query = "elden")
+
+        viewModel.searchState.first { state -> state == settled }
+        server.cancelledTerms.first { terms -> terms.contains("eldenx") }
+        assertEquals(2, server.requests.value.size)
     }
 
     /**

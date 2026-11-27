@@ -1,5 +1,6 @@
 package io.github.johnwes7.steal.views
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,7 +37,9 @@ import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +70,7 @@ import io.github.johnwes7.steal.views.components.shared.ContentUnavailableView
 import io.github.johnwes7.steal.views.components.shared.LoadErrorView
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.theme.SteaLTheme
+import kotlinx.coroutines.delay
 
 /**
  * Search tab 的根页面：顶栏是搜索框，下面是 Steam 商店的搜索结果；点一条推入详情页。
@@ -137,12 +142,14 @@ private fun SearchContent(
     // Both the top bar and the search field change color once the list leaves its top, so they get its scroll state.
     val listState = rememberLazyListState()
     val isScrolled = listState.canScrollBackward
+    val isSearchingNext = isSearchingNextQuery(searchState = searchState)
 
     PageScaffold(
         header = {
             SearchField(
                 queryState = queryState,
                 isScrolled = isScrolled,
+                isSearching = isSearchingNext,
                 focusesWhenEmpty = focusesWhenEmpty,
             )
         },
@@ -217,12 +224,27 @@ private fun SearchContent(
     }
 }
 
+/**
+ * 屏幕上是旧结果、同时正在搜下一个词时为 `true`；第一次搜（`Loading`）由列表里的指示器表示，不算。
+ * `true` while earlier results are on screen and the next query is being searched; the first search (`Loading`)
+ * shows its own indicator in the list and doesn't count.
+ */
+private fun isSearchingNextQuery(searchState: SearchState): Boolean {
+    if (searchState is SearchState.Loaded) {
+        return searchState.isSearching
+    }
+    if (searchState is SearchState.NoResults) {
+        return searchState.isSearching
+    }
+    return false
+}
+
 // MARK: - 搜索框 / Search field
 
 /**
- * 顶栏里的搜索框：M3 搜索栏的输入框，左边放大镜、有字时右边清除键，键盘上是搜索键。
- * The search field in the top bar: the M3 search bar's input field, with a magnifier at the start, a clear button
- * at the end when there is text, and a search key on the keyboard.
+ * 顶栏里的搜索框：M3 搜索栏的输入框，左边放大镜（[isSearching] 时换成加载指示器）、有字时右边清除键，键盘上是搜索键。
+ * The search field in the top bar: the M3 search bar's input field, with a magnifier at the start (a loading
+ * indicator while [isSearching]), a clear button at the end when there is text, and a search key on the keyboard.
  *
  * 不画 `SearchBar` 本体：这一页一直是搜索状态，所以交给输入框的 `SearchBarState` 一开始就是展开的，获得焦点时也不会
  * 再展开出别的东西。底色同 M3 的 `AppBarWithSearch`：平时 `surfaceContainerHigh`，[isScrolled] 时
@@ -237,6 +259,7 @@ private fun SearchContent(
 private fun SearchField(
     queryState: TextFieldState,
     isScrolled: Boolean,
+    isSearching: Boolean,
     focusesWhenEmpty: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -277,9 +300,7 @@ private fun SearchField(
             .padding(end = 16.dp)
             .focusRequester(focusRequester),
         placeholder = { Text(text = stringResource(R.string.search_placeholder)) },
-        leadingIcon = {
-            Icon(painter = painterResource(R.drawable.search_24px), contentDescription = null)
-        },
+        leadingIcon = { SearchLeadingIcon(isSearching = isSearching) },
         trailingIcon = if (hasText) {
             { SearchClearButton(queryState = queryState) }
         } else {
@@ -302,6 +323,46 @@ private fun searchFieldContainerColor(isScrolled: Boolean): Color {
     val searchBarColors = SearchBarDefaults.colors()
     return searchBarColors.containerColor
 }
+
+/**
+ * 搜索框左边的图标：平时是放大镜；[isSearching] 持续 200ms 以上才淡入换成 24dp 的加载指示器，搜完换回来。
+ * The search field's leading icon: a magnifier normally; once [isSearching] has lasted 200 ms it cross-fades into a
+ * 24 dp loading indicator, and back when the search ends.
+ *
+ * 等 200ms 是 M3 的建议（200ms 以内的等待不用指示器）：请求很快回来时指示器不会一闪而过。
+ * The 200 ms wait follows M3 (no indicator for waits under 200 ms), so a quick reply doesn't flash the indicator.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SearchLeadingIcon(isSearching: Boolean) {
+    // 1. 搜索持续 200ms 才显示指示器，搜完马上收起
+    // 1. Show the indicator only after 200 ms of searching, and hide it as soon as the search ends
+    var showsIndicator by remember { mutableStateOf(false) }
+    LaunchedEffect(isSearching) {
+        if (!isSearching) {
+            showsIndicator = false
+            return@LaunchedEffect
+        }
+        delay(INDICATOR_DELAY_MILLIS)
+        showsIndicator = true
+    }
+
+    // 2. 放大镜和指示器淡入淡出地换，两者同样 24dp，不会挤动文字
+    // 2. Cross-fade between the magnifier and the indicator; both are 24 dp, so the text doesn't shift
+    Crossfade(targetState = showsIndicator, label = "searchLeadingIcon") { shows ->
+        if (shows) {
+            LoadingIndicator(modifier = Modifier.size(24.dp))
+        } else {
+            Icon(painter = painterResource(R.drawable.search_24px), contentDescription = null)
+        }
+    }
+}
+
+/**
+ * 搜索持续多久才显示加载指示器（毫秒）。
+ * How long a search must last before the loading indicator shows, in milliseconds.
+ */
+private const val INDICATOR_DELAY_MILLIS = 200L
 
 /**
  * 清除输入的按钮，只在有字时出现。
@@ -416,6 +477,21 @@ private fun SearchContentLoadedPreview() {
         SearchContent(
             searchState = SearchState.Loaded(query = "counter-strike", items = previewSearchItems),
             queryState = TextFieldState(initialText = "counter-strike"),
+            onOpenResult = { _ -> },
+            focusesWhenEmpty = false,
+        )
+    }
+}
+
+// 指示器要等 200ms（LaunchedEffect）才出现：静态预览只看得到放大镜，要在交互预览里看。
+// The indicator waits 200 ms in a LaunchedEffect: the static preview shows only the magnifier, so use interactive mode.
+@Preview
+@Composable
+private fun SearchContentSearchingNextPreview() {
+    SteaLTheme(darkTheme = true) {
+        SearchContent(
+            searchState = SearchState.Loaded(query = "counter-strike", items = previewSearchItems, isSearching = true),
+            queryState = TextFieldState(initialText = "counter-strike 2"),
             onOpenResult = { _ -> },
             focusesWhenEmpty = false,
         )
