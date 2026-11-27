@@ -16,6 +16,7 @@ import io.github.johnwes7.steal.shared.viewmodels.GamesViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RegionSettingsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.RootViewModel
 import io.github.johnwes7.steal.shared.viewmodels.SaleEventsViewModel
+import io.github.johnwes7.steal.shared.viewmodels.SearchViewModel
 import io.github.johnwes7.steal.shared.viewmodels.SettingsViewModel
 import io.github.johnwes7.steal.shared.viewmodels.ThemeSettingsViewModel
 import io.ktor.client.HttpClient
@@ -132,6 +133,16 @@ class AppContainer(
             }
         }
         return factory
+    }
+
+    /**
+     * Search tab 根页面 [SearchViewModel] 的工厂。
+     * The factory for the Search tab root screen's [SearchViewModel].
+     */
+    val searchViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            SearchViewModel(steamApi = steamApi, settingsRepository = settingsRepository)
+        }
     }
 
     /**

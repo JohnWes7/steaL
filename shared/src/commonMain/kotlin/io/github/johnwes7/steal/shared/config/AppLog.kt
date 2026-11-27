@@ -56,6 +56,12 @@ object AppLog {
     val gameDetail: Logger = Logger.withTag("GameDetail")
 
     /**
+     * Search 页：搜索 Steam 商店的失败。
+     * The Search page: failures searching the Steam store.
+     */
+    val search: Logger = Logger.withTag("Search")
+
+    /**
      * 设置：读写存储的失败。
      * Settings: failures reading or writing storage.
      */
