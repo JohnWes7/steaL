@@ -1,0 +1,73 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "16f1ba1c08576b7b86ce78383a39f1fa",
+    "entities": [
+      {
+        "tableName": "wishlist_items",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`app_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `header_image_url` TEXT, `itad_id` TEXT, `is_coming_soon` INTEGER, `release_checked_at` INTEGER, `added_at` INTEGER NOT NULL, `known_low_amount` INTEGER, `known_low_region` TEXT, PRIMARY KEY(`app_id`))",
+        "fields": [
+          {
+            "fieldPath": "appID",
+            "columnName": "app_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "headerImageURL",
+            "columnName": "header_image_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "itadID",
+            "columnName": "itad_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isComingSoon",
+            "columnName": "is_coming_soon",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "releaseCheckedAt",
+            "columnName": "release_checked_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "added_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "knownLow.amount",
+            "columnName": "known_low_amount",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "knownLow.region",
+            "columnName": "known_low_region",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "app_id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '16f1ba1c08576b7b86ce78383a39f1fa')"
+    ]
+  }
+}
