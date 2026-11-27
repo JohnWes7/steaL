@@ -151,7 +151,7 @@ private fun SearchContent(
     ) { contentPadding ->
         // 骨架给的留白加在列表里面，内容才会滚到两条栏后面；再加上列表自己的边距。
         // The scaffold's padding goes inside the list so content scrolls behind both bars, plus the list's own margins.
-        val ownPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 24.dp)
+        val ownPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 24.dp)
 
         // 键盘盖住 tab 栏、比它高：键盘弹出时底部再让出多出来的那段，被挡住的结果才滑得出来，空状态也居中在键盘上面。
         // The keyboard covers the tab bar and is taller: while it shows, the bottom clears the extra height so hidden
@@ -321,9 +321,11 @@ private fun SearchClearButton(queryState: TextFieldState) {
  * One search result: Steam's capsule image on the start side and the game name (up to two lines) beside it; the
  * whole card is clickable.
  *
- * 版式同首页 Giveaways 的行：卡片底色 `surfaceContainerHigh`，横图四个角都用卡片的圆角，不参与决定行高。
+ * 版式同首页 Giveaways 的行：卡片底色 `surfaceContainerHigh`，横图四个角都用卡片的圆角，不参与决定行高。圆角比
+ * Giveaways 小（`small`）：Steam 横图左上角有 DLC / Demo 的角标，大圆角会切掉它的一角。
  * Laid out like the home page's Giveaways rows: a `surfaceContainerHigh` card, a capsule image with the card's
- * rounded corners on all four sides that never decides the row height.
+ * rounded corners on all four sides that never decides the row height. The corners are smaller than the
+ * Giveaways' (`small`): Steam capsules carry a DLC / Demo badge at the top left, and large corners cut into it.
  */
 @Composable
 private fun SearchResultRow(
@@ -331,7 +333,7 @@ private fun SearchResultRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cardShape = MaterialTheme.shapes.large
+    val cardShape = MaterialTheme.shapes.small
 
     Card(
         onClick = onClick,
@@ -358,10 +360,14 @@ private fun SearchResultRow(
                 )
             }
             // 横图不参与决定行高：matchParentSize 取文字撑出来的高度，图片加载完行高不会跳（同 GiveawayRowView）。
+            // 名字折两行时横图被拉高、左右要裁掉一截：靠左对齐裁右边，左上角的 DLC / Demo 角标才留得住。
             // The image never decides the row height: matchParentSize takes the height the text sets, so the row
-            // doesn't jump when the image loads (as in GiveawayRowView).
+            // doesn't jump when the image loads (as in GiveawayRowView). A two-line name stretches the image and its
+            // sides must be cropped: aligning to the start crops the right side, keeping the DLC / Demo badge at the
+            // top left.
             ArtworkImage(
                 url = item.tinyImage,
+                alignment = Alignment.TopStart,
                 modifier = Modifier
                     .matchParentSize()
                     .wrapContentWidth(align = Alignment.Start)

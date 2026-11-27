@@ -31,16 +31,17 @@ import io.github.johnwes7.steal.views.theme.SteaLTheme
  * loading fails or there is no URL.
  *
  * 图片是装饰，不朗读；标题由旁边的文字提供。尺寸由 [modifier] 决定。[contentScale] 不是裁切时，留白处露出
- * [placeholderColor]；要在图片后面垫别的东西就传透明。
+ * [placeholderColor]；要在图片后面垫别的东西就传透明。裁切时保留哪一部分由 [alignment] 决定，默认居中。
  * The image is decorative and not read out; the nearby text names the game. [modifier] decides the size. When
  * [contentScale] doesn't crop, the gaps show [placeholderColor]; pass transparent to put something else behind the
- * image.
+ * image. [alignment] decides which part survives a crop, centered by default.
  */
 @Composable
 fun ArtworkImage(
     url: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
+    alignment: Alignment = Alignment.Center,
     placeholderColor: Color = MaterialTheme.colorScheme.surfaceVariant,
 ) {
     // 换了地址就重新算失败与否。
@@ -61,6 +62,7 @@ fun ArtworkImage(
             model = request,
             contentDescription = null,
             contentScale = contentScale,
+            alignment = alignment,
             onSuccess = { _ -> hasFailed = false },
             onError = { _ -> hasFailed = true },
             modifier = Modifier.fillMaxSize(),
