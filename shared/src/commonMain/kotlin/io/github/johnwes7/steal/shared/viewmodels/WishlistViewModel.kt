@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -266,6 +267,67 @@ class WishlistViewModel(
         _selectedFilter.value = filter
     }
 
+    /**
+     * 下拉刷新：按当前地区重查全部行的价格，并绕过 HTTP 缓存重新核对所有不是已发售的行；旧价格留到新结果回来。
+     * 还没加载过、或已经在刷新时不做事。
+     * Pull to refresh: refetches every row's price for the current region and, bypassing the HTTP cache, rechecks
+     * every row not known to be released; old prices stay until new ones arrive. Does nothing before the first load
+     * or while already refreshing.
+     *
+     * 刷新期间收藏或地区变了，刷新会被正常的加载取代，转圈照样停下。
+     * If the wishlist or the region changes meanwhile, the refresh gives way to a normal load and the spinner still
+     * stops.
+     */
+    fun refresh() {
+        // 1. 还没加载过、或正在刷新就跳过，否则开始转圈
+        // 1. Skip before the first load or while refreshing; otherwise start the spinner
+        val region = loadedRegion
+        if (region == null) {
+            return
+        }
+        if (_isRefreshing.value) {
+            return
+        }
+        _isRefreshing.value = true
+
+        // 2. 取代正在进行的加载：放进同样的两个位置，收藏或地区再变时会被取消
+        // 2. Replace any load in progress, in the same two slots, so a later wishlist or region change cancels it
+        pricesJob?.cancel()
+        releasesJob?.cancel()
+        val prices = viewModelScope.launch {
+            refreshPrices(region = region)
+        }
+        val releases = viewModelScope.launch {
+            refreshReleases(region = region, steamLanguage = requestedLanguage)
+        }
+        pricesJob = prices
+        releasesJob = releases
+
+        // 3. 两个都结束（或被取消）才停止转圈
+        // 3. Stop the spinner once both finish (or are cancelled)
+        viewModelScope.launch {
+            joinAll(prices, releases)
+            _isRefreshing.value = false
+        }
+    }
+
+    /**
+     * 从愿望单删掉 [item]（左滑删除）；它的价格在接下来的加载里丢掉，别的行不会重查。
+     * Removes [item] from the wishlist (swipe to delete); its price is dropped by the load that follows, and no
+     * other row is refetched.
+     */
+    fun remove(item: WishlistItem) {
+        viewModelScope.launch {
+            try {
+                wishlistRepository.remove(appID = item.appID)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                AppLog.wishlist.e(error) { "从愿望单删除失败 / Removing from the wishlist failed: ${item.appID}" }
+            }
+        }
+    }
+
     // MARK: - 订阅 / Subscription
 
     /**
@@ -421,6 +483,20 @@ class WishlistViewModel(
         // 3. 查完整批写回：界面只重算一次
         // 3. Write the whole batch back at once, so the UI recomputes once
         val newStates = fetchPriceStates(items = newItems, region = region)
+        _priceStates.value = _priceStates.value + newStates
+    }
+
+    /**
+     * 下拉刷新的查价：全部行重查，查完整批覆盖；查的期间旧价格照常显示。
+     * Pull to refresh's price fetch: every row is refetched and the batch overwrites the old states at once; the
+     * old prices show meanwhile.
+     */
+    private suspend fun refreshPrices(region: AppRegion) {
+        val items = wishlistRepository.items.first()
+        if (items.isEmpty()) {
+            return
+        }
+        val newStates = fetchPriceStates(items = items, region = region)
         _priceStates.value = _priceStates.value + newStates
     }
 
@@ -588,6 +664,20 @@ class WishlistViewModel(
         // 2. 向 Steam 核对并回写
         // 2. Check with Steam and write back
         checkReleases(items = itemsToCheck, region = region, steamLanguage = steamLanguage, bypassesCache = false)
+    }
+
+    /**
+     * 下拉刷新的核对：不看上次核对时间，绕过 HTTP 缓存重新核对所有不是已发售的行。
+     * Pull to refresh's release check: rechecks every row not known to be released, whenever it was last checked,
+     * bypassing the HTTP cache.
+     *
+     * 不绕过的话，`appdetails` 的 `max-age=3600` 让一小时内的刷新读到旧结果。
+     * Without the bypass, `appdetails`' `max-age=3600` would hand a refresh within the hour the old result.
+     */
+    private suspend fun refreshReleases(region: AppRegion, steamLanguage: String) {
+        val items = wishlistRepository.items.first()
+        val itemsToCheck = items.filter { item -> item.isComingSoon != false }
+        checkReleases(items = itemsToCheck, region = region, steamLanguage = steamLanguage, bypassesCache = true)
     }
 
     /**
