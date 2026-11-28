@@ -1,6 +1,7 @@
 package io.github.johnwes7.steal.shared.viewmodels
 
 import io.github.johnwes7.steal.shared.models.app.WishlistFilter
+import io.github.johnwes7.steal.shared.models.app.WishlistItem
 import io.github.johnwes7.steal.shared.services.InMemoryPreferencesDataStore
 import io.github.johnwes7.steal.shared.services.InMemoryWishlistDao
 import io.github.johnwes7.steal.shared.services.ItadApi
@@ -11,11 +12,20 @@ import io.github.johnwes7.steal.shared.services.installAppPlugins
 import io.github.johnwes7.steal.shared.viewmodels.WishlistViewModel.PriceLoadState
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.client.plugins.cache.storage.CacheStorage
+import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.HttpResponseData
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -23,6 +33,9 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -30,11 +43,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 /**
- * [WishlistViewModel] 的测试：读到之前是 `null`，别处（详情页的心形）加入、移出时跟着变。
- * Tests for [WishlistViewModel]: `null` until read, and following adds and removes made elsewhere (the detail page's
- * heart).
+ * [WishlistViewModel] 的测试：读到之前是 `null`，别处（详情页的心形）加入、移出时跟着变；筛选；查价、核对发售状态和回写。
+ * Tests for [WishlistViewModel]: `null` until read, following adds and removes made elsewhere (the detail page's
+ * heart), the filters, and fetching prices, checking release status and writing back.
  *
  * [WishlistViewModel.items] 只在有人收集时才读（`WhileSubscribed`），测试在 `backgroundScope` 里收集它，代替界面。
  * [WishlistViewModel.items] only reads while collected (`WhileSubscribed`), so tests collect it in
@@ -156,20 +172,267 @@ class WishlistViewModelTest {
     }
 
     /**
-     * 建一个读 [repository] 的 ViewModel；接口一律回 404，这些测试不该发请求。
-     * Builds a view model reading [repository]; every API call gets a 404, since these tests should send none.
+     * 存着 UUID 的直接查价；缺 UUID 的 lookup，查到回写、查不到是 `NoPrice`；回写不会让价格再查一次。
+     * 同时核对发售状态并回写，Steam 查不到的不写。
+     * Rows with a stored UUID go straight to the prices; the others are looked up, a hit written back and a miss
+     * `NoPrice`; the write-back does not refetch the prices. Release statuses are checked and written back at the
+     * same time, except for games Steam does not have.
+     */
+    @Test
+    fun loadsPricesAndWritesBack() = runTest {
+        val repository = WishlistRepository(wishlistDao = InMemoryWishlistDao())
+        addGame(repository = repository, appID = PORTAL_ID, itadID = PORTAL_UUID, isComingSoon = null)
+        addGame(repository = repository, appID = SILKSONG_ID, itadID = null, isComingSoon = null)
+        addGame(repository = repository, appID = UNLISTED_ID, itadID = null, isComingSoon = null)
+        val servers = FakeServers()
+        servers.uuidByAppID = mapOf(SILKSONG_ID to SILKSONG_UUID)
+        servers.pricedUUIDs = setOf(PORTAL_UUID)
+        servers.comingSoonByAppID = mapOf(PORTAL_ID to false, SILKSONG_ID to true)
+        val viewModel = servers.makeViewModel(repository = repository)
+        collectRows(viewModel)
+
+        viewModel.loadIfNeeded(steamLanguage = "english")
+        viewModel.visibleRows.first { rows -> rows != null && hasSettledPrices(rows = rows) }
+        val savedItems = viewModel.items.first { items -> items != null && hasCheckedReleases(items = items) }
+        advanceUntilIdle()
+
+        val priceByAppID = priceByAppIDOf(viewModel)
+        val portalPrice = priceByAppID.getValue(PORTAL_ID) as PriceLoadState.Loaded
+        val savedByAppID = savedItems.orEmpty().associateBy { item -> item.appID }
+        assertEquals(50, portalPrice.deal.cut)
+        assertEquals(PriceLoadState.NoPrice, priceByAppID.getValue(SILKSONG_ID))
+        assertEquals(PriceLoadState.NoPrice, priceByAppID.getValue(UNLISTED_ID))
+        assertEquals(SILKSONG_UUID, savedByAppID.getValue(SILKSONG_ID).itadID)
+        assertNull(savedByAppID.getValue(UNLISTED_ID).itadID)
+        assertEquals(2, servers.lookupCount.value)
+        assertEquals(1, servers.pricesCount.value)
+        assertEquals(false, savedByAppID.getValue(PORTAL_ID).isComingSoon)
+        assertEquals(true, savedByAppID.getValue(SILKSONG_ID).isComingSoon)
+        assertNull(savedByAppID.getValue(UNLISTED_ID).isComingSoon)
+    }
+
+    /**
+     * 一天内核对过的、已发售（`false`）的不向 Steam 核对；超过一天的才核对。
+     * Games checked within a day and released ones (`false`) are not checked with Steam; only those older than a
+     * day are.
+     */
+    @Test
+    fun releaseChecksSkipRecentAndReleased() = runTest {
+        val checkedAt = Instant.parse("2026-11-28T00:00:00Z")
+        val repository = WishlistRepository(wishlistDao = InMemoryWishlistDao(), clock = FixedClock(now = checkedAt))
+        addGame(repository = repository, appID = PORTAL_ID, itadID = PORTAL_UUID, isComingSoon = false)
+        addGame(repository = repository, appID = SILKSONG_ID, itadID = SILKSONG_UUID, isComingSoon = true)
+
+        // 一小时后：两行都不用核对，等价格落定再确认没发 Steam 请求。
+        // An hour later: neither row needs a check; wait for the prices, then confirm no Steam request went out.
+        val soonServers = FakeServers()
+        val soonClock = FixedClock(now = checkedAt + 1.hours)
+        val soonViewModel = soonServers.makeViewModel(repository = repository, clock = soonClock)
+        collectRows(soonViewModel)
+        soonViewModel.loadIfNeeded(steamLanguage = "english")
+        soonViewModel.visibleRows.first { rows -> rows != null && rows.isNotEmpty() && hasSettledPrices(rows = rows) }
+        advanceUntilIdle()
+        val soonSteamAppIDs = soonServers.steamAppIDs.value
+
+        // 25 小时后：只有未发售的那行要核对。
+        // 25 hours later: only the unreleased row needs a check.
+        val laterServers = FakeServers()
+        val laterClock = FixedClock(now = checkedAt + 25.hours)
+        val laterViewModel = laterServers.makeViewModel(repository = repository, clock = laterClock)
+        laterViewModel.loadIfNeeded(steamLanguage = "english")
+        laterServers.steamAppIDs.first { appIDs -> appIDs.isNotEmpty() }
+        advanceUntilIdle()
+        val laterSteamAppIDs = laterServers.steamAppIDs.value
+
+        assertEquals(emptyList(), soonSteamAppIDs)
+        assertEquals(listOf(SILKSONG_ID), laterSteamAppIDs)
+    }
+
+    /**
+     * 代替界面一直收集 [WishlistViewModel.visibleRows]，测试结束时自动停止。
+     * Keeps collecting [WishlistViewModel.visibleRows] in place of the UI, stopping when the test ends.
+     */
+    private fun TestScope.collectRows(viewModel: WishlistViewModel) {
+        backgroundScope.launch {
+            viewModel.visibleRows.collect { _ -> }
+        }
+        backgroundScope.launch {
+            viewModel.items.collect { _ -> }
+        }
+    }
+
+    /**
+     * 每行现在的价格，按 appID。
+     * Each row's current price by appID.
+     */
+    private fun priceByAppIDOf(viewModel: WishlistViewModel): Map<Int, PriceLoadState> {
+        val rows = viewModel.visibleRows.value.orEmpty()
+        val pairs = rows.map { row -> row.item.appID to row.price }
+        val priceByAppID = pairs.toMap()
+        return priceByAppID
+    }
+
+    /**
+     * 每行的价格都落定了（不是 `Loading`）。
+     * Whether every row's price has settled (none is `Loading`).
+     */
+    private fun hasSettledPrices(rows: List<WishlistViewModel.Row>): Boolean {
+        val hasLoading = rows.any { row -> row.price == PriceLoadState.Loading }
+        return !hasLoading
+    }
+
+    /**
+     * Portal 和 Silksong 的发售状态都回写了（测试里 Steam 只认识这两个）。
+     * Whether Portal's and Silksong's release statuses are written back (the only two Steam knows in the tests).
+     */
+    private fun hasCheckedReleases(items: List<WishlistItem>): Boolean {
+        val checkedItems = items.filter { item -> item.isComingSoon != null }
+        return checkedItems.size == 2
+    }
+
+    private suspend fun addGame(repository: WishlistRepository, appID: Int, itadID: String?, isComingSoon: Boolean?) {
+        repository.add(
+            appID = appID,
+            name = "Game $appID",
+            headerImageURL = null,
+            itadID = itadID,
+            isComingSoon = isComingSoon,
+            knownLow = null,
+        )
+    }
+
+    /**
+     * 建一个读 [repository] 的 ViewModel，接口都由一个默认的 [FakeServers] 回答（什么都查不到）。
+     * Builds a view model reading [repository], with every API answered by a default [FakeServers] (nothing found).
      */
     private fun makeViewModel(repository: WishlistRepository): WishlistViewModel {
-        val engine = MockEngine { _ -> respond(content = "", status = HttpStatusCode.NotFound) }
-        val client = HttpClient(engine) {
-            installAppPlugins(logsRequests = false, cacheStorage = CacheStorage.Unlimited())
+        val servers = FakeServers()
+        return servers.makeViewModel(repository = repository)
+    }
+
+    /**
+     * 固定在 [now] 的时钟。
+     * A clock stopped at [now].
+     */
+    private class FixedClock(private val now: Instant) : Clock {
+        override fun now(): Instant = now
+    }
+
+    /**
+     * 扮演 ITAD（lookup、查价）和 Steam（`appdetails`）的假服务器，记下收到的请求。
+     * A fake server playing ITAD (lookups, prices) and Steam (`appdetails`), recording the requests it gets.
+     */
+    private class FakeServers {
+
+        /** lookup 查得到的 UUID，按 appID；不在里面的回 `found: false` / UUIDs found by lookup, by appID; others get `found: false`. */
+        var uuidByAppID: Map<Int, String> = emptyMap()
+
+        /** 有 Steam 半价报价的 UUID；其他的不在响应里 / UUIDs with a half-price Steam offer; others are left out of the response. */
+        var pricedUUIDs: Set<String> = emptySet()
+
+        /** Steam 的 `coming_soon`，按 appID；不在里面的回 `success: false` / Steam's `coming_soon` by appID; others get `success: false`. */
+        var comingSoonByAppID: Map<Int, Boolean> = emptyMap()
+
+        /** 收到的 lookup 请求数 / The lookup requests received. */
+        val lookupCount = MutableStateFlow(0)
+
+        /** 收到的查价请求数 / The price requests received. */
+        val pricesCount = MutableStateFlow(0)
+
+        /** 收到的 `appdetails` 请求的 appID，按到达顺序 / The appIDs of the `appdetails` requests received, in order. */
+        val steamAppIDs = MutableStateFlow<List<Int>>(emptyList())
+
+        fun makeViewModel(repository: WishlistRepository, clock: Clock = Clock.System): WishlistViewModel {
+            val engine = MockEngine { request -> answer(request) }
+            val client = HttpClient(engine) {
+                installAppPlugins(logsRequests = false, cacheStorage = CacheStorage.Unlimited())
+            }
+            return WishlistViewModel(
+                wishlistRepository = repository,
+                itadApi = ItadApi(client = client, apiKey = "test-key"),
+                steamApi = SteamApi(client = client),
+                settingsRepository = SettingsRepository(dataStore = InMemoryPreferencesDataStore()),
+                clock = clock,
+            )
         }
-        return WishlistViewModel(
-            wishlistRepository = repository,
-            itadApi = ItadApi(client = client, apiKey = "test-key"),
-            steamApi = SteamApi(client = client),
-            settingsRepository = SettingsRepository(dataStore = InMemoryPreferencesDataStore()),
-        )
+
+        private suspend fun MockRequestHandleScope.answer(request: HttpRequestData): HttpResponseData {
+            val path = request.url.encodedPath
+            if (path == "/games/lookup/v1") {
+                return answerLookup(request)
+            }
+            if (path == "/games/prices/v3") {
+                return answerPrices(request)
+            }
+            if (path == "/api/appdetails") {
+                return answerDetails(request)
+            }
+            error("没想到的请求 / Unexpected request: ${request.url}")
+        }
+
+        private fun MockRequestHandleScope.answerLookup(request: HttpRequestData): HttpResponseData {
+            lookupCount.update { count -> count + 1 }
+            val appID = request.url.parameters["appid"]?.toInt()
+            val uuid = uuidByAppID[appID]
+            val body = if (uuid == null) {
+                """{"found":false}"""
+            } else {
+                """{"found":true,"game":{"id":"$uuid","slug":"game","title":"Game","type":"game"}}"""
+            }
+            return respond(content = body, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        private suspend fun MockRequestHandleScope.answerPrices(request: HttpRequestData): HttpResponseData {
+            pricesCount.update { count -> count + 1 }
+            val sentBody = request.body.toByteArray().decodeToString()
+            val sentUUIDs = Json.parseToJsonElement(sentBody).jsonArray
+            val entries = mutableListOf<String>()
+            for (element in sentUUIDs) {
+                val uuid = element.jsonPrimitive.content
+                if (uuid in pricedUUIDs) {
+                    entries.add(priceEntry(uuid = uuid))
+                }
+            }
+            val body = entries.joinToString(separator = ",", prefix = "[", postfix = "]")
+            return respond(content = body, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        private fun MockRequestHandleScope.answerDetails(request: HttpRequestData): HttpResponseData {
+            val appID = request.url.parameters["appids"]?.toInt() ?: error("没有 appids / No appids")
+            steamAppIDs.update { appIDs -> appIDs + appID }
+            val comingSoon = comingSoonByAppID[appID]
+            val body = if (comingSoon == null) {
+                """{"$appID":{"success":false}}"""
+            } else {
+                """{"$appID":{"success":true,"data":{"type":"game","name":"Game","is_free":false,"release_date":{"coming_soon":$comingSoon,"date":""}}}}"""
+            }
+            return respond(content = body, status = HttpStatusCode.OK, headers = JSON_HEADERS)
+        }
+
+        private fun priceEntry(uuid: String): String {
+            val price = """{"amount":4.99,"amountInt":499,"currency":"AUD"}"""
+            val regular = """{"amount":9.99,"amountInt":999,"currency":"AUD"}"""
+            val deal = """{"shop":{"id":61,"name":"Steam"},"price":$price,"regular":$regular,"cut":50,""" +
+                """"voucher":null,"storeLow":null,"flag":null,"drm":[],"platforms":[],""" +
+                """"timestamp":"2026-11-28T00:00:00+00:00","expiry":null,"url":"https://example.com/steam"}"""
+            return """{"id":"$uuid","historyLow":{"all":$price,"y1":null,"m3":null},"deals":[$deal]}"""
+        }
+    }
+
+    private companion object {
+
+        const val PORTAL_ID = 620
+
+        const val PORTAL_UUID = "portal-uuid"
+
+        const val SILKSONG_ID = 1_030_300
+
+        const val SILKSONG_UUID = "silksong-uuid"
+
+        /** ITAD 没收录、Steam 也查不到的游戏 / A game neither ITAD nor Steam has. */
+        const val UNLISTED_ID = 999
+
+        val JSON_HEADERS = headersOf(HttpHeaders.ContentType, "application/json")
     }
 
     /**

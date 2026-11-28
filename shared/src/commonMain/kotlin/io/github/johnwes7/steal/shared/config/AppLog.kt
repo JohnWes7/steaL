@@ -62,6 +62,12 @@ object AppLog {
     val search: Logger = Logger.withTag("Search")
 
     /**
+     * 愿望单页：查 ITAD UUID、查价、核对发售状态和回写的失败。
+     * The wishlist page: failures looking up ITAD UUIDs, fetching prices, checking release status and writing back.
+     */
+    val wishlist: Logger = Logger.withTag("Wishlist")
+
+    /**
      * 设置：读写存储的失败。
      * Settings: failures reading or writing storage.
      */
