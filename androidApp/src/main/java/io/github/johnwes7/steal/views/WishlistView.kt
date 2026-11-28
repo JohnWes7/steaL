@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -48,7 +49,6 @@ import io.github.johnwes7.steal.views.components.shared.PageHeaderView
 import io.github.johnwes7.steal.views.components.shared.PageScaffold
 import io.github.johnwes7.steal.views.components.wishlist.WishlistFilterBar
 import io.github.johnwes7.steal.views.components.wishlist.WishlistRowView
-import io.github.johnwes7.steal.views.theme.ExtendedTheme
 import io.github.johnwes7.steal.views.theme.SteaLTheme
 
 /**
@@ -281,7 +281,7 @@ private fun SwipeToRemoveRow(
  */
 @Composable
 private fun DeleteBackground(isVisible: Boolean) {
-    val color = if (isVisible) ExtendedTheme.colors.destructive else Color.Transparent
+    val color = if (isVisible) MaterialTheme.colorScheme.errorContainer else Color.Transparent
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -293,7 +293,7 @@ private fun DeleteBackground(isVisible: Boolean) {
             Icon(
                 painter = painterResource(R.drawable.delete_24px),
                 contentDescription = null,
-                tint = ExtendedTheme.colors.onDestructive,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
             )
         }
     }
