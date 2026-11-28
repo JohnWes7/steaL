@@ -163,7 +163,12 @@ class AppContainer(
      */
     val wishlistViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         initializer {
-            WishlistViewModel(wishlistRepository = wishlistRepository)
+            WishlistViewModel(
+                wishlistRepository = wishlistRepository,
+                itadApi = itadApi,
+                steamApi = steamApi,
+                settingsRepository = settingsRepository,
+            )
         }
     }
 
