@@ -10,9 +10,11 @@ import io.github.johnwes7.steal.shared.models.steam.SteamSearchResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 
 /**
@@ -68,12 +70,24 @@ class SteamApi(
      * movies, screenshots and genres. The response carries `max-age=3600`, so the same game, region and language is
      * read from the HTTP cache for an hour. A non-2xx status throws [SteamApiException]; lost connections, timeouts
      * and decoding failures throw Ktor's own exceptions.
+     *
+     * [bypassesCache] 为 `true` 时（下拉刷新）带 `Cache-Control: no-cache`，一定真的请求，新结果照常存进缓存。
+     * When [bypassesCache] is `true` (pull to refresh), the request carries `Cache-Control: no-cache`, so it always
+     * goes to the network, and the new result is cached as usual.
      */
-    suspend fun fetchAppDetails(appID: Int, region: AppRegion, steamLanguage: String): SteamAppDetails? {
+    suspend fun fetchAppDetails(
+        appID: Int,
+        region: AppRegion,
+        steamLanguage: String,
+        bypassesCache: Boolean = false,
+    ): SteamAppDetails? {
         val response = client.get("$BASE_URL/api/appdetails") {
             parameter("appids", appID)
             parameter("cc", region.apiRegionCode)
             parameter("l", steamLanguage)
+            if (bypassesCache) {
+                header(HttpHeaders.CacheControl, NO_CACHE)
+            }
         }
         ensureSuccess(response)
 
@@ -134,6 +148,12 @@ class SteamApi(
          * The root address of the Steam store.
          */
         const val BASE_URL: String = "https://store.steampowered.com"
+
+        /**
+         * 要求绕过 HTTP 缓存的 `Cache-Control` 请求头值。
+         * The `Cache-Control` request header value that asks to bypass the HTTP cache.
+         */
+        private const val NO_CACHE: String = "no-cache"
     }
 }
 

@@ -5,6 +5,7 @@ import androidx.room3.Query
 import androidx.room3.Upsert
 import io.github.johnwes7.steal.shared.models.app.WishlistItem
 import kotlinx.coroutines.flow.Flow
+import kotlin.time.Instant
 
 /**
  * 读写 `wishlist_items` 表；只给 `WishlistRepository` 用，界面和 ViewModel 不直接碰它。
@@ -33,4 +34,21 @@ interface WishlistDao {
      */
     @Query("DELETE FROM wishlist_items WHERE app_id = :appID")
     suspend fun delete(appID: Int)
+
+    /**
+     * 写回一个游戏的 ITAD UUID；这一行已经被移除时什么也不做，不会重新建出来。
+     * Writes back a game's ITAD UUID; does nothing when the row has been removed, so it is never recreated.
+     */
+    @Query("UPDATE wishlist_items SET itad_id = :itadID WHERE app_id = :appID")
+    suspend fun updateItadID(appID: Int, itadID: String)
+
+    /**
+     * 写回一个游戏的发售状态和核对时间；这一行已经被移除时什么也不做。
+     * Writes back a game's release status and check time; does nothing when the row has been removed.
+     */
+    @Query(
+        "UPDATE wishlist_items SET is_coming_soon = :isComingSoon, release_checked_at = :checkedAt " +
+            "WHERE app_id = :appID",
+    )
+    suspend fun updateReleaseStatus(appID: Int, isComingSoon: Boolean, checkedAt: Instant)
 }

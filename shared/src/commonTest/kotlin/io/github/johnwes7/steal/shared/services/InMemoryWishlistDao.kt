@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlin.time.Instant
 
 /**
  * 测试用的 [WishlistDao]：愿望单放在内存里，不用 Room，两个平台都能跑。
@@ -26,8 +27,8 @@ internal class InMemoryWishlistDao : WishlistDao {
     val rows = MutableStateFlow<List<WishlistItem>>(emptyList())
 
     /**
-     * 收到的写入次数（加入和删除都算）。
-     * The number of writes received (adds and removes both count).
+     * 收到的写入次数（加入、删除、回写都算）。
+     * The number of writes received (adds, removes and write-backs all count).
      */
     val writeCount = MutableStateFlow(0)
 
@@ -58,6 +59,22 @@ internal class InMemoryWishlistDao : WishlistDao {
         rows.update { currentRows -> rowsWithout(currentRows, appID) }
     }
 
+    override suspend fun updateItadID(appID: Int, itadID: String) {
+        startWrite()
+        rows.update { currentRows ->
+            rowsUpdating(currentRows, appID) { row -> row.copy(itadID = itadID) }
+        }
+    }
+
+    override suspend fun updateReleaseStatus(appID: Int, isComingSoon: Boolean, checkedAt: Instant) {
+        startWrite()
+        rows.update { currentRows ->
+            rowsUpdating(currentRows, appID) { row ->
+                row.copy(isComingSoon = isComingSoon, releaseCheckedAt = checkedAt)
+            }
+        }
+    }
+
     /**
      * 记一次写入，等闸门，按设置抛错。
      * Counts a write, waits at the gate and throws when set to fail.
@@ -78,6 +95,26 @@ internal class InMemoryWishlistDao : WishlistDao {
     private fun rowsReplacing(rows: List<WishlistItem>, item: WishlistItem): List<WishlistItem> {
         val otherRows = rowsWithout(rows, item.appID)
         return otherRows + item
+    }
+
+    /**
+     * 把 [appID] 那一行换成 [change] 改过的样子；没有这一行就原样返回，同 SQL 的 `UPDATE`。
+     * Replaces the [appID] row with [change] applied to it; returns the rows unchanged when it is missing, as an SQL
+     * `UPDATE` would.
+     */
+    private fun rowsUpdating(
+        rows: List<WishlistItem>,
+        appID: Int,
+        change: (WishlistItem) -> WishlistItem,
+    ): List<WishlistItem> {
+        val updatedRows = rows.map { row ->
+            if (row.appID == appID) {
+                change(row)
+            } else {
+                row
+            }
+        }
+        return updatedRows
     }
 
     private fun rowsWithout(rows: List<WishlistItem>, appID: Int): List<WishlistItem> {

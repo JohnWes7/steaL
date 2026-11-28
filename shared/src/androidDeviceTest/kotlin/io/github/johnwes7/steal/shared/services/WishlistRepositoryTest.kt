@@ -201,6 +201,72 @@ class WishlistRepositoryTest {
         assertNull(savedItem.knownLow)
     }
 
+    /**
+     * 回写 ITAD UUID 只改那一列，加入时间和顺序不变。
+     * Writing back the ITAD UUID changes only that column, leaving the added time and the order alone.
+     */
+    @Test
+    fun updateItadIDChangesOnlyThatColumn() = runTest {
+        addGame(appID = 1, name = "Older")
+        clock.currentTime = START_TIME + ONE_MINUTE
+        addGame(appID = 2, name = "Newer")
+        val itemsBefore = repository.items.first()
+
+        clock.currentTime = START_TIME + ONE_MINUTE + ONE_MINUTE
+        repository.updateItadID(appID = 1, itadID = "018d937f-21e1-728e-86d7-9acb3c59f2bb")
+
+        val itemsAfter = repository.items.first()
+        val olderBefore = itemsBefore.last()
+        val olderAfter = itemsAfter.last()
+        val expectedOlder = olderBefore.copy(itadID = "018d937f-21e1-728e-86d7-9acb3c59f2bb")
+
+        assertEquals(listOf(2, 1), currentAppIDs())
+        assertEquals(expectedOlder, olderAfter)
+    }
+
+    /**
+     * 回写发售状态时核对时间记为回写那一刻，不是加入时间；已经知道的状态也能改。
+     * Writing back the release status records the moment of the write as the check time, not the added time; a known
+     * status can be changed too.
+     */
+    @Test
+    fun updateReleaseStatusRecordsCheckTime() = runTest {
+        repository.add(
+            appID = 1,
+            name = "Upcoming",
+            headerImageURL = null,
+            itadID = null,
+            isComingSoon = true,
+            knownLow = null,
+        )
+
+        val checkTime = START_TIME + ONE_MINUTE
+        clock.currentTime = checkTime
+        repository.updateReleaseStatus(appID = 1, isComingSoon = false)
+
+        val items = repository.items.first()
+        val savedItem = items.single()
+
+        assertEquals(false, savedItem.isComingSoon)
+        assertEquals(checkTime, savedItem.releaseCheckedAt)
+        assertEquals(START_TIME, savedItem.addedAt)
+    }
+
+    /**
+     * 回写一个已经移出的游戏什么也不做，不会把它重新加回来。
+     * Writing back a game that has been removed does nothing and does not add it back.
+     */
+    @Test
+    fun updatesOnRemovedGameDoNothing() = runTest {
+        addGame(appID = 1, name = "Removed")
+        repository.remove(appID = 1)
+
+        repository.updateItadID(appID = 1, itadID = "018d937f-21e1-728e-86d7-9acb3c59f2bb")
+        repository.updateReleaseStatus(appID = 1, isComingSoon = false)
+
+        assertEquals(emptyList(), currentAppIDs())
+    }
+
     private companion object {
         /**
          * 测试时钟的起点；用整毫秒，存成 Unix 毫秒再读回来才会完全相等。

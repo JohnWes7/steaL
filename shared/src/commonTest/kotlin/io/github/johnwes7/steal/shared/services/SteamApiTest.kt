@@ -199,6 +199,48 @@ class SteamApiTest {
         assertEquals(LoadError.Server(429), LoadError.from(error))
     }
 
+    /**
+     * 带 `max-age` 的详情一小时内读缓存；`bypassesCache = true` 时带 `Cache-Control: no-cache` 真的请求、拿到新数据，
+     * 之后普通请求读到的也是新数据。
+     * Details with `max-age` come from the cache within the hour; `bypassesCache = true` sends
+     * `Cache-Control: no-cache` and really requests, getting the new data, which later plain fetches then read too.
+     */
+    @Test
+    fun fetchAppDetailsBypassesCacheWhenAsked() = runTest {
+        var requestCount = 0
+        var lastCacheControl: String? = null
+        val api = makeApi { request ->
+            requestCount += 1
+            lastCacheControl = request.headers[HttpHeaders.CacheControl]
+            val body = if (requestCount == 1) {
+                DETAILS_BODY
+            } else {
+                DISCOUNTED_DETAILS_BODY
+            }
+            respond(content = body, status = HttpStatusCode.OK, headers = CACHEABLE_JSON_HEADERS)
+        }
+
+        api.fetchAppDetails(appID = ELDEN_RING, region = AppRegion.Australia, steamLanguage = "english")
+        val cached = api.fetchAppDetails(appID = ELDEN_RING, region = AppRegion.Australia, steamLanguage = "english")
+        val countAfterCachedFetch = requestCount
+
+        val bypassed = api.fetchAppDetails(
+            appID = ELDEN_RING,
+            region = AppRegion.Australia,
+            steamLanguage = "english",
+            bypassesCache = true,
+        )
+        val cacheControlOfBypass = lastCacheControl
+        val afterBypass = api.fetchAppDetails(appID = ELDEN_RING, region = AppRegion.Australia, steamLanguage = "english")
+
+        assertEquals(1, countAfterCachedFetch)
+        assertEquals(8995, cached?.priceOverview?.final)
+        assertEquals(2, requestCount)
+        assertEquals("no-cache", cacheControlOfBypass)
+        assertEquals(4497, bypassed?.priceOverview?.final)
+        assertEquals(4497, afterBypass?.priceOverview?.final)
+    }
+
     // MARK: - 搜索 / Search
 
     /**
@@ -325,7 +367,23 @@ class SteamApiTest {
         const val SEARCH_BODY =
             """{"total":1,"items":[{"type":"app","name":"ELDEN RING","id":1245620,"price":{"currency":"AUD","initial":8995,"final":8995},"tiny_image":"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/capsule_231x87.jpg"}]}"""
 
+        /**
+         * 同一个游戏打五折后的详情，用来分辨拿到的是缓存还是新数据。
+         * The same game's details at half price, to tell cached data from new data.
+         */
+        const val DISCOUNTED_DETAILS_BODY =
+            """{"1245620":{"success":true,"data":{"type":"game","name":"ELDEN RING","steam_appid":1245620,"is_free":false,"price_overview":{"currency":"AUD","initial":8995,"final":4497,"discount_percent":50}}}}"""
+
         /** JSON 响应头 / The JSON response header. */
         val JSON_HEADERS = headersOf(HttpHeaders.ContentType, "application/json")
+
+        /**
+         * 带 `max-age=3600` 的 JSON 响应头，同 Steam `appdetails` 的真实响应。
+         * JSON response headers with `max-age=3600`, as on Steam's real `appdetails` responses.
+         */
+        val CACHEABLE_JSON_HEADERS = headersOf(
+            HttpHeaders.ContentType to listOf("application/json"),
+            HttpHeaders.CacheControl to listOf("public, max-age=3600"),
+        )
     }
 }

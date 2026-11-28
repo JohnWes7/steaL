@@ -80,6 +80,28 @@ class WishlistRepository(
     }
 
     /**
+     * 写回查到的 ITAD UUID [itadID]；游戏已经被移出时什么也不做。
+     * Writes back a looked-up ITAD UUID [itadID]; does nothing when the game has been removed.
+     */
+    suspend fun updateItadID(appID: Int, itadID: String) {
+        wishlistDao.updateItadID(appID = appID, itadID = itadID)
+    }
+
+    /**
+     * 写回向 Steam 核对到的发售状态 [isComingSoon]，核对时间记为现在；游戏已经被移出时什么也不做。
+     * Writes back the release status [isComingSoon] checked with Steam, with now as the check time; does nothing
+     * when the game has been removed.
+     *
+     * 结果和原来一样也要调：核对时间要更新，一天内才不会再查。
+     * Call it even when the result is unchanged: the check time must move on so the game isn't checked again
+     * within a day.
+     */
+    suspend fun updateReleaseStatus(appID: Int, isComingSoon: Boolean) {
+        val now = clock.now()
+        wishlistDao.updateReleaseStatus(appID = appID, isComingSoon = isComingSoon, checkedAt = now)
+    }
+
+    /**
      * 从一份愿望单取出所有 appID。
      * Collects every appID from a wishlist.
      */
