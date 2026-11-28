@@ -105,3 +105,15 @@ internal val FavoritePinkDark = Color(0xFFFF375F)
  * A saved heart (light): the iOS system pink (`systemPink`, light).
  */
 internal val FavoritePinkLight = Color(0xFFFF2D55)
+
+/**
+ * 删除（深色）：iOS 系统红（`systemRed` 深色），如左滑删除露出的底色。
+ * Delete (dark): the iOS system red (`systemRed`, dark), such as the background revealed by swipe to delete.
+ */
+internal val DestructiveRedDark = Color(0xFFFF453A)
+
+/**
+ * 删除（浅色）：iOS 系统红（`systemRed` 浅色）。
+ * Delete (light): the iOS system red (`systemRed`, light).
+ */
+internal val DestructiveRedLight = Color(0xFFFF3B30)

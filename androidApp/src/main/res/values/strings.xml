@@ -41,13 +41,29 @@
 
     <!-- Search 页 / Search page -->
     <string name="search_placeholder">Search Steam games</string>
-    <string name="wishlist_empty_title">No games yet</string>
-    <string name="wishlist_empty_message">Tap the heart on any game to save it here.</string>
     <string name="search_idle_title">Search the Steam store</string>
     <string name="search_idle_message">Find games, DLC and soundtracks by name.</string>
     <!-- %1$s 是真正搜过的那个词 / %1$s is the query that was actually searched -->
     <string name="search_no_results_title">No results for “%1$s”</string>
     <string name="search_no_results_message">Check the spelling or try a new search.</string>
+
+    <!-- Wishlist 页 / Wishlist page -->
+    <string name="wishlist_empty_title">No games yet</string>
+    <string name="wishlist_empty_message">Tap the heart on any game to save it here.</string>
+    <!-- ITAD 没收录，或没有能在 Steam 激活的报价 / ITAD doesn't track it, or no offer activates on Steam -->
+    <string name="wishlist_no_price">No price</string>
+    <string name="wishlist_price_failed">Couldn\'t load price</string>
+    <!-- 筛选项要短：四个放一行 / Filter labels stay short so four fit on one row -->
+    <string name="wishlist_filter_all">All</string>
+    <string name="wishlist_filter_on_sale">On sale</string>
+    <string name="wishlist_filter_all_time_low">Lowest</string>
+    <string name="wishlist_filter_upcoming">Upcoming</string>
+    <string name="wishlist_on_sale_empty_title">No games on sale</string>
+    <string name="wishlist_on_sale_empty_message">None of your saved games are discounted right now.</string>
+    <string name="wishlist_all_time_low_empty_title">No all-time lows</string>
+    <string name="wishlist_all_time_low_empty_message">None of your saved games are at their lowest price ever.</string>
+    <string name="wishlist_upcoming_empty_title">No upcoming games</string>
+    <string name="wishlist_upcoming_empty_message">All of your saved games are already out.</string>
 
     <!-- Sales 页 / Sales page -->
     <string name="sale_events_happening_now">Happening now</string>

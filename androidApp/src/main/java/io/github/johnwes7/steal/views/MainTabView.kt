@@ -94,7 +94,9 @@ fun MainTabView() {
             is SearchRoute -> NavEntry(key) {
                 SearchView(onOpenGameDetail = { route -> navigator.navigate(route) })
             }
-            is WishlistRoute -> NavEntry(key) { WishlistView() }
+            is WishlistRoute -> NavEntry(key) {
+                WishlistView(onOpenGameDetail = { route -> navigator.navigate(route) })
+            }
             is SalesRoute -> NavEntry(key) { SaleEventsView() }
             is SettingsRoute -> NavEntry(key) {
                 SettingsView(

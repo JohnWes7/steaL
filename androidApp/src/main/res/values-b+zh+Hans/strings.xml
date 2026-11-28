@@ -30,12 +30,26 @@
 
     <!-- Search 页 / Search page -->
     <string name="search_placeholder">搜索 Steam 游戏</string>
-    <string name="wishlist_empty_title">还没有收藏</string>
-    <string name="wishlist_empty_message">点任意游戏上的心形，就会收藏到这里。</string>
     <string name="search_idle_title">搜索 Steam 商店</string>
     <string name="search_idle_message">按名字查找游戏、DLC 和原声音乐。</string>
     <string name="search_no_results_title">没有找到“%1$s”</string>
     <string name="search_no_results_message">检查一下拼写，或者换个词再搜。</string>
+
+    <!-- Wishlist 页 / Wishlist page -->
+    <string name="wishlist_empty_title">还没有收藏</string>
+    <string name="wishlist_empty_message">点任意游戏上的心形，就会收藏到这里。</string>
+    <string name="wishlist_no_price">暂无价格</string>
+    <string name="wishlist_price_failed">价格加载失败</string>
+    <string name="wishlist_filter_all">全部</string>
+    <string name="wishlist_filter_on_sale">打折</string>
+    <string name="wishlist_filter_all_time_low">史低</string>
+    <string name="wishlist_filter_upcoming">未发售</string>
+    <string name="wishlist_on_sale_empty_title">没有打折的游戏</string>
+    <string name="wishlist_on_sale_empty_message">收藏的游戏现在都没在打折。</string>
+    <string name="wishlist_all_time_low_empty_title">没有史低的游戏</string>
+    <string name="wishlist_all_time_low_empty_message">收藏的游戏现在都不是史低价。</string>
+    <string name="wishlist_upcoming_empty_title">没有未发售的游戏</string>
+    <string name="wishlist_upcoming_empty_message">收藏的游戏都已经发售了。</string>
 
     <!-- Sales 页 / Sales page -->
     <string name="sale_events_happening_now">正在进行</string>

@@ -63,6 +63,16 @@ data class ExtendedColors(
      * A saved heart.
      */
     val favorite: Color,
+    /**
+     * 删除操作的实心底色，如左滑删除露出的那一块。
+     * The solid fill behind a delete action, such as the area revealed by swipe to delete.
+     */
+    val destructive: Color,
+    /**
+     * [destructive] 上的图标和文字。
+     * Icons and text on [destructive].
+     */
+    val onDestructive: Color,
 )
 
 private val LightExtendedColors = ExtendedColors(
@@ -73,6 +83,8 @@ private val LightExtendedColors = ExtendedColors(
     giftContainer = GreenContainerLight,
     onGiftContainer = OnGreenContainerLight,
     favorite = FavoritePinkLight,
+    destructive = DestructiveRedLight,
+    onDestructive = Color.White,
 )
 
 private val DarkExtendedColors = ExtendedColors(
@@ -83,6 +95,8 @@ private val DarkExtendedColors = ExtendedColors(
     giftContainer = GreenContainerDark,
     onGiftContainer = OnGreenContainerDark,
     favorite = FavoritePinkDark,
+    destructive = DestructiveRedDark,
+    onDestructive = Color.White,
 )
 
 /**
@@ -98,6 +112,8 @@ val LocalExtendedColors = staticCompositionLocalOf {
         giftContainer = Color.Unspecified,
         onGiftContainer = Color.Unspecified,
         favorite = Color.Unspecified,
+        destructive = Color.Unspecified,
+        onDestructive = Color.Unspecified,
     )
 }
 
